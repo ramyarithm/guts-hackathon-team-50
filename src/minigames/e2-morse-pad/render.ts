@@ -26,9 +26,6 @@ const C = {
   amber: "#ffb347",
   amberDim: "rgba(255, 179, 71, 0.4)",
   danger: "#ff6b57",
-  dangerDim: "rgba(255, 107, 87, 0.3)",
-  blue: "#47b3ff",
-  blueDim: "rgba(71, 179, 255, 0.3)",
   slotBg: "#0a1411",
   slotBorder: "#2a4a3a",
   slotActive: "#3a6a5a",
@@ -62,7 +59,6 @@ export function drawFrame(
   drawMorseGuide(ctx);
   drawStats(ctx, state);
   drawMessage(ctx, state);
-  drawButtonLabels(ctx, state);
   drawScanlines(ctx);
 
   ctx.restore();
@@ -286,7 +282,7 @@ function drawMorseGuide(ctx: CanvasRenderingContext2D): void {
 }
 
 function drawStats(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const y = 378;
+  const y = 400;
 
   ctx.fillStyle = C.panel;
   ctx.fillRect(10, y, WORLD_WIDTH - 20, 36);
@@ -325,7 +321,7 @@ function drawStats(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const y = 424;
+  const y = 456;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -344,47 +340,6 @@ function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   ctx.fillText(state.message, WORLD_WIDTH / 2, y);
   ctx.globalAlpha = 1;
-}
-
-function drawButtonLabels(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const y = 448;
-  const btnW = 120;
-  const btnH = 28;
-  const gap = 20;
-  const leftX = WORLD_WIDTH / 2 - gap / 2 - btnW;
-  const rightX = WORLD_WIDTH / 2 + gap / 2;
-
-  const active = state.phase === 'PLAYING' || state.phase === 'READY';
-
-  // Left button (dash)
-  ctx.fillStyle = active ? C.dangerDim : C.slotBg;
-  ctx.fillRect(leftX, y, btnW, btnH);
-  ctx.strokeStyle = active ? C.danger : C.slotBorder;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(leftX, y, btnW, btnH);
-
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = `bold 12px ${FONT}`;
-  ctx.fillStyle = active ? C.danger : C.textDim;
-  ctx.fillText("━ DASH", leftX + btnW / 2, y + btnH / 2 - 2);
-  ctx.font = `9px ${FONT}`;
-  ctx.fillStyle = C.textDim;
-  ctx.fillText("LEFT / A", leftX + btnW / 2, y + btnH / 2 + 10);
-
-  // Right button (dot)
-  ctx.fillStyle = active ? C.blueDim : C.slotBg;
-  ctx.fillRect(rightX, y, btnW, btnH);
-  ctx.strokeStyle = active ? C.blue : C.slotBorder;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(rightX, y, btnW, btnH);
-
-  ctx.font = `bold 12px ${FONT}`;
-  ctx.fillStyle = active ? C.blue : C.textDim;
-  ctx.fillText("▪ DOT", rightX + btnW / 2, y + btnH / 2 - 2);
-  ctx.font = `9px ${FONT}`;
-  ctx.fillStyle = C.textDim;
-  ctx.fillText("RIGHT / D", rightX + btnW / 2, y + btnH / 2 + 10);
 }
 
 function drawScanlines(ctx: CanvasRenderingContext2D): void {
