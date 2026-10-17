@@ -1,0 +1,84 @@
+{
+  "meta": {
+    "description": "Player dialogue lines grouped by game stage. Pick randomly from each group.",
+    "delivery": "Conversational and understated at first; increasingly tense as truth emerges. Pause at ellipses."
+  },
+  "stages": {
+    "intro": {
+      "description": "Before C1 - player arrives and gets locked in",
+      "lines": [
+        { "id": "01", "text": "Underground bunker. Four dead lines. There goes my afternoon." },
+        { "id": "02", "text": "Hang on… Why's the door closing?" },
+        { "id": "03", "text": "My card worked thirty seconds ago." },
+        { "id": "04", "text": "Fine. You handle the door. I'll handle the phones." }
+      ]
+    },
+    "c1_complete": {
+      "description": "After completing C1 - first digit recovered, starting to find clues",
+      "lines": [
+        { "id": "05", "text": "Stored recordings? I'm here to fix a line. Why bring that up?" },
+        { "id": "06", "text": "Let's see what's keeping you quiet." },
+        { "id": "07", "text": "Authorised at eight fourteen… I didn't get here until ten." }
+      ]
+    },
+    "c2_complete": {
+      "description": "After completing C2 - discovering the conspiracy",
+      "lines": [
+        { "id": "08", "text": "You said it was a malfunction. Why was there a lockdown order before I arrived?" },
+        { "id": "09", "text": "Right. A precaution." },
+        { "id": "10", "text": "Home numbers. Private conversations. None of these people knew." },
+        { "id": "11", "text": "I know this routing. This is what I flagged in my report." }
+      ]
+    },
+    "c3_complete": {
+      "description": "After completing C3 - realizing the trap and finding hope",
+      "lines": [
+        { "id": "12", "text": "That's why they sent me." },
+        { "id": "13", "text": "I remember that name. They said he'd transferred." },
+        { "id": "14", "text": "Four systems. Four digits. He left a way out." },
+        { "id": "15", "text": "I'm copying these recordings. All of them." }
+      ]
+    },
+    "c4_complete": {
+      "description": "After completing C4 - all digits recovered, confrontation",
+      "lines": [
+        { "id": "16", "text": "Just working through the faults. Like you asked." },
+        { "id": "17", "text": "You broke the lines yourself. Then put my name on the callout." },
+        { "id": "18", "text": "I've got the order. Your voice is on it." },
+        { "id": "19", "text": "Hello? …Yeah. Thought so." },
+        { "id": "20", "text": "That's the last digit. Time to leave." }
+      ]
+    },
+    "pin_entry": {
+      "description": "During PIN entry (E1/E2)",
+      "lines": [
+        { "id": "23", "text": "There it is. Just one more lock." }
+      ]
+    },
+    "pin_wrong": {
+      "description": "When PIN entry fails",
+      "lines": [
+        { "id": "24", "text": "No. Slow down. Check the fragments." }
+      ]
+    },
+    "pin_success": {
+      "description": "When PIN entry succeeds",
+      "lines": [
+        { "id": "25", "text": "Come on… Yes. Yes!" }
+      ]
+    },
+    "tunnel": {
+      "description": "During tunnel stage (after PIN)",
+      "lines": [
+        { "id": "21", "text": "He said this leads outside. Please let him be right." },
+        { "id": "22", "text": "What was that?" }
+      ]
+    },
+    "ending": {
+      "description": "Final escape",
+      "lines": [
+        { "id": "26", "text": "I'm out. Now I need to get these recordings to someone." }
+      ]
+    }
+  }
+}
