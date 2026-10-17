@@ -74,6 +74,7 @@ export function createG3Adapter(): MinigameAdapter {
       if (disposed) return;
       // Starting twice on one instance replaces the previous scene cleanly.
       teardownScene();
+      completed = false; // Reset completion flag for new game
       args = startArgs;
 
       host = startArgs.container ?? document.getElementById("minigame-root");
