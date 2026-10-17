@@ -2,7 +2,7 @@
 // Auto-registers when imported. CORE imports this module for the side effect.
 
 import { WORLD_HEIGHT, WORLD_WIDTH, createGame, hashSeed, type Game } from "./logic";
-import { drawFrame } from "./render";
+import { createRenderer } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 
@@ -24,6 +24,8 @@ export function createG2Adapter(): MinigameAdapter {
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
   let disposed = false;
+  // Static layers are cached per adapter instance, never at module level.
+  const renderer = createRenderer();
 
   const resize = (): void => {
     if (!host || !canvas) return;
@@ -46,7 +48,7 @@ export function createG2Adapter(): MinigameAdapter {
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.step(elapsed);
-    drawFrame(ctx, game.state, canvas.width, canvas.height);
+    renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
   };
 
   const teardownScene = (): void => {
