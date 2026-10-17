@@ -28,7 +28,7 @@ export function createG2Adapter(): MinigameAdapter {
   const renderer = createRenderer();
 
   const resize = (): void => {
-    if (!host || !canvas) return;
+    if (disposed || !host || !canvas) return;
     const cssW = host.clientWidth || WORLD_WIDTH;
     // A host with no explicit height gets the game's natural aspect ratio.
     const cssH = host.clientHeight || (cssW * WORLD_HEIGHT) / WORLD_WIDTH;

@@ -31,7 +31,7 @@ export function createG5Adapter(): MinigameAdapter {
   }
 
   function resize(): void {
-    if (!canvas || !host) return;
+    if (disposed || !canvas || !host) return;
     const rect = host.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;

@@ -175,7 +175,9 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
 
     if (success) {
       state.hits++;
-      state.syncedConnectors.push({ localAngle: BOTTOM - state.angle, type });
+      // Store the contact's local angle on the wheel (not relative to BOTTOM)
+      const contactLocalAngle = closestIndex * TWO_PI / CONTACT_COUNT;
+      state.syncedConnectors.push({ localAngle: contactLocalAngle, type });
       state.speed = Math.min(MAX_SPEED, state.speed + SPEED_PER_HIT);
       state.message = "CONTACT RESTORED";
       state.messageType = "success";
