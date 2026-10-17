@@ -30,10 +30,13 @@ export function createG8Adapter(): MinigameAdapter {
     if (!canvas || !host) return;
     const fit = Math.min((host.clientWidth || WORLD_WIDTH) / WORLD_WIDTH,
       (host.clientHeight || WORLD_HEIGHT) / WORLD_HEIGHT);
-    canvas.width = WORLD_WIDTH; canvas.height = WORLD_HEIGHT;
-    canvas.style.width = `${Math.max(1, Math.floor(WORLD_WIDTH * fit))}px`;
-    canvas.style.height = `${Math.max(1, Math.floor(WORLD_HEIGHT * fit))}px`;
-    canvas.style.imageRendering = "pixelated";
+    const drawWidth = Math.max(1, Math.floor(WORLD_WIDTH * fit));
+    const drawHeight = Math.max(1, Math.floor(WORLD_HEIGHT * fit));
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.style.width = `${drawWidth}px`;
+    canvas.style.height = `${drawHeight}px`;
+    canvas.width = Math.round(drawWidth * dpr);
+    canvas.height = Math.round(drawHeight * dpr);
   };
   const draw = () => {
     if (!game || !canvas || !ctx) return;

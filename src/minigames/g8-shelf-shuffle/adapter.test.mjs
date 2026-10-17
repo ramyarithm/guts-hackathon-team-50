@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './test-loader.mjs';
-const { generateSequence } = load('./logic.ts');
+const { generateSequence, ROUND_MS } = load('./logic.ts');
 const { createG8Adapter, g8Entry } = load('./index.ts');
 const { getGame, getTwoButtonGames } = load('../registry.ts');
 function environment(t) {
@@ -38,11 +38,29 @@ test('adapter mounts one canvas, sets labels immediately, restarts safely, and d
   adapter.handleInput('RIGHT'); env.pump(1000); assert.equal(env.frames.size,0);
   adapter.startMinigame(args); assert.equal(env.host.children.length,1); adapter.dispose();
 });
+test('canvas matches display density and fits smaller phone screens without changing gameplay coordinates', t => {
+  const env = environment(t); const adapter = createG8Adapter();
+  const args = { gameId:'G8', stageId:'ANY', runId:'resolution', container:env.host, onComplete(){}, setControlLabels(){} };
+  window.devicePixelRatio = 2;
+  adapter.startMinigame(args);
+  let canvas = env.host.children[0];
+  assert.equal(canvas.width, 560); assert.equal(canvas.height, 640);
+  assert.equal(canvas.style.width, '280px'); assert.equal(canvas.style.height, '320px');
+  env.host.clientWidth = 140; env.host.clientHeight = 160;
+  window.devicePixelRatio = 4; // Match the other adapters' density cap of three.
+  adapter.startMinigame(args); canvas = env.host.children[0];
+  assert.equal(canvas.width, 420); assert.equal(canvas.height, 480);
+  assert.equal(canvas.style.width, '140px'); assert.equal(canvas.style.height, '160px');
+  assert.match(canvas.attrs['aria-label'], /READY/);
+  assert.equal(env.host.children.length, 1);
+  adapter.dispose();
+});
+
 test('adapter checks the real deadline before accepting an input between frames; retry uses the same two buttons', t => {
   const env = environment(t); const labels = []; const adapter = createG8Adapter();
   adapter.startMinigame({ gameId:'G8',stageId:'IGNORED',runId:'deadline',container:env.host,onComplete(){},setControlLabels:l=>labels.push(l) });
   env.elapse(99999); adapter.handleInput('RIGHT'); // READY time must not be counted.
-  env.elapse(40001); adapter.handleInput('LEFT');
+  env.elapse(ROUND_MS + 1); adapter.handleInput('LEFT');
   // A just-expired input must show the failure before a later press retries.
   assert.ok(labels.some(l => l.left === 'Retry'));
   assert.match(env.host.children[0].attrs['aria-label'], /FAILED/);

@@ -2,7 +2,7 @@ import type { Button, ControlLabels } from "../types";
 
 export const WORLD_WIDTH = 280;
 export const WORLD_HEIGHT = 320;
-export const ROUND_MS = 40_000;
+export const ROUND_MS = 20_000;
 export const CAPACITY = 4;
 export const TARGET_MATCHES = 8;
 export const OBJECT_TYPES = ["BATTERY", "DRIVE", "BOX", "WRENCH"] as const;

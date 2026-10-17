@@ -2,7 +2,7 @@
 
 Two-button storage puzzle. LEFT places the current item on the left shelf; RIGHT
 places it on the right. Three consecutive identical items on one shelf clear.
-A shelf holds four items. Clear 24 items in eight matches within 40 seconds.
+A shelf holds four items. Clear 24 items in eight matches within 20 seconds.
 The clock starts on the first placement. A failed run shows its reason; either
 button retries the same puzzle with a fresh timer. No future items are displayed.
 
@@ -36,7 +36,7 @@ produce a different puzzle. There is no `Math.random()` and no stage dependence.
 Overflow is checked before accepting a fifth object, even if that object would
 otherwise make a match. Logical matches clear immediately; their ghosts flash
 then dissolve into deterministic pixel particles. Brief placement lockouts
-prevent input double-firing while preserving the full 40-second real-time limit.
+prevent input double-firing while preserving the full 20-second real-time limit.
 
 ## Verification
 

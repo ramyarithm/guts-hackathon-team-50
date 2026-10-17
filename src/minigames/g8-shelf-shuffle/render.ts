@@ -1,8 +1,10 @@
 import { CAPACITY, ROUND_MS, TARGET_MATCHES, WORLD_WIDTH, WORLD_HEIGHT,
   type GameState, type ObjectType } from "./logic";
 
-const P = { bg: "#080f18", panel: "#101d29", line: "#2a424b", dim: "#739098",
-  text: "#d6e5d9", teal: "#62d8be", cyan: "#72c9ed", gold: "#e6b76a", red: "#ed796e" };
+// Same terminal font and palette as Pressure Valves and Coffee Run.
+const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
+const P = { bg: "#0a1411", panel: "#182420", line: "#2f453b", dim: "rgba(184,245,207,0.6)",
+  text: "#b8f5cf", teal: "#5cff9d", cyan: "#76d5ed", gold: "#ffb347", red: "#ff6b57" };
 const NAMES: Record<ObjectType, string> = { BATTERY: "BATTERY", DRIVE: "STORAGE DRIVE", BOX: "TOOLBOX", WRENCH: "WRENCH" };
 const INK: Record<ObjectType, string> = { BATTERY: P.teal, DRIVE: P.cyan, BOX: P.gold, WRENCH: "#ccd2df" };
 export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameState>, width: number, height: number): void {
@@ -12,9 +14,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
   const box = (x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color; ctx.fillRect(Math.round(x), Math.round(y), w, h);
   };
-  const text = (value: string, x: number, y: number, color = P.text, size = 10, align: CanvasTextAlign = "left") => {
-    ctx.font = `bold ${size}px monospace`; ctx.fillStyle = color; ctx.textAlign = align;
-    ctx.textBaseline = "middle"; ctx.fillText(value, x, y);
+  const text = (value: string, x: number, y: number, color = P.text, size = 11, align: CanvasTextAlign = "left") => {
+    ctx.font = `${size >= 12 ? 'bold ' : ''}${size}px ${FONT}`;
+    ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "middle";
+    ctx.fillText(value, x, y);
   };
   const panel = (x: number, y: number, w: number, h: number, border = P.line) => {
     box(x, y, w, h, border); box(x + 1, y + 1, w - 2, h - 2, P.panel);
@@ -40,21 +43,21 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
     ctx.restore();
   };
   box(0, 0, WORLD_WIDTH, WORLD_HEIGHT, P.bg);
-  for (let y = 8; y < 320; y += 16) box(7, y, 1, 2, "#182834");
-  text("SHELF SHUFFLE", 14, 17, P.teal, 15);
-  text(`${state.matches}/${TARGET_MATCHES}`, 265, 16, P.teal, 14, "right");
-  text("MATCHES", 265, 31, P.dim, 7, "right");
-  text("STORAGE / REPAIR BAY", 14, 32, P.dim, 8);
+  for (let y = 8; y < 320; y += 16) box(7, y, 1, 2, "rgba(72,214,128,0.07)");
+  text("SHELF SHUFFLE", 14, 17, P.text, 12);
+  text(`${state.matches}/${TARGET_MATCHES}`, 265, 16, P.text, 12, "right");
+  text("MATCHES", 265, 31, P.dim, 10, "right");
+  text("STORAGE / REPAIR BAY", 14, 32, P.dim, 10);
   const urgent = state.remainingMs <= 10_000;
   const timerColor = urgent ? P.red : P.teal;
   box(14, 44, 213, 5, P.line);
   box(14, 44, Math.ceil(213 * state.remainingMs / ROUND_MS), 5, timerColor);
   text(`${Math.ceil(state.remainingMs / 1000)}s`, 266, 46, timerColor, 11, "right");
-  text(state.phase === "READY" ? "FIRST PLACEMENT STARTS THE CLOCK" : "PLACE THE CURRENT ITEM", 140, 64, P.dim, 8, "center");
+  text(state.phase === "READY" ? "First placement starts the clock" : "Place the current item", 140, 64, P.dim, 11, "center");
   // Intentionally one item only. Never render or receive the remaining sequence.
   if (state.current && state.phase !== "SUCCESS") {
-    panel(114, 77, 52, 37); icon(state.current, 140, 96, 1.1);
-    text(NAMES[state.current], 140, 124, INK[state.current], 9, "center");
+    panel(114, 77, 52, 37); icon(state.current, 140, 96);
+    text(NAMES[state.current], 140, 124, INK[state.current], 11, "center");
   } else text("ALL SORTED", 140, 101, P.teal, 14, "center");
   for (const side of [0, 1] as const) {
     const x = side === 0 ? 16 : 151;
@@ -62,23 +65,23 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
     const warning = shelf.length >= 3;
     const color = warning ? (shelf.length === 4 ? P.red : P.gold) : P.dim;
     panel(x, 139, 113, 125, warning ? color : P.line);
-    text(side === 0 ? "LEFT" : "RIGHT", x + 9, 149, color, 9);
-    text(`${shelf.length}/${CAPACITY}`, x + 103, 149, color, 9, "right");
+    text(side === 0 ? "LEFT" : "RIGHT", x + 9, 149, color, 10);
+    text(`${shelf.length}/${CAPACITY}`, x + 103, 149, color, 10, "right");
     for (let slot = 0; slot < CAPACITY; slot++) {
       const y = 244 - slot * 25;
-      box(x + 8, y - 12, 97, 22, "#0b151f");
-      box(x + 7, y + 10, 99, 3, "#314953"); box(x + 7, y + 10, 99, 1, "#536b70");
-      text(`${slot + 1}`, x + 14, y, "#344e5a", 7);
+      box(x + 8, y - 12, 97, 22, "#0e1613");
+      box(x + 7, y + 10, 99, 3, "#2f453b"); box(x + 7, y + 10, 99, 1, "#2a4a3a");
+      text(`${slot + 1}`, x + 14, y, P.dim, 9);
       if (shelf[slot]) {
         const fx = state.effects.find(e => e.shelf === side && e.kind === "PLACE" && e.slot === slot);
         const bounce = fx ? -Math.round(12 * (1 - Math.min(1, fx.ageMs / 150)) ** 2) : 0;
-        icon(shelf[slot], x + 57, y + bounce, .8);
+        icon(shelf[slot], x + 57, y + bounce);
       }
     }
     for (const fx of state.effects.filter(e => e.shelf === side && e.kind === "MATCH")) {
       const t = fx.ageMs / fx.durationMs;
       if (t < .4) {
-        for (let i = 0; i < 3; i++) icon(fx.type, x + 57 + (Math.floor(fx.ageMs / 45) % 2 ? 1 : -1), 244 - (fx.slot + i) * 25, .8, true);
+        for (let i = 0; i < 3; i++) icon(fx.type, x + 57 + (Math.floor(fx.ageMs / 45) % 2 ? 1 : -1), 244 - (fx.slot + i) * 25, 1, true);
       } else {
         ctx.globalAlpha = Math.max(0, 1 - (t - .4) / .6);
         for (let i = 0; i < 12; i++) {
@@ -90,28 +93,28 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
       }
     }
   }
-  text(`${state.placed} / 24 SORTED`, 140, 277, P.dim, 9, "center");
+  text(`${state.placed} / 24 SORTED`, 140, 277, P.dim, 10, "center");
   if (state.phase === "READY") {
-    text("3 IDENTICAL IN A ROW = CLEAR", 140, 295, P.text, 9, "center");
-    text("Choose a shelf. No swaps. Keep space.", 140, 310, P.dim, 8, "center");
+    text("3 identical in a row = clear", 140, 295, P.text, 11, "center");
+    text("Choose a shelf. Keep space.", 140, 310, P.dim, 11, "center");
   } else {
     const full = state.shelves.some(s => s.length === CAPACITY);
-    text(full ? "SHELF FULL - USE THE OTHER SIDE" : urgent ? "LOW TIME - KEEP SORTING" : "MATCH THREE. MAKE ROOM.", 140, 302, full || urgent ? P.red : P.dim, 8, "center");
+    text(full ? "Shelf full - use the other side" : urgent ? "Low time - keep sorting" : "Match three. Make room.", 140, 302, full || urgent ? P.red : P.dim, 11, "center");
   }
   if (state.phase === "FAILED" || state.phase === "SUCCESS") {
-    box(0, 56, 280, 264, "rgba(5,10,17,0.88)");
+    box(0, 56, 280, 264, "rgba(4,10,8,0.86)");
     panel(22, 106, 236, 126, state.phase === "SUCCESS" ? P.teal : P.red);
     if (state.phase === "SUCCESS") {
-      text("BAY RESTORED", 140, 134, P.teal, 19, "center");
-      text("8 MATCHES / SHELVES CLEAR", 140, 162, P.text, 10, "center");
-      text("SIGNAL RETURNING...", 140, 202, P.dim, 9, "center");
+      text("BAY RESTORED", 140, 134, P.teal, 22, "center");
+      text("8 matches / shelves clear", 140, 162, P.text, 11, "center");
+      text("Signal returning...", 140, 202, P.dim, 11, "center");
       const t = Math.min(1, state.successMs / 650); box(49, 180, Math.round(182 * t), 4, P.teal);
     } else {
-      text("SORTING HALTED", 140, 133, P.red, 17, "center");
+      text("SORTING HALTED", 140, 133, P.red, 22, "center");
       const message = state.failure === "TIMEOUT" ? "TIME RAN OUT" : state.failure === "OVERFLOW" ? `${state.failedShelf === 0 ? "LEFT" : "RIGHT"} SHELF OVERFLOW` : "ITEMS STILL ON THE SHELVES";
-      text(message, 140, 160, P.text, 10, "center");
-      text("SAME PUZZLE. FRESH 40 SECONDS.", 140, 185, P.dim, 8, "center");
-      text("LEFT OR RIGHT TO RETRY", 140, 211, P.teal, 10, "center");
+      text(message, 140, 160, P.text, 11, "center");
+      text(`Same puzzle. Fresh ${ROUND_MS / 1000} seconds.`, 140, 185, P.dim, 11, "center");
+      text("LEFT OR RIGHT TO RETRY", 140, 211, P.teal, 12, "center");
     }
   }
 }

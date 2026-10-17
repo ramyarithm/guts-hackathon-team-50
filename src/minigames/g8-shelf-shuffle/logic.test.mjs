@@ -51,10 +51,11 @@ test('nonconsecutive identical items do not match; four slots are allowed, a fif
   place(state, 'LEFT', null); assert.equal(state.phase, 'FAILED'); assert.equal(state.failure, 'OVERFLOW');
   assert.equal(state.failedShelf, 0); assert.equal(state.shelves[0].length, 4);
 });
-test('timer waits for the first placement, counts real elapsed time and expires exactly at 40 seconds', () => {
+test('timer waits for the first placement, counts real elapsed time and expires exactly at 20 seconds', () => {
   const game = createGame({ runId: 'timer' }); game.step(999999);
   assert.equal(game.state.remainingMs, ROUND_MS); assert.equal(game.state.phase, 'READY');
-  game.press('RIGHT'); game.step(39999); assert.equal(game.state.remainingMs, 1);
+  assert.equal(ROUND_MS, 20000);
+  game.press('RIGHT'); game.step(ROUND_MS - 1); assert.equal(game.state.remainingMs, 1);
   game.step(1); assert.equal(game.state.phase, 'FAILED'); assert.equal(game.state.failure, 'TIMEOUT');
 });
 test('exhausted but uncleared shelves fail explicitly', () => {
@@ -65,9 +66,9 @@ test('exhausted but uncleared shelves fail explicitly', () => {
 test('either retry button fully resets the timer, effects, shelves, matches and deterministic sequence', () => {
   for (const button of ['LEFT', 'RIGHT']) {
     const labels = []; const game = createGame({ runId: 'retry', onLabels: l => labels.push(l) });
-    game.press('LEFT'); game.step(40000); assert.equal(game.state.phase, 'FAILED');
+    game.press('LEFT'); game.step(ROUND_MS); assert.equal(game.state.phase, 'FAILED');
     assert.deepEqual(labels.at(-1), { left: 'Retry', right: 'Retry' });
-    game.press(button); assert.equal(game.state.phase, 'READY'); assert.equal(game.state.remainingMs, 40000);
+    game.press(button); assert.equal(game.state.phase, 'READY'); assert.equal(game.state.remainingMs, ROUND_MS);
     assert.equal(game.state.placed, 0); assert.equal(game.state.matches, 0); assert.deepEqual(game.state.shelves, [[], []]);
     assert.deepEqual(game.state.effects, []); assert.equal(game.state.current, generateSequence('retry')[0]);
     solve(game, 'retry'); assert.equal(game.state.phase, 'SUCCESS');
