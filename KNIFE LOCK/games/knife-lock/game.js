@@ -44,7 +44,7 @@ function updateMessage(message, colour = '') {
 function updateStats() {
   el('score').textContent = `${hits} / ${rules.hitsToWin}`;
   el('lives').textContent = missesLeft;
-  el('speed').textContent = state === 'ready' ? '—' : `${(speed / rules.startSpeed).toFixed(1)}×`;
+  el('speed').textContent = state === 'ready' ? 'â€”' : `${(speed / rules.startSpeed).toFixed(1)}Ã—`;
 }
 
 function startGame() {
@@ -53,7 +53,7 @@ function startGame() {
   hits = 0;
   missesLeft = rules.allowedMisses;
   state = 'playing';
-  lastThrow = -10000;
+  lastThrow = performance.now();
   knives = [];
   flyingKnives = [];
   flashUntil = 0;
@@ -93,7 +93,7 @@ function finishGame(won) {
     }));
   } else {
     el('dialogText').textContent = 'Three mistakes triggered the terminal lock. Try again.';
-    updateMessage('TERMINAL LOCKED — TRY AGAIN', 'danger');
+    updateMessage('TERMINAL LOCKED â€” TRY AGAIN', 'danger');
   }
 }
 
@@ -134,7 +134,7 @@ function throwKnife(type) {
     missesLeft -= 1;
     shake = 17;
     speed = Math.min(rules.maxSpeed, speed * rules.mistakeMultiplier + rules.mistakeBonus);
-    updateMessage(goodTiming ? 'WRONG KNIFE — SPEED INCREASED' : 'MISALIGNED — SPEED INCREASED', 'danger');
+    updateMessage(goodTiming ? 'WRONG KNIFE â€” SPEED INCREASED' : 'MISALIGNED â€” SPEED INCREASED', 'danger');
   }
 
   updateStats();
@@ -151,6 +151,7 @@ function pressButton(type) {
   // Either button starts and restarts the game; during play it throws a knife.
   if (state === 'ready' || state === 'finished') {
     startGame();
+    return; // This press only starts the wheel.
   } else if (state === 'playing') {
     throwKnife(type);
   }
