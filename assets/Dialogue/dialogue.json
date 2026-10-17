@@ -1,83 +1,457 @@
+
 {
   "meta": {
-    "description": "Player dialogue lines grouped by game stage. Pick randomly from each group.",
-    "delivery": "Conversational and understated at first; increasingly tense as truth emerges. Pause at ellipses."
+    "title": "DEAD SIGNAL",
+    "description": "Complete visual novel dialogue, including reactions for all eight minigames and the main narrative.",
+    "delivery": "Natural and slightly sarcastic at first, becoming suspicious, frightened and confrontational as the story unfolds. Pause briefly at ellipses.",
+    "ordering": "Story dialogue must play in the listed order. Do not randomly select or skip story-critical lines.",
+    "speakers": {
+      "ENGINEER": "The player character, speaking aloud or thinking to themselves.",
+      "SUPERVISOR": "The engineer's supervisor, communicating through the bunker intercom.",
+      "COLLEAGUE_RECORDING": "An archived recording left by a missing engineer.",
+      "SYSTEM": "Non-spoken on-screen narration."
+    },
+    "dialogue_flow": [
+      "Play the minigame.",
+      "After success, play the reaction matching the completed game ID, G1 through G8.",
+      "Play the story dialogue for the current narrative stage, C1 through C4.",
+      "Show the PIN digit awarded by the controller.",
+      "Transition to the next bunker background."
+    ],
+    "important_rules": [
+      "Minigames can appear in a randomized order.",
+      "The first minigame must use one button.",
+      "Each game has its own unique completion reaction.",
+      "Story revelations depend on completion order, not minigame identity.",
+      "Only four of the eight regular minigames are played during one run.",
+      "Do not hard-code PIN digits into dialogue.",
+      "Dialogue should not interrupt active minigames.",
+      "Tunnel dialogue should trigger at specific gameplay moments."
+    ]
+  },
+  "minigame_reactions": {
+    "G1": {
+      "name": "Signal Relay",
+      "description": "The player guides a signal pulse through obstacles.",
+      "lines": [
+        {
+          "id": "G1-01",
+          "speaker": "ENGINEER",
+          "text": "Signal's through. Finally."
+        },
+        {
+          "id": "G1-02",
+          "speaker": "ENGINEER",
+          "text": "Since when does repairing a phone involve dodging obstacles?"
+        }
+      ]
+    },
+    "G2": {
+      "name": "Lane Crossing",
+      "description": "The player crosses moving hazard lanes.",
+      "lines": [
+        {
+          "id": "G2-01",
+          "speaker": "ENGINEER",
+          "text": "Made it across. That was closer than I'd like."
+        },
+        {
+          "id": "G2-02",
+          "speaker": "ENGINEER",
+          "text": "Whoever designed this diagnostic needs a new job."
+        }
+      ]
+    },
+    "G3": {
+      "name": "Core Defrag",
+      "description": "The player rotates and stacks falling blocks to clear rows.",
+      "lines": [
+        {
+          "id": "G3-01",
+          "speaker": "ENGINEER",
+          "text": "Memory cleared. That's one less problem."
+        },
+        {
+          "id": "G3-02",
+          "speaker": "ENGINEER",
+          "text": "Did I seriously just play Tetris to repair a communication line?"
+        }
+      ]
+    },
+    "G4": {
+      "name": "Rhythm Game",
+      "description": "The player keeps the rhythm after the drum track disappears.",
+      "lines": [
+        {
+          "id": "G4-01",
+          "speaker": "ENGINEER",
+          "text": "The drums stopped, but I kept the beat."
+        },
+        {
+          "id": "G4-02",
+          "speaker": "ENGINEER",
+          "text": "Never thought keeping rhythm would be part of this job."
+        }
+      ]
+    },
+    "G5": {
+      "name": "Circuit Sync",
+      "description": "The player times red and blue connections on a spinning circuit.",
+      "lines": [
+        {
+          "id": "G5-01",
+          "speaker": "ENGINEER",
+          "text": "Red, blue… There. Everything's connected."
+        },
+        {
+          "id": "G5-02",
+          "speaker": "ENGINEER",
+          "text": "At least that one almost felt like engineering."
+        }
+      ]
+    },
+    "G6": {
+      "name": "Pressure Valves",
+      "description": "The player keeps two pressure tanks stable by venting them.",
+      "lines": [
+        {
+          "id": "G6-01",
+          "speaker": "ENGINEER",
+          "text": "Both tanks stabilised. Good."
+        },
+        {
+          "id": "G6-02",
+          "speaker": "ENGINEER",
+          "text": "I really didn't want to find out what happens when those gauges hit red."
+        }
+      ]
+    },
+    "G7": {
+      "name": "Signal Lock",
+      "description": "The player locks a moving needle onto five target zones.",
+      "lines": [
+        {
+          "id": "G7-01",
+          "speaker": "ENGINEER",
+          "text": "Five locks. Signal secured."
+        },
+        {
+          "id": "G7-02",
+          "speaker": "ENGINEER",
+          "text": "That needle wasn't making it easy."
+        }
+      ]
+    },
+    "G8": {
+      "name": "Shelf Shuffle",
+      "description": "The player sorts four types of objects between two shelves, matching three identical objects at a time.",
+      "lines": [
+        {
+          "id": "G8-01",
+          "speaker": "ENGINEER",
+          "text": "Everything sorted. Finally."
+        },
+        {
+          "id": "G8-02",
+          "speaker": "ENGINEER",
+          "text": "Why does a communications system need an inventory puzzle?"
+        }
+      ]
+    }
   },
   "stages": {
     "intro": {
-      "description": "Before C1 - player arrives and gets locked in",
+      "description": "Before C1. The engineer arrives at the bunker, the door locks unexpectedly, and the supervisor offers to help.",
       "lines": [
-        { "id": "01", "text": "Underground bunker. Four dead lines. There goes my afternoon." },
-        { "id": "02", "text": "Hang on… Why's the door closing?" },
-        { "id": "03", "text": "My card worked thirty seconds ago." },
-        { "id": "04", "text": "Fine. You handle the door. I'll handle the phones." }
+        {
+          "id": "01",
+          "speaker": "ENGINEER",
+          "text": "Underground bunker. Four dead lines. There goes my afternoon."
+        },
+        {
+          "id": "02",
+          "speaker": "ENGINEER",
+          "text": "Hang on… Why's the door closing?"
+        },
+        {
+          "id": "03",
+          "speaker": "ENGINEER",
+          "text": "My card worked thirty seconds ago."
+        },
+        {
+          "id": "27",
+          "speaker": "SUPERVISOR",
+          "text": "Control here. Looks like a security fault triggered the lockdown. I'm working on the door from up here."
+        },
+        {
+          "id": "28",
+          "speaker": "SUPERVISOR",
+          "text": "In the meantime, restore those four communication lines. That should get the systems responding again."
+        },
+        {
+          "id": "04",
+          "speaker": "ENGINEER",
+          "text": "Fine. You handle the door. I'll handle the phones."
+        }
       ]
     },
     "c1_complete": {
-      "description": "After completing C1 - first digit recovered, starting to find clues",
+      "description": "After the first minigame. The first PIN digit is recovered. The engineer discovers that the lockdown was authorised before arriving.",
       "lines": [
-        { "id": "05", "text": "Stored recordings? I'm here to fix a line. Why bring that up?" },
-        { "id": "06", "text": "Let's see what's keeping you quiet." },
-        { "id": "07", "text": "Authorised at eight fourteen… I didn't get here until ten." }
+        {
+          "id": "05",
+          "speaker": "ENGINEER",
+          "text": "First line's back. What's this? A digit hidden in the diagnostics?"
+        },
+        {
+          "id": "06",
+          "speaker": "ENGINEER",
+          "text": "There's a lockdown record here. Let's see..."
+        },
+        {
+          "id": "07",
+          "speaker": "ENGINEER",
+          "text": "Authorised at eight fourteen… I didn't get here until ten."
+        },
+        {
+          "id": "29",
+          "speaker": "SUPERVISOR",
+          "text": "Probably an old security entry. Don't worry about it. Just keep working on the lines."
+        },
+        {
+          "id": "30",
+          "speaker": "ENGINEER",
+          "text": "An old entry… Right."
+        }
       ]
     },
     "c2_complete": {
-      "description": "After completing C2 - discovering the conspiracy",
+      "description": "After the second minigame. The second digit is recovered. The engineer discovers illegal surveillance records and recognises the routing from an earlier maintenance report.",
       "lines": [
-        { "id": "08", "text": "You said it was a malfunction. Why was there a lockdown order before I arrived?" },
-        { "id": "09", "text": "Right. A precaution." },
-        { "id": "10", "text": "Home numbers. Private conversations. None of these people knew." },
-        { "id": "11", "text": "I know this routing. This is what I flagged in my report." }
+        {
+          "id": "08",
+          "speaker": "ENGINEER",
+          "text": "Another digit. And more recordings… What exactly is this system storing?"
+        },
+        {
+          "id": "09",
+          "speaker": "ENGINEER",
+          "text": "Home numbers. Private conversations. None of these people knew."
+        },
+        {
+          "id": "10",
+          "speaker": "ENGINEER",
+          "text": "Wait. I know this routing. This is what I flagged in my maintenance report."
+        },
+        {
+          "id": "11",
+          "speaker": "ENGINEER",
+          "text": "You said it was a malfunction. Why was there a lockdown order before I arrived?"
+        },
+        {
+          "id": "31",
+          "speaker": "SUPERVISOR",
+          "text": "It's a security precaution. You're looking at records you don't understand. Finish the repairs."
+        },
+        {
+          "id": "32",
+          "speaker": "ENGINEER",
+          "text": "Right. A precaution."
+        }
       ]
     },
     "c3_complete": {
-      "description": "After completing C3 - realizing the trap and finding hope",
+      "description": "After the third minigame. The third digit is recovered. A recording from a missing colleague reveals the trap and explains the four-digit escape code.",
       "lines": [
-        { "id": "12", "text": "That's why they sent me." },
-        { "id": "13", "text": "I remember that name. They said he'd transferred." },
-        { "id": "14", "text": "Four systems. Four digits. He left a way out." },
-        { "id": "15", "text": "I'm copying these recordings. All of them." }
+        {
+          "id": "33",
+          "speaker": "ENGINEER",
+          "text": "Third digit. There's a voice recording attached to this one."
+        },
+        {
+          "id": "34",
+          "speaker": "COLLEAGUE_RECORDING",
+          "text": "If you're hearing this, Control sent you down here too. Same four broken lines. Same locked door."
+        },
+        {
+          "id": "13",
+          "speaker": "ENGINEER",
+          "text": "I remember that voice. They said he'd transferred."
+        },
+        {
+          "id": "35",
+          "speaker": "COLLEAGUE_RECORDING",
+          "text": "They need an authorised engineer to bring the archive back online. Once it's restored, they can erase the evidence."
+        },
+        {
+          "id": "12",
+          "speaker": "ENGINEER",
+          "text": "That's why they sent me."
+        },
+        {
+          "id": "36",
+          "speaker": "COLLEAGUE_RECORDING",
+          "text": "I hid the exit code across all four systems. One digit in each. Get them all, and you can unlock the door."
+        },
+        {
+          "id": "37",
+          "speaker": "COLLEAGUE_RECORDING",
+          "text": "Don't trust Control. And whatever you do, don't leave the recordings behind."
+        },
+        {
+          "id": "14",
+          "speaker": "ENGINEER",
+          "text": "Four systems. Four digits. He left a way out."
+        },
+        {
+          "id": "15",
+          "speaker": "ENGINEER",
+          "text": "I'm copying these recordings. All of them."
+        }
       ]
     },
     "c4_complete": {
-      "description": "After completing C4 - all digits recovered, confrontation",
+      "description": "After the fourth minigame. The final digit is recovered. The engineer discovers the supervisor's sabotage, confronts him, and notices something watching from the vent.",
       "lines": [
-        { "id": "16", "text": "Just working through the faults. Like you asked." },
-        { "id": "17", "text": "You broke the lines yourself. Then put my name on the callout." },
-        { "id": "18", "text": "I've got the order. Your voice is on it." },
-        { "id": "19", "text": "Hello? …Yeah. Thought so." },
-        { "id": "20", "text": "That's the last digit. Time to leave." }
+        {
+          "id": "38",
+          "speaker": "SUPERVISOR",
+          "text": "You've been quiet down there. Is the final line restored?"
+        },
+        {
+          "id": "16",
+          "speaker": "ENGINEER",
+          "text": "Just working through the faults. Like you asked."
+        },
+        {
+          "id": "39",
+          "speaker": "ENGINEER",
+          "text": "Hold on. The fault records… They weren't accidents. Someone deliberately shut these systems down."
+        },
+        {
+          "id": "40",
+          "speaker": "ENGINEER",
+          "text": "There's your authorisation. The sabotage order and the lockdown. Both signed by Control."
+        },
+        {
+          "id": "17",
+          "speaker": "ENGINEER",
+          "text": "You broke the lines yourself. Then put my name on the callout."
+        },
+        {
+          "id": "41",
+          "speaker": "SUPERVISOR",
+          "text": "You were supposed to restore the archive. Nothing more."
+        },
+        {
+          "id": "18",
+          "speaker": "ENGINEER",
+          "text": "I've got the order. Your voice is on it. And I've copied everything."
+        },
+        {
+          "id": "42",
+          "speaker": "SUPERVISOR",
+          "text": "You have no idea what you're getting yourself into."
+        },
+        {
+          "id": "19",
+          "speaker": "ENGINEER",
+          "text": "Hello? …Yeah. Thought so."
+        },
+        {
+          "id": "20",
+          "speaker": "ENGINEER",
+          "text": "That's the last digit. Time to leave."
+        },
+        {
+          "id": "43",
+          "speaker": "ENGINEER",
+          "text": "Wait… Are those eyes in the vent?"
+        }
       ]
     },
     "pin_entry": {
-      "description": "During PIN entry (E1/E2)",
+      "description": "The player approaches the bunker door and enters the four-digit combination using the vault-style lock.",
       "lines": [
-        { "id": "23", "text": "There it is. Just one more lock." }
+        {
+          "id": "23",
+          "speaker": "ENGINEER",
+          "text": "There it is. Just one more lock."
+        },
+        {
+          "id": "44",
+          "speaker": "ENGINEER",
+          "text": "Four digits. Come on…"
+        }
       ]
     },
     "pin_wrong": {
-      "description": "When PIN entry fails",
+      "description": "Shown when the player enters an incorrect combination.",
       "lines": [
-        { "id": "24", "text": "No. Slow down. Check the fragments." }
+        {
+          "id": "24",
+          "speaker": "ENGINEER",
+          "text": "No. Slow down. Check the fragments."
+        }
       ]
     },
     "pin_success": {
-      "description": "When PIN entry succeeds",
+      "description": "The correct code unlocks the door. The bunker door opens, revealing the dark maintenance tunnel.",
       "lines": [
-        { "id": "25", "text": "Come on… Yes. Yes!" }
+        {
+          "id": "25",
+          "speaker": "ENGINEER",
+          "text": "Come on… Yes. Yes!"
+        },
+        {
+          "id": "45",
+          "speaker": "ENGINEER",
+          "text": "A tunnel? Of course there's a tunnel."
+        }
       ]
     },
     "tunnel": {
-      "description": "During tunnel stage (after PIN)",
+      "description": "The engineer enters the maintenance tunnel and encounters a creature that reacts to the flashlight.",
       "lines": [
-        { "id": "21", "text": "He said this leads outside. Please let him be right." },
-        { "id": "22", "text": "What was that?" }
+        {
+          "id": "21",
+          "speaker": "ENGINEER",
+          "trigger": "tunnel_enter",
+          "text": "He said this leads outside. Please let him be right."
+        },
+        {
+          "id": "22",
+          "speaker": "ENGINEER",
+          "trigger": "monster_first_detected",
+          "text": "What was that?"
+        },
+        {
+          "id": "46",
+          "speaker": "ENGINEER",
+          "trigger": "monster_reacts_to_flashlight",
+          "text": "Those eyes… It's looking at the light."
+        },
+        {
+          "id": "47",
+          "speaker": "ENGINEER",
+          "trigger": "light_mechanic_revealed",
+          "text": "Right. Light off. Stay quiet. Keep moving."
+        }
       ]
     },
     "ending": {
-      "description": "Final escape",
+      "description": "After surviving the tunnel, the engineer reaches the surface. The sun rises over the hills and the game ends.",
       "lines": [
-        { "id": "26", "text": "I'm out. Now I need to get these recordings to someone." }
+        {
+          "id": "26",
+          "speaker": "ENGINEER",
+          "text": "I'm out. Now I need to get these recordings to someone."
+        },
+        {
+          "id": "48",
+          "speaker": "SYSTEM",
+          "text": "You are out. Now make sure the truth gets out too."
+        }
       ]
     }
   }
