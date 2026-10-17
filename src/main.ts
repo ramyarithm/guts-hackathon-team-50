@@ -246,6 +246,16 @@ function startGame(gameId: string): void {
 
   state.currentGameId = gameId;
   elements.minigameRoot.innerHTML = '';
+  
+  // If starting E1 or E2, switch to PIN_ENTRY phase
+  if (gameId === 'E1' || gameId === 'E2') {
+    state.phase = 'PIN_ENTRY';
+    state.endingGame = gameId as 'E1' | 'E2';
+    // Update background for the ending game
+    elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+    elements.sceneBg.classList.add(gameId === 'E1' ? 'stage-e1' : 'stage-e2');
+  }
+  
   updateDebugButtons();
 
   // Set input mode based on game's inputCount
@@ -304,9 +314,17 @@ function handleGameComplete(): void {
     }
   } else if (state.phase === 'PIN_ENTRY') {
     // PIN entry game completed successfully
-    console.log('[Main] PIN entry successful!');
-    state.phase = 'ENDING';
-    showEnding();
+    console.log('[Main] PIN entry successful! Opening door...');
+    
+    // Clean up the game
+    if (currentAdapter) {
+      currentAdapter.dispose();
+      currentAdapter = null;
+    }
+    elements.minigameRoot.innerHTML = '';
+    
+    // Play door opening animation
+    showDoorOpening();
   }
 }
 
@@ -322,34 +340,62 @@ function advanceToNextStage(): void {
 
 function startPinEntryPhase(): void {
   state.phase = 'PIN_ENTRY';
-  console.log('[Main] Starting PIN entry phase...');
+  state.endingGame = 'E2'; // Use morse pad for PIN entry
+  console.log('[Main] Starting PIN entry phase with E2...');
+  
+  updateStageDisplay(); // Update background to PIN stage
+  startGame('E2');
+}
 
-  // For now, show a placeholder. E1/E2 will be implemented later.
-  elements.minigameRoot.innerHTML = `
-    <div style="color: #5cff9d; padding: 40px; text-align: center; font-family: monospace;">
-      <h2 style="color: #5cff9d; margin-bottom: 20px;">PIN COLLECTED</h2>
-      <div style="font-size: 48px; letter-spacing: 16px; margin: 30px 0;">
-        ${state.runPlan.pinDigits.join('')}
-      </div>
-      <p style="color: #8fa89a; margin-top: 30px;">
-        E1/E2 ending minigames coming soon...
-      </p>
-      <p style="color: #5a6a62; margin-top: 20px; font-size: 12px;">
-        The player would enter this PIN using an ending minigame.
-      </p>
-    </div>
-  `;
-
-  updateControlLabels({ left: '—', right: '—' });
+function showDoorOpening(): void {
+  // Play door opening animation then show ending
+  // Use vault frames for E1, pin door frames for E2
+  const frames = state.endingGame === 'E1' 
+    ? [
+        '/assets/scenes/vault_door_open_frame_1.png',
+        '/assets/scenes/vault_door_open_frame_2.png',
+        '/assets/scenes/vault_door_open_frame_3.png',
+      ]
+    : [
+        '/assets/scenes/pin_door_open_frame_1.png',
+        '/assets/scenes/pin_door_open_frame_2.png',
+        '/assets/scenes/pin_door_open_frame_3.png',
+      ];
+  
+  let frameIndex = 0;
+  elements.sceneBg.style.backgroundImage = `url('${frames[0]}')`;
+  
+  const interval = setInterval(() => {
+    frameIndex++;
+    if (frameIndex < frames.length) {
+      elements.sceneBg.style.backgroundImage = `url('${frames[frameIndex]}')`;
+    } else {
+      clearInterval(interval);
+      // After door opens, transition to tunnel/ending
+      setTimeout(() => {
+        showEnding();
+      }, 500);
+    }
+  }, 400);
 }
 
 function showEnding(): void {
+  state.phase = 'ENDING';
+  
+  // Show sunrise ending
+  elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
+  
   elements.minigameRoot.innerHTML = `
     <div style="color: #5cff9d; padding: 40px; text-align: center; font-family: monospace;">
-      <h2 style="color: #5cff9d;">ESCAPED!</h2>
-      <p style="color: #8fa89a;">You made it out.</p>
+      <h2 style="color: #5cff9d; margin-bottom: 20px;">ESCAPED!</h2>
+      <p style="color: #8fa89a;">You made it out of the bunker.</p>
+      <p style="color: #5a6a62; margin-top: 20px; font-size: 12px;">
+        The signal is dead. You are free.
+      </p>
     </div>
   `;
+  
+  updateControlLabels({ left: '—', right: '—' });
 }
 
 // ---- Input Handling ----

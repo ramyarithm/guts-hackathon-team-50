@@ -69,28 +69,37 @@ html, body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   /* Default to level 1 */
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level1.png');
+  background-image: url('/assets/scenes/bunker_after_level1.png');
 }
 
 /* Stage-specific backgrounds */
 #scene-bg.stage-c1 {
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level1.png');
+  background-image: url('/assets/scenes/bunker_after_level1.png');
 }
 
 #scene-bg.stage-c2 {
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level2.png');
+  background-image: url('/assets/scenes/bunker_after_level2.png');
 }
 
 #scene-bg.stage-c3 {
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level3_balanced_red_lamp.png');
+  background-image: url('/assets/scenes/bunker_after_level3_balanced_red_lamp.png');
 }
 
 #scene-bg.stage-c4 {
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level4_pin_closed_two_buttons.png');
+  background-image: url('/assets/scenes/bunker_after_level4_pin_open_two_buttons.png');
 }
 
 #scene-bg.stage-pin {
-  background-image: url('/assets/scenes/dead_signal_bunker_after_level4_vault_dial.png');
+  background-image: url('/assets/scenes/bunker_after_level4_pin_open_two_buttons.png');
+}
+
+/* Ending game backgrounds */
+#scene-bg.stage-e1 {
+  background-image: url('/assets/scenes/bunker_after_level4_vault_dial.png');
+}
+
+#scene-bg.stage-e2 {
+  background-image: url('/assets/scenes/bunker_after_level4_pin_open_two_buttons.png');
 }
 
 /* ============================================
