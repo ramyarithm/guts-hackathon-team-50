@@ -151,6 +151,7 @@ const elements = {
   controls: document.getElementById('controls') as HTMLElement,
   stages: document.querySelectorAll('.stage') as NodeListOf<HTMLDivElement>,
   minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
+  sceneBg: document.getElementById('scene-bg') as HTMLDivElement,
 };
 
 // ---- UI Updates ----
@@ -171,6 +172,14 @@ function updateControlLabels(labels: ControlLabels): void {
 
 function updateStageDisplay(): void {
   const stageIndex = STAGES.indexOf(state.currentStage);
+
+  // Update background based on stage
+  elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin');
+  if (state.phase === 'PIN_ENTRY') {
+    elements.sceneBg.classList.add('stage-pin');
+  } else {
+    elements.sceneBg.classList.add(`stage-${state.currentStage.toLowerCase()}`);
+  }
 
   elements.stages.forEach((el, i) => {
     const stageId = STAGES[i];

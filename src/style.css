@@ -1,26 +1,26 @@
-/* Please Hold - Game UI Styles */
+/* Dead Signal Theme - Immersive Bunker UI */
 
 :root {
-  /* Dark theme - bunker/terminal aesthetic */
-  --bg-dark: #0a0e0d;
-  --bg-panel: #111916;
-  --bg-panel-light: #1a2420;
-  --border: #2a3a34;
-  --border-light: #3a4a44;
+  --font-mono: "ui-monospace", Menlo, Consolas, "Courier New", monospace;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  
+  --bg-dark: #04080a;
+  --bg-panel: #0a1210;
+  --bg-panel-light: #0f1a16;
+  
+  --border: #1a2f28;
+  --border-light: #2a4a3a;
   
   --text: #8fa89a;
-  --text-bright: #c8e6d0;
   --text-dim: #5a6a62;
+  --text-bright: #c8e6d0;
   
   --accent: #5cff9d;
   --accent-dim: rgba(92, 255, 157, 0.3);
-  --accent-glow: rgba(92, 255, 157, 0.15);
+  --accent-glow: rgba(92, 255, 157, 0.08);
   
   --danger: #ff6b57;
-  --warning: #ffb347;
-  
-  --font-mono: "ui-monospace", Menlo, Consolas, "Courier New", monospace;
-  --font-sans: system-ui, -apple-system, sans-serif;
+  --danger-dim: rgba(255, 107, 87, 0.3);
 }
 
 * {
@@ -34,17 +34,15 @@ html, body {
   background: var(--bg-dark);
   color: var(--text);
   font-family: var(--font-sans);
+  overflow: hidden;
 }
 
 #app {
+  position: relative;
+  width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  max-width: 480px;
-  margin: 0 auto;
-  background: var(--bg-panel);
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
 }
 
 #app:not(.ready) {
@@ -55,20 +53,66 @@ html, body {
   visibility: visible;
 }
 
-/* Header */
+/* ============================================
+   SCENE BACKGROUND
+   ============================================ */
+
+#scene-bg {
+  position: absolute;
+  inset: 0;
+  background-color: var(--bg-dark);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  /* Pixel art - keep crisp when scaled */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  /* Default to level 1 */
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level1.png');
+}
+
+/* Stage-specific backgrounds */
+#scene-bg.stage-c1 {
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level1.png');
+}
+
+#scene-bg.stage-c2 {
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level2.png');
+}
+
+#scene-bg.stage-c3 {
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level3_balanced_red_lamp.png');
+}
+
+#scene-bg.stage-c4 {
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level4_pin_closed_two_buttons.png');
+}
+
+#scene-bg.stage-pin {
+  background-image: url('/assets/scenes/dead_signal_bunker_after_level4_vault_dial.png');
+}
+
+/* ============================================
+   DEBUG HEADER (floating overlay)
+   ============================================ */
+
 #header {
+  position: relative;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: var(--bg-panel-light);
+  padding: 8px 12px;
+  background: rgba(10, 18, 16, 0.85);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(4px);
 }
 
 #header h1 {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent);
   letter-spacing: 1px;
@@ -78,22 +122,23 @@ html, body {
 #debug-panel {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 #debug-games {
   display: flex;
+  gap: 4px;
   flex-wrap: wrap;
-  gap: 6px;
 }
 
 .debug-btn.not-ready {
-  opacity: 0.5;
+  opacity: 0.4;
   border-style: dashed;
 }
 
 .debug-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -101,41 +146,20 @@ html, body {
 
 .debug-pin {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   color: var(--accent);
   letter-spacing: 2px;
-  padding: 2px 8px;
+  padding: 2px 6px;
   background: var(--accent-glow);
   border: 1px solid var(--accent-dim);
   border-radius: 4px;
-}
-
-#toggle-game {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 4px 10px;
-  background: var(--accent-glow);
-  border: 1px solid var(--accent-dim);
-  border-radius: 4px;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-#toggle-game:hover {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
-
-#toggle-game:active {
-  transform: scale(0.97);
 }
 
 .debug-btn {
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 4px 10px;
+  font-size: 10px;
+  padding: 3px 8px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -150,41 +174,51 @@ html, body {
 }
 
 .debug-btn.active {
-  background: var(--accent-glow);
   border-color: var(--accent);
   color: var(--accent);
+  background: var(--accent-glow);
 }
 
-.debug-btn:active {
-  transform: scale(0.97);
+/* ============================================
+   PHONE CONTAINER (centered game area)
+   ============================================ */
+
+#phone-container {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
-/* Stage Navigation */
+/* Stage progress - compact bar above game */
 #stage-nav {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  background: var(--bg-panel);
+  gap: 2px;
+  padding: 4px 10px;
+  background: rgba(10, 18, 16, 0.8);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  min-width: 60px;
+  border-radius: 4px;
+  min-width: 44px;
   transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
 }
 
 .stage.active {
   border-color: var(--accent);
-  background: var(--accent-glow);
+  background: rgba(92, 255, 157, 0.1);
 }
 
 .stage.completed {
@@ -197,7 +231,7 @@ html, body {
 
 .stage-num {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -205,7 +239,7 @@ html, body {
 
 .stage-digit {
   font-family: var(--font-mono);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-dim);
   line-height: 1;
@@ -215,24 +249,25 @@ html, body {
   color: var(--text-bright);
 }
 
-/* Main Game Area */
-#game-area {
-  flex: 1;
+/* Phone frame - contains game and controls */
+#phone-frame {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  overflow: hidden;
-  background: var(--bg-dark);
+  background: #0a0f0d;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 
+    0 0 0 2px #1a2a24,
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(92, 255, 157, 0.08);
 }
 
+/* Game canvas */
 #minigame-root {
-  width: 100%;
-  max-width: 320px;
-  aspect-ratio: 320 / 480;
+  width: 280px;
+  height: 320px;
   background: #000;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -242,13 +277,15 @@ html, body {
   height: 100%;
 }
 
-/* Control Buttons */
+/* ============================================
+   CONTROL BUTTONS (inside phone)
+   ============================================ */
+
 #controls {
   display: flex;
-  gap: 16px;
-  padding: 16px;
-  background: var(--bg-panel-light);
-  border-top: 1px solid var(--border);
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 0 0;
 }
 
 .control-btn {
@@ -256,11 +293,12 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 16px 12px;
-  background: var(--bg-panel);
-  border: 2px solid var(--border);
-  border-radius: 8px;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: #0d1512;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.1s ease;
   user-select: none;
@@ -270,14 +308,14 @@ html, body {
 
 .control-btn:hover {
   border-color: var(--border-light);
-  background: var(--bg-panel-light);
+  background: #101a16;
 }
 
 .control-btn:active,
 .control-btn.pressed {
   border-color: var(--accent);
   background: var(--accent-glow);
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .control-btn.disabled {
@@ -288,13 +326,13 @@ html, body {
 .control-btn.disabled:hover,
 .control-btn.disabled:active {
   border-color: var(--border);
-  background: var(--bg-panel);
+  background: #0d1512;
   transform: none;
 }
 
 .control-btn .label {
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-bright);
   text-transform: uppercase;
@@ -303,7 +341,7 @@ html, body {
 
 .control-btn .key-hint {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 9px;
   color: var(--text-dim);
 }
 
@@ -326,109 +364,55 @@ html, body {
 }
 
 .control-btn--single {
-  width: 100%;
-  max-width: none;
-  padding: 24px 48px;
+  flex: 1;
+  padding: 12px 8px;
 }
 
 .control-btn--single .label {
-  font-size: 20px;
-}
-
-.control-btn--single .key-hint {
   font-size: 14px;
 }
 
-/* Status messages */
-#status {
-  text-align: center;
-  padding: 8px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  background: var(--bg-dark);
-}
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
 
-#status.success {
-  color: var(--accent);
-}
-
-#status.error {
-  color: var(--danger);
-}
-
-/* Game info overlay */
-.game-info {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-dim);
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-/* Responsive adjustments */
-@media (max-height: 700px) {
-  #header {
-    padding: 8px 12px;
+@media (min-width: 400px) {
+  #phone-frame {
+    padding: 10px;
   }
   
-  #header h1 {
-    font-size: 14px;
+  #minigame-root {
+    width: 300px;
+    height: 340px;
+  }
+  
+  .control-btn {
+    padding: 12px 10px;
+  }
+  
+  .control-btn .label {
+    font-size: 13px;
+  }
+}
+
+@media (min-height: 700px) {
+  #phone-container {
+    padding: 24px;
   }
   
   #stage-nav {
-    padding: 12px;
-    gap: 8px;
+    margin-bottom: 12px;
   }
   
   .stage {
     padding: 6px 12px;
-    min-width: 50px;
   }
   
   .stage-digit {
     font-size: 20px;
   }
   
-  #game-area {
-    padding: 8px;
+  #minigame-root {
+    height: 360px;
   }
-  
-  #controls {
-    padding: 12px;
-    gap: 12px;
-  }
-  
-  .control-btn {
-    padding: 12px 10px;
-  }
-}
-
-/* Focus styles for accessibility */
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Scanline effect for retro feel (optional) */
-#game-area::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.1) 0px,
-    rgba(0, 0, 0, 0.1) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  opacity: 0.3;
 }
