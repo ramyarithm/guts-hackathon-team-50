@@ -41,7 +41,9 @@ export {
 // Each module calls register() when imported
 import "./g1-signal-relay";
 import "./g2-lane-crossing";
+import "./g3-tetris";
 
 // Re-export game entries for direct access if needed
 export { g1Entry, G1_ID, createG1Adapter } from "./g1-signal-relay";
 export { g2Entry, G2_ID, createG2Adapter } from "./g2-lane-crossing";
+export { g3Entry, G3_ID, createG3Adapter } from "./g3-tetris";
