@@ -90,19 +90,33 @@ function generateRunPlan(seed: number): RunPlan {
     console.warn(`[Main] Only ${twoButtonGames.length} two-button games available, need 3 for C2-C4`);
   }
 
+  // Track used games to prevent duplicates
+  const usedGameIds = new Set<string>();
+
   // C1: Random one-button game
   const shuffledOneBtn = shuffleArray(oneButtonGames, rng);
   const c1Game = shuffledOneBtn[0].id;
+  usedGameIds.add(c1Game);
 
-  // C2-C4: Random two-button games (no repeats)
-  const shuffledTwoBtn = shuffleArray(twoButtonGames, rng);
-  const c2Game = shuffledTwoBtn[0]?.id ?? c1Game; // Fallback if not enough games
-  const c3Game = shuffledTwoBtn[1]?.id ?? shuffledTwoBtn[0]?.id ?? c1Game;
-  const c4Game = shuffledTwoBtn[2]?.id ?? shuffledTwoBtn[1]?.id ?? shuffledTwoBtn[0]?.id ?? c1Game;
+  // C2-C4: Random two-button games (no repeats, also excluding C1 game)
+  const availableTwoBtn = shuffleArray(twoButtonGames, rng).filter(g => !usedGameIds.has(g.id));
+  
+  const games: string[] = [c1Game];
+  
+  for (let i = 0; i < 3; i++) {
+    if (availableTwoBtn[i]) {
+      games.push(availableTwoBtn[i].id);
+      usedGameIds.add(availableTwoBtn[i].id);
+    } else {
+      // Fallback: reuse a game if not enough available (shouldn't happen with 5+ two-button games)
+      console.warn(`[Main] Not enough unique two-button games for stage ${i + 2}`);
+      games.push(availableTwoBtn[0]?.id ?? c1Game);
+    }
+  }
 
   const plan: RunPlan = {
     seed,
-    games: [c1Game, c2Game, c3Game, c4Game],
+    games,
     pinDigits: [
       Math.floor(rng() * 10).toString(),
       Math.floor(rng() * 10).toString(),
@@ -113,6 +127,13 @@ function generateRunPlan(seed: number): RunPlan {
 
   console.log('[Main] Generated run plan:', plan);
   console.log('[Main] PIN for this run:', plan.pinDigits.join(''));
+  
+  // Verify no duplicates
+  const uniqueGames = new Set(plan.games);
+  if (uniqueGames.size !== plan.games.length) {
+    console.warn('[Main] Warning: Run plan contains duplicate games!', plan.games);
+  }
+  
   return plan;
 }
 
