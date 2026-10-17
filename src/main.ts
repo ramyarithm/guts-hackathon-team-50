@@ -64,6 +64,7 @@ interface GameState {
   digits: Record<StageId, string>;
   pinEntered: string;
   endingGame: 'E1' | 'E2' | null;
+  currentGameId: string; // The actually-running game (may differ from runPlan when debugging)
 }
 
 const STAGES: StageId[] = ['C1', 'C2', 'C3', 'C4'];
@@ -116,14 +117,16 @@ function generateRunPlan(seed: number): RunPlan {
 
 function createInitialState(): GameState {
   const seed = Date.now();
+  const runPlan = generateRunPlan(seed);
   return {
     phase: 'STAGES',
     currentStage: 'C1',
-    runPlan: generateRunPlan(seed),
+    runPlan,
     completed: { C1: false, C2: false, C3: false, C4: false },
     digits: { C1: '?', C2: '?', C3: '?', C4: '?' },
     pinEntered: '',
     endingGame: null,
+    currentGameId: runPlan.games[0], // Start with C1's game
   };
 }
 
@@ -179,11 +182,7 @@ function updateDebugButtons(): void {
 }
 
 function getCurrentGameId(): string {
-  if (state.phase === 'STAGES') {
-    const stageIndex = STAGES.indexOf(state.currentStage);
-    return state.runPlan.games[stageIndex];
-  }
-  return state.endingGame ?? '';
+  return state.currentGameId;
 }
 
 /** Build one debug button per registered game (every game, pool or special, ready or not). */
@@ -222,6 +221,7 @@ function startGame(gameId: string): void {
     currentAdapter = null;
   }
 
+  state.currentGameId = gameId;
   elements.minigameRoot.innerHTML = '';
   updateDebugButtons();
 

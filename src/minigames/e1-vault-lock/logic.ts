@@ -13,7 +13,7 @@ export type { Button, ControlLabels } from "../types";
 // ---- Tuning -----------------------------------------------------------------
 
 /** Positions on the dial, 0..DIAL_SIZE-1, wrapping. */
-export const DIAL_SIZE = 12;
+export const DIAL_SIZE = 10;
 /** Numbers in the combination. */
 export const CODE_LENGTH = 3;
 /** Where the dial sits when an instance starts. The first number is never this. */
