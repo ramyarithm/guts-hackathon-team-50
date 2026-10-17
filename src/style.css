@@ -101,6 +101,33 @@ html, body {
   transform: scale(0.97);
 }
 
+.debug-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.debug-btn:hover {
+  border-color: var(--border-light);
+  color: var(--text);
+}
+
+.debug-btn.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.debug-btn:active {
+  transform: scale(0.97);
+}
+
 /* Stage Navigation */
 #stage-nav {
   display: flex;

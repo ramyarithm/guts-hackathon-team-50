@@ -38,7 +38,9 @@ let currentAdapter: MinigameAdapter | null = null;
 // ---- DOM Elements ----
 
 const elements = {
-  toggleGame: document.getElementById('toggle-game') as HTMLButtonElement,
+  btnG1: document.getElementById('btn-g1') as HTMLButtonElement,
+  btnG2: document.getElementById('btn-g2') as HTMLButtonElement,
+  btnG4: document.getElementById('btn-g4') as HTMLButtonElement,
   btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
   leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
@@ -82,12 +84,10 @@ function updateStageDisplay(): void {
   });
 }
 
-function updateToggleButton(): void {
-  const games = getReadyGames();
-  const otherGame = games.find(g => g.id !== state.currentGameId);
-  if (otherGame) {
-    elements.toggleGame.textContent = `Switch to ${otherGame.id}`;
-  }
+function updateDebugButtons(): void {
+  elements.btnG1.classList.toggle('active', state.currentGameId === 'G1');
+  elements.btnG2.classList.toggle('active', state.currentGameId === 'G2');
+  elements.btnG4.classList.toggle('active', state.currentGameId === 'G4');
 }
 
 // ---- Game Management ----
@@ -104,7 +104,7 @@ function startGame(gameId: string): void {
   
   // Update state
   state.currentGameId = gameId;
-  updateToggleButton();
+  updateDebugButtons();
   
   // Create and start new adapter
   try {
@@ -233,16 +233,25 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-// Debug toggle button
-elements.toggleGame.addEventListener('click', () => {
-  const games = getReadyGames();
-  const currentIndex = games.findIndex(g => g.id === state.currentGameId);
-  const nextIndex = (currentIndex + 1) % games.length;
-  const nextGame = games[nextIndex];
-  
-  if (nextGame) {
-    console.log(`[Main] Switching from ${state.currentGameId} to ${nextGame.id}`);
-    startGame(nextGame.id);
+// Debug game selection buttons
+elements.btnG1.addEventListener('click', () => {
+  if (state.currentGameId !== 'G1') {
+    console.log('[Main] Switching to G1');
+    startGame('G1');
+  }
+});
+
+elements.btnG2.addEventListener('click', () => {
+  if (state.currentGameId !== 'G2') {
+    console.log('[Main] Switching to G2');
+    startGame('G2');
+  }
+});
+
+elements.btnG4.addEventListener('click', () => {
+  if (state.currentGameId !== 'G4') {
+    console.log('[Main] Switching to G4');
+    startGame('G4');
   }
 });
 
@@ -267,7 +276,7 @@ function init(): void {
   
   // Initialize UI
   updateStageDisplay();
-  updateToggleButton();
+  updateDebugButtons();
   
   // Start the first game
   startGame(state.currentGameId);
