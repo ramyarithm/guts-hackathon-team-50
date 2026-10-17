@@ -2,10 +2,10 @@
 
 GUTS Hackathon — Team 50, University of Glasgow.
 
-A two-button narrative escape game: repair four bunker systems, recover four PIN digits, and escape with the evidence.
+A two-button narrative escape game: each new run randomly selects four distinct minigames from a pool of up to seven. Complete them to recover four PIN digits and escape with the evidence.
 
 ## Start here
 
-Read the [story, challenge ownership and integration guide](docs/PLEASE_HOLD.md) to claim a challenge and build independently.
+Read the [story, minigame ownership and integration guide](docs/PLEASE_HOLD.md) to claim a game and build independently.
 
-The required game is intro → four challenges → PIN door → escape ending. The tunnel monster is an optional stretch goal. Puzzle mechanics remain open for each challenge's owner.
+Build four to seven games as time allows. Gameplay selection and order change per run; four fixed story stages keep the narrative coherent. The required flow is intro → four random minigames with story reveals → PIN door → escape ending. The tunnel monster remains optional. Minigame mechanics are open for each owner.
