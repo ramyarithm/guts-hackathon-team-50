@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>G2 dev harness</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%232f7d4f'/%3E%3C/svg%3E" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #1a1a1f;
+        color: #eee;
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        min-height: 100vh;
+      }
+      h1 { font-size: 14px; margin: 0; color: #aaa; }
+      #minigame-root {
+        width: min(100%, 360px);
+        aspect-ratio: 2 / 3;
+        border: 1px solid #444;
+        background: #111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .controls { display: flex; gap: 12px; width: min(100%, 360px); }
+      .controls button {
+        flex: 1;
+        padding: 14px 8px;
+        font: inherit;
+        font-weight: bold;
+        color: #fff;
+        background: #2f7d4f;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .controls button:active { background: #256a40; }
+      #btn-new {
+        font: inherit;
+        padding: 8px 12px;
+        color: #eee;
+        background: #333;
+        border: 1px solid #555;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #status { font-size: 12px; color: #aaa; text-align: center; max-width: 360px; }
+      #status.done { color: #6fe39a; }
+      .hint { font-size: 11px; color: #888; }
+      #log {
+        width: min(100%, 360px);
+        max-height: 180px;
+        overflow: auto;
+        font: 11px ui-monospace, Menlo, monospace;
+        color: #999;
+        border-top: 1px solid #333;
+        padding-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>G2 — lane crossing — dev harness</h1>
+    <div id="minigame-root"></div>
+    <div class="controls">
+      <button id="btn-left" type="button">LEFT</button>
+      <button id="btn-right" type="button">RIGHT</button>
+    </div>
+    <div class="hint">Keyboard: ArrowLeft / ArrowDown / A → LEFT, ArrowRight / ArrowUp / D → RIGHT</div>
+    <button id="btn-new" type="button">New instance (dispose + recreate)</button>
+    <div id="status"></div>
+    <div id="log"></div>
+    <script type="module" src="/src/harness.ts"></script>
+  </body>
+</html>
