@@ -1,5 +1,5 @@
 /**
- * G3 Rhythm Game - Canvas rendering
+ * G4 Rhythm Game - Canvas rendering
  * 
  * Visual elements:
  * - Beat indicator (pulsing circle that syncs with the beat)

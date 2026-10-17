@@ -1,5 +1,5 @@
 /**
- * G3 Rhythm Game - Adapter
+ * G4 Rhythm Game - Adapter
  * 
  * One-button rhythm game where the player taps in time to music.
  * Uses LEFT button (or spacebar) only - RIGHT is inactive.

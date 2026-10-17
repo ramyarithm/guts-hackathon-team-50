@@ -1,11 +1,11 @@
 /**
- * G3 Rhythm Game - Pure game logic
+ * G4 Rhythm Game - Pure game logic
  * 
  * A one-button rhythm game where the player taps in time to music.
  * - First 5 seconds: plays drums version (with beat)
  * - After 5 seconds: switches to beatless version, player must keep the rhythm
  * - Tracker bar fills with accurate taps, drains with misses
- * - 103 BPM = ~582.5ms per beat
+ * - 129 BPM = ~465ms per beat
  */
 
 import type { ControlLabels } from "../types";
