@@ -40,6 +40,7 @@ let currentAdapter: MinigameAdapter | null = null;
 const elements = {
   btnG1: document.getElementById('btn-g1') as HTMLButtonElement,
   btnG2: document.getElementById('btn-g2') as HTMLButtonElement,
+  btnG3: document.getElementById('btn-g3') as HTMLButtonElement,
   btnG4: document.getElementById('btn-g4') as HTMLButtonElement,
   btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
@@ -87,6 +88,7 @@ function updateStageDisplay(): void {
 function updateDebugButtons(): void {
   elements.btnG1.classList.toggle('active', state.currentGameId === 'G1');
   elements.btnG2.classList.toggle('active', state.currentGameId === 'G2');
+  elements.btnG3.classList.toggle('active', state.currentGameId === 'G3');
   elements.btnG4.classList.toggle('active', state.currentGameId === 'G4');
 }
 
@@ -245,6 +247,13 @@ elements.btnG2.addEventListener('click', () => {
   if (state.currentGameId !== 'G2') {
     console.log('[Main] Switching to G2');
     startGame('G2');
+  }
+});
+
+elements.btnG3.addEventListener('click', () => {
+  if (state.currentGameId !== 'G3') {
+    console.log('[Main] Switching to G3');
+    startGame('G3');
   }
 });
 
