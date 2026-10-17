@@ -303,6 +303,34 @@ html, body {
   color: var(--text-dim);
 }
 
+/* Single button mode */
+#controls.single-button-mode #btn-left,
+#controls.single-button-mode #btn-right {
+  display: none;
+}
+
+#controls.single-button-mode #btn-single {
+  display: flex;
+}
+
+#controls:not(.single-button-mode) #btn-single {
+  display: none;
+}
+
+.control-btn--single {
+  width: 100%;
+  max-width: none;
+  padding: 24px 48px;
+}
+
+.control-btn--single .label {
+  font-size: 20px;
+}
+
+.control-btn--single .key-hint {
+  font-size: 14px;
+}
+
 /* Status messages */
 #status {
   text-align: center;

@@ -13,6 +13,7 @@ import './style.css';
 import {
   createAdapter,
   getAllGames,
+  getInputCount,
   getReadyGames,
   getOneButtonGames,
   getTwoButtonGames,
@@ -71,6 +72,7 @@ const STAGES: StageId[] = ['C1', 'C2', 'C3', 'C4'];
 
 let state: GameState;
 let currentAdapter: MinigameAdapter | null = null;
+let currentInputCount: 1 | 2 = 2; // Track current game's input mode
 
 // ---- Run Plan Generation ----
 
@@ -145,6 +147,9 @@ const elements = {
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
   leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
   rightLabel: document.querySelector('#btn-right .label') as HTMLSpanElement,
+  btnSingle: document.getElementById('btn-single') as HTMLButtonElement,
+  singleLabel: document.querySelector('#btn-single .label') as HTMLSpanElement,
+  controls: document.getElementById('controls') as HTMLElement,
   stages: document.querySelectorAll('.stage') as NodeListOf<HTMLDivElement>,
   minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
 };
@@ -154,6 +159,9 @@ const elements = {
 function updateControlLabels(labels: ControlLabels): void {
   elements.leftLabel.textContent = labels.left;
   elements.rightLabel.textContent = labels.right;
+  
+  // For single button mode, use the left label
+  elements.singleLabel.textContent = labels.left || labels.right || 'Action';
 
   const leftDisabled = labels.left === '—' || labels.left === '';
   const rightDisabled = labels.right === '—' || labels.right === '';
@@ -232,6 +240,11 @@ function startGame(gameId: string): void {
   elements.minigameRoot.innerHTML = '';
   updateDebugButtons();
 
+  // Set input mode based on game's inputCount
+  const inputCount = getInputCount(gameId);
+  currentInputCount = inputCount;
+  elements.controls.classList.toggle('single-button-mode', inputCount === 1);
+
   try {
     currentAdapter = createAdapter(gameId);
     currentAdapter.startMinigame({
@@ -243,7 +256,7 @@ function startGame(gameId: string): void {
       container: elements.minigameRoot,
       targetPin: state.runPlan.pinDigits, // For E1/E2 ending games
     } as any);
-    console.log(`[Main] Started ${gameId} for stage ${state.currentStage}`);
+    console.log(`[Main] Started ${gameId} for stage ${state.currentStage} (${inputCount}-button)`);
   } catch (error) {
     console.error(`[Main] Failed to start ${gameId}:`, error);
     elements.minigameRoot.innerHTML = `
@@ -374,6 +387,16 @@ elements.btnRight.addEventListener('touchstart', (e) => {
 });
 elements.btnRight.addEventListener('touchend', () => handleButtonRelease(elements.btnRight));
 
+// Single button (sends LEFT for one-button games)
+elements.btnSingle.addEventListener('mousedown', () => handleButtonPress('LEFT', elements.btnSingle));
+elements.btnSingle.addEventListener('mouseup', () => handleButtonRelease(elements.btnSingle));
+elements.btnSingle.addEventListener('mouseleave', () => handleButtonRelease(elements.btnSingle));
+elements.btnSingle.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  handleButtonPress('LEFT', elements.btnSingle);
+});
+elements.btnSingle.addEventListener('touchend', () => handleButtonRelease(elements.btnSingle));
+
 // Keyboard input
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
@@ -385,6 +408,12 @@ window.addEventListener('keydown', (e) => {
   } else if (key === 'arrowright' || key === 'd') {
     e.preventDefault();
     handleButtonPress('RIGHT', elements.btnRight);
+  } else if (key === 's') {
+    // S key for single-button games (sends LEFT)
+    e.preventDefault();
+    if (currentInputCount === 1) {
+      handleButtonPress('LEFT', elements.btnSingle);
+    }
   }
 });
 
@@ -394,6 +423,8 @@ window.addEventListener('keyup', (e) => {
     handleButtonRelease(elements.btnLeft);
   } else if (key === 'arrowright' || key === 'd') {
     handleButtonRelease(elements.btnRight);
+  } else if (key === 's') {
+    handleButtonRelease(elements.btnSingle);
   }
 });
 

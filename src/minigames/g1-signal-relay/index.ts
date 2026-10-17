@@ -143,7 +143,7 @@ export const g1Entry: MinigameRegistryEntry = {
   id: G1_ID,
   name: "Signal Relay",
   ready: true,
-  inputCount: 2, // Both buttons pulse
+  inputCount: 1, // One-button game
   adapter: createG1Adapter,
 };
 
