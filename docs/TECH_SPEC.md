@@ -17,15 +17,17 @@ Edit the Owner and Status columns when claiming work. Puzzle mechanics and solut
 
 | ID | Task | Owner | Status | Required output |
 | --- | --- | --- | --- | --- |
-| G1 | Minigame placeholder 1 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G2 | Minigame placeholder 2 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G3 | Minigame placeholder 3 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G4 | Minigame placeholder 4 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G5 | Minigame placeholder 5 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G6 | Minigame placeholder 6 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| G7 | Minigame placeholder 7 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event; eligible when ready |
-| CORE | Main scene, shared state, intro, PIN door and ending | Unclaimed | Not started | Complete playable flow joining all four slots |
-| BOSS | Final difficult level after the door | Unclaimed | Not started | Fixed adapter; never drawn from the random pool |
+| G1 | Signal Relay — flappy-bird style pulse game | Implemented | Ready | 2-button adapter; completion event |
+| G2 | Lane Crossing — frogger-style crossing | Implemented | Ready | 2-button adapter; completion event |
+| G3 | Core Defrag — tetris-style block stacking | Implemented | Ready | 2-button adapter; completion event |
+| G4 | Rhythm Game — tap to the beat | Implemented | Ready | 1-button adapter; completion event |
+| G5 | Minigame placeholder 5 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event |
+| G6 | Pressure Valves — balance two tanks | Implemented | Ready | 2-button adapter; completion event |
+| G7 | Minigame placeholder 7 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event |
+| E1 | Ending minigame 1 — PIN entry variant | Unclaimed | Not started | PIN entry adapter; validates against pinDigits |
+| E2 | Ending minigame 2 — PIN entry variant | Unclaimed | Not started | PIN entry adapter; validates against pinDigits |
+| CORE | Main scene, shared state, intro, PIN door and ending | In progress | Partial | Run plan generation done; PIN entry phase placeholder |
+| BOSS | Final difficult level after PIN entry | Unclaimed | Not started | Fixed adapter; never drawn from the random pool |
 
 ## 1. Seeded randomness
 
@@ -128,16 +130,31 @@ progress = {
 ## 5. Shared flow
 
 1. Create and retain a random four-game run plan from the ready pool, then show the intro scene.
-2. Main scene: select an available station.
-3. Run the selected minigame assigned to that narrative stage in this run.
-4. On its first successful completion, save completion, reveal its assigned PIN digit and unlock its story.
-5. Return to the main scene; completed stations remain completed. Repeat for the remaining stations.
-6. After all four are complete, enable PIN entry at the security door.
-7. Correct PIN opens the door into the escape tunnel.
-8. The player faces the boss — a fixed, more difficult level.
-9. Completing the boss triggers the escape ending.
+2. Main scene: play stages in C1 → C2 → C3 → C4 order.
+3. **C1**: Run a randomly selected **one-button game** (introduces controls).
+4. **C2–C4**: Run randomly selected **two-button games** (no repeats within a run).
+5. On each stage's first successful completion, save completion, reveal its assigned PIN digit.
+6. After all four stages are complete, transition to the **PIN entry phase**.
+7. Run an ending minigame (E1 or E2) where the player enters the collected 4-digit PIN.
+8. Correct PIN entry triggers the escape ending (or boss, if implemented).
 
-For the prototype, unlock narrative stages in C1 → C2 → C3 → C4 order. Players can revisit completed story reveals without replaying challenges. This is a shared-flow default, not a prescription for puzzle mechanics.
+### Stage game selection
+
+```js
+generateRunPlan(seed, readyGames) {
+  const rng = seededPrng(seed);
+  const oneButton = shuffle(readyGames.filter(g => g.inputCount === 1), rng);
+  const twoButton = shuffle(readyGames.filter(g => g.inputCount === 2), rng);
+  
+  return [
+    oneButton[0].id,   // C1: always one-button
+    twoButton[0].id,   // C2: two-button
+    twoButton[1].id,   // C3: two-button
+    twoButton[2].id,   // C4: two-button
+  ];
+}
+// Guards: need at least 1 one-button game and 3 two-button games.
+```
 
 ### Persistent progress display
 
@@ -234,9 +251,53 @@ A development placeholder displays “Minigame not implemented yet” plus curre
 
 Owners should share their adapter name, control labels, entry/exit behaviour and completion signal with the core integrator before merging. They must not modify another slot or the central configuration to make their puzzle work.
 
-## 10. Boss
+## 10. Ending Minigames (E1/E2)
 
-The boss is a **fixed, more difficult level** reached after the PIN door opens. It is not drawn from the random pool.
+After all four stages are complete, the player enters the **PIN entry phase** using one of two ending minigames: **E1** or **E2**. These are separate from the G1–G7 pool and are never drawn during stages C1–C4.
+
+### Purpose
+
+The ending minigames provide a final challenge where the player must enter the collected 4-digit PIN. Unlike the stage minigames which test reflexes or puzzle-solving, the ending minigames test the player's memory of the PIN they collected.
+
+### Selection
+
+- E1 and E2 are **not** part of the random selection pool.
+- The controller chooses one (E1 or E2) after C4 completes.
+- Both must be implemented before the ending is playable.
+
+### Interface
+
+Ending minigames use the same `MinigameAdapter` interface as stage minigames:
+
+```js
+startMinigame({
+  gameId,          // "E1" or "E2"
+  stageId,         // "PIN" (special stage for ending)
+  runId,           // same run as stages
+  setControlLabels,
+  onComplete       // called when PIN is entered correctly
+});
+```
+
+### Completion
+
+- `onComplete` is called when the player successfully enters the correct PIN.
+- Incorrect entries should provide feedback but allow retry.
+- The ending minigame has access to `GAME_CONFIG.pinDigits` to validate entry.
+
+### Design guidelines
+
+- E1 and E2 should have **different mechanics** for entering the PIN.
+- Both must use only LEFT and RIGHT buttons.
+- The player should see the collected digits displayed somewhere during entry.
+- Example mechanics:
+  - **Dial-style**: LEFT/RIGHT cycle through digits, confirm each position
+  - **Memory sequence**: Replay the digits in order with timing
+  - **Pattern matching**: Select correct digits from moving options
+
+## 11. Boss (Post-PIN)
+
+The boss is a **fixed, more difficult level** reached after the PIN is entered correctly. It is not drawn from the random pool.
 
 - Declared as its own config entry with its own adapter and its own declared `inputCount`.
 - Never selected by `seededRunPlan`, and never affects the four-stage selection.

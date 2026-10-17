@@ -172,3 +172,38 @@ elements.btnG[N].addEventListener('click', () => {
 - [ ] `dispose()` cleans up all resources
 - [ ] TypeScript compiles without errors
 - [ ] Game added to `minigames/index.ts` imports and exports
+
+
+## Game Selection Rules
+
+The game controller selects minigames as follows:
+
+- **C1**: Always a random **one-button game** (introduces controls)
+- **C2–C4**: Always random **two-button games** (no repeats within a run)
+
+**Minimum requirements to run:**
+- At least 1 ready one-button game
+- At least 3 ready two-button games
+
+## Ending Minigames (E1/E2)
+
+E1 and E2 are special ending minigames for PIN entry. They are **not** part of the G1–G7 pool and are never selected for stages C1–C4.
+
+### Location
+```
+src/minigames/e1-[name]/
+src/minigames/e2-[name]/
+```
+
+### Key Differences from Stage Games
+- Use `stageId: "PIN"` instead of C1–C4
+- Must validate the entered PIN against the collected digits
+- Call `onComplete()` only when the correct PIN is entered
+- Not registered in the same pool as G1–G7
+
+### PIN Validation
+The ending game receives the collected PIN through `state.runPlan.pinDigits`. It should:
+1. Let the player enter 4 digits using LEFT/RIGHT controls
+2. Validate against the PIN generated for this run (same seed = same PIN)
+3. Allow retry on incorrect entry
+4. Call `onComplete()` on correct entry

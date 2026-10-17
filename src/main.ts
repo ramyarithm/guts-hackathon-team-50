@@ -1,40 +1,131 @@
 /**
  * Please Hold - Main Game Controller
- * 
- * Simple SPA that manages game stages and routes button inputs to minigames.
+ *
+ * Game Flow:
+ * 1. C1: Random one-button game (introduces controls)
+ * 2. C2-C4: Random two-button games (no repeats within a run)
+ * 3. After C4: PIN entry phase using E1 or E2 ending minigame
+ *
+ * Each completed stage reveals one digit of the 4-digit PIN.
  */
 
 import './style.css';
-import { 
-  createAdapter, 
+import {
+  createAdapter,
   getAllGames,
-  getReadyGames, 
-  type Button, 
-  type ControlLabels, 
-  type MinigameAdapter 
+  getReadyGames,
+  getOneButtonGames,
+  getTwoButtonGames,
+  type Button,
+  type ControlLabels,
+  type MinigameAdapter,
 } from './minigames';
+
+// ---- Seeded PRNG ----
+
+/** mulberry32: deterministic PRNG for run reproducibility */
+function createSeededRng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Fisher-Yates shuffle using seeded RNG */
+function shuffleArray<T>(arr: T[], rng: () => number): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 // ---- Game State ----
 
-interface GameState {
-  currentStage: 'C1' | 'C2' | 'C3' | 'C4';
-  currentGameId: string;
-  runId: string;
-  completed: Record<string, boolean>;
-  digits: Record<string, string>;
+type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'ENDING';
+type StageId = 'C1' | 'C2' | 'C3' | 'C4';
+
+interface RunPlan {
+  seed: number;
+  games: string[]; // [C1 game, C2 game, C3 game, C4 game]
+  pinDigits: string[]; // 4 random digits generated from seed
 }
 
-const PIN_DIGITS = ['7', '3', '1', '9']; // From TECH_SPEC
+interface GameState {
+  phase: GamePhase;
+  currentStage: StageId;
+  runPlan: RunPlan;
+  completed: Record<StageId, boolean>;
+  digits: Record<StageId, string>;
+  pinEntered: string;
+  endingGame: 'E1' | 'E2' | null;
+}
 
-let state: GameState = {
-  currentStage: 'C1',
-  currentGameId: 'G1',
-  runId: `run-${Date.now()}`,
-  completed: { C1: false, C2: false, C3: false, C4: false },
-  digits: { C1: '?', C2: '?', C3: '?', C4: '?' },
-};
+const STAGES: StageId[] = ['C1', 'C2', 'C3', 'C4'];
 
+let state: GameState;
 let currentAdapter: MinigameAdapter | null = null;
+
+// ---- Run Plan Generation ----
+
+function generateRunPlan(seed: number): RunPlan {
+  const rng = createSeededRng(seed);
+
+  const oneButtonGames = getOneButtonGames();
+  const twoButtonGames = getTwoButtonGames();
+
+  // Validate we have enough games
+  if (oneButtonGames.length === 0) {
+    console.error('[Main] No one-button games available for C1!');
+    throw new Error('Need at least one one-button game for C1');
+  }
+  if (twoButtonGames.length < 3) {
+    console.warn(`[Main] Only ${twoButtonGames.length} two-button games available, need 3 for C2-C4`);
+  }
+
+  // C1: Random one-button game
+  const shuffledOneBtn = shuffleArray(oneButtonGames, rng);
+  const c1Game = shuffledOneBtn[0].id;
+
+  // C2-C4: Random two-button games (no repeats)
+  const shuffledTwoBtn = shuffleArray(twoButtonGames, rng);
+  const c2Game = shuffledTwoBtn[0]?.id ?? c1Game; // Fallback if not enough games
+  const c3Game = shuffledTwoBtn[1]?.id ?? shuffledTwoBtn[0]?.id ?? c1Game;
+  const c4Game = shuffledTwoBtn[2]?.id ?? shuffledTwoBtn[1]?.id ?? shuffledTwoBtn[0]?.id ?? c1Game;
+
+  const plan: RunPlan = {
+    seed,
+    games: [c1Game, c2Game, c3Game, c4Game],
+    pinDigits: [
+      Math.floor(rng() * 10).toString(),
+      Math.floor(rng() * 10).toString(),
+      Math.floor(rng() * 10).toString(),
+      Math.floor(rng() * 10).toString(),
+    ],
+  };
+
+  console.log('[Main] Generated run plan:', plan);
+  console.log('[Main] PIN for this run:', plan.pinDigits.join(''));
+  return plan;
+}
+
+function createInitialState(): GameState {
+  const seed = Date.now();
+  return {
+    phase: 'STAGES',
+    currentStage: 'C1',
+    runPlan: generateRunPlan(seed),
+    completed: { C1: false, C2: false, C3: false, C4: false },
+    digits: { C1: '?', C2: '?', C3: '?', C4: '?' },
+    pinEntered: '',
+    endingGame: null,
+  };
+}
 
 // ---- DOM Elements ----
 
@@ -53,28 +144,25 @@ const elements = {
 function updateControlLabels(labels: ControlLabels): void {
   elements.leftLabel.textContent = labels.left;
   elements.rightLabel.textContent = labels.right;
-  
-  // Handle disabled state for inactive buttons
+
   const leftDisabled = labels.left === '—' || labels.left === '';
   const rightDisabled = labels.right === '—' || labels.right === '';
-  
+
   elements.btnLeft.classList.toggle('disabled', leftDisabled);
   elements.btnRight.classList.toggle('disabled', rightDisabled);
 }
 
 function updateStageDisplay(): void {
-  const stageIndex = ['C1', 'C2', 'C3', 'C4'].indexOf(state.currentStage);
-  
+  const stageIndex = STAGES.indexOf(state.currentStage);
+
   elements.stages.forEach((el, i) => {
-    const stageId = `C${i + 1}` as keyof typeof state.completed;
+    const stageId = STAGES[i];
     const digitEl = el.querySelector('.stage-digit') as HTMLSpanElement;
-    
-    // Update digit display
+
     digitEl.textContent = state.digits[stageId];
-    
-    // Update stage states
+
     el.classList.remove('active', 'completed');
-    if (i === stageIndex) {
+    if (state.phase === 'STAGES' && i === stageIndex) {
       el.classList.add('active');
     }
     if (state.completed[stageId]) {
@@ -84,9 +172,18 @@ function updateStageDisplay(): void {
 }
 
 function updateDebugButtons(): void {
+  const currentGameId = getCurrentGameId();
   elements.debugGames.querySelectorAll<HTMLButtonElement>('.debug-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.gameId === state.currentGameId);
+    btn.classList.toggle('active', btn.dataset.gameId === currentGameId);
   });
+}
+
+function getCurrentGameId(): string {
+  if (state.phase === 'STAGES') {
+    const stageIndex = STAGES.indexOf(state.currentStage);
+    return state.runPlan.games[stageIndex];
+  }
+  return state.endingGame ?? '';
 }
 
 /** Build one debug button per registered game (every game, pool or special, ready or not). */
@@ -101,7 +198,7 @@ function buildDebugButtons(): void {
     btn.title = `${game.name} (${game.inputCount} button${game.inputCount === 1 ? '' : 's'})${game.ready ? '' : ' - not ready'}`;
     if (!game.ready) btn.classList.add('not-ready');
     btn.addEventListener('click', () => {
-      if (state.currentGameId !== game.id) {
+      if (getCurrentGameId() !== game.id) {
         console.log(`[Main] Switching to ${game.id}`);
         startGame(game.id);
       }
@@ -112,27 +209,28 @@ function buildDebugButtons(): void {
 
 // ---- Game Management ----
 
+function startCurrentStageGame(): void {
+  const stageIndex = STAGES.indexOf(state.currentStage);
+  const gameId = state.runPlan.games[stageIndex];
+  startGame(gameId);
+}
+
 function startGame(gameId: string): void {
   // Clean up existing adapter
   if (currentAdapter) {
     currentAdapter.dispose();
     currentAdapter = null;
   }
-  
-  // Clear the minigame root
+
   elements.minigameRoot.innerHTML = '';
-  
-  // Update state
-  state.currentGameId = gameId;
   updateDebugButtons();
-  
-  // Create and start new adapter
+
   try {
     currentAdapter = createAdapter(gameId);
     currentAdapter.startMinigame({
       gameId,
       stageId: state.currentStage,
-      runId: state.runId,
+      runId: `run-${state.runPlan.seed}`,
       setControlLabels: updateControlLabels,
       onComplete: handleGameComplete,
       container: elements.minigameRoot,
@@ -149,58 +247,96 @@ function startGame(gameId: string): void {
 }
 
 function handleGameComplete(): void {
-  console.log(`[Main] Game ${state.currentGameId} completed for stage ${state.currentStage}`);
-  
-  // Mark stage as completed
-  state.completed[state.currentStage] = true;
-  
-  // Award the PIN digit for this stage
-  const stageIndex = ['C1', 'C2', 'C3', 'C4'].indexOf(state.currentStage);
-  state.digits[state.currentStage] = PIN_DIGITS[stageIndex];
-  
-  // Update UI
-  updateStageDisplay();
-  
-  // Check if all stages are complete
-  const allComplete = Object.values(state.completed).every(Boolean);
-  if (allComplete) {
-    console.log('[Main] All stages complete! PIN:', PIN_DIGITS.join(''));
-    // For now, just log it. Later this would trigger the PIN door scene.
-  } else {
-    // Auto-advance to next stage after a short delay
-    setTimeout(() => {
-      advanceToNextStage();
-    }, 1500);
+  const gameId = getCurrentGameId();
+  console.log(`[Main] Game ${gameId} completed for stage ${state.currentStage}`);
+
+  if (state.phase === 'STAGES') {
+    // Mark stage as completed
+    state.completed[state.currentStage] = true;
+
+    // Award the PIN digit for this stage
+    const stageIndex = STAGES.indexOf(state.currentStage);
+    state.digits[state.currentStage] = state.runPlan.pinDigits[stageIndex];
+
+    updateStageDisplay();
+
+    // Check if all stages are complete
+    const allComplete = STAGES.every(s => state.completed[s]);
+    if (allComplete) {
+      console.log('[Main] All stages complete! PIN:', state.runPlan.pinDigits.join(''));
+      setTimeout(() => {
+        startPinEntryPhase();
+      }, 1500);
+    } else {
+      // Advance to next stage
+      setTimeout(() => {
+        advanceToNextStage();
+      }, 1500);
+    }
+  } else if (state.phase === 'PIN_ENTRY') {
+    // PIN entry game completed successfully
+    console.log('[Main] PIN entry successful!');
+    state.phase = 'ENDING';
+    showEnding();
   }
 }
 
 function advanceToNextStage(): void {
-  const stages: Array<'C1' | 'C2' | 'C3' | 'C4'> = ['C1', 'C2', 'C3', 'C4'];
-  const currentIndex = stages.indexOf(state.currentStage);
-  
-  if (currentIndex < stages.length - 1) {
-    state.currentStage = stages[currentIndex + 1];
+  const currentIndex = STAGES.indexOf(state.currentStage);
+
+  if (currentIndex < STAGES.length - 1) {
+    state.currentStage = STAGES[currentIndex + 1];
     updateStageDisplay();
-    // Start the same game type for the next stage (for testing)
-    startGame(state.currentGameId);
+    startCurrentStageGame();
   }
+}
+
+function startPinEntryPhase(): void {
+  state.phase = 'PIN_ENTRY';
+  console.log('[Main] Starting PIN entry phase...');
+
+  // For now, show a placeholder. E1/E2 will be implemented later.
+  elements.minigameRoot.innerHTML = `
+    <div style="color: #5cff9d; padding: 40px; text-align: center; font-family: monospace;">
+      <h2 style="color: #5cff9d; margin-bottom: 20px;">PIN COLLECTED</h2>
+      <div style="font-size: 48px; letter-spacing: 16px; margin: 30px 0;">
+        ${state.runPlan.pinDigits.join('')}
+      </div>
+      <p style="color: #8fa89a; margin-top: 30px;">
+        E1/E2 ending minigames coming soon...
+      </p>
+      <p style="color: #5a6a62; margin-top: 20px; font-size: 12px;">
+        The player would enter this PIN using an ending minigame.
+      </p>
+    </div>
+  `;
+
+  updateControlLabels({ left: '—', right: '—' });
+}
+
+function showEnding(): void {
+  elements.minigameRoot.innerHTML = `
+    <div style="color: #5cff9d; padding: 40px; text-align: center; font-family: monospace;">
+      <h2 style="color: #5cff9d;">ESCAPED!</h2>
+      <p style="color: #8fa89a;">You made it out.</p>
+    </div>
+  `;
 }
 
 // ---- Input Handling ----
 
 function sendInput(button: Button): void {
   if (!currentAdapter) return;
-  
-  // Check if button is disabled
+
   const btnEl = button === 'LEFT' ? elements.btnLeft : elements.btnRight;
   if (btnEl.classList.contains('disabled')) return;
-  
+
   currentAdapter.handleInput(button);
 }
 
 function handleButtonPress(button: Button, btnEl: HTMLButtonElement): void {
   if (btnEl.classList.contains('disabled')) return;
-  
+
   btnEl.classList.add('pressed');
   sendInput(button);
 }
@@ -233,7 +369,7 @@ elements.btnRight.addEventListener('touchend', () => handleButtonRelease(element
 // Keyboard input
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  
+
   const key = e.key.toLowerCase();
   if (key === 'arrowleft' || key === 'a') {
     e.preventDefault();
@@ -259,12 +395,17 @@ window.addEventListener('keyup', (e) => {
 
 function init(): void {
   console.log('[Main] Initializing Please Hold...');
-  
+
   // Log available games
-  const games = getReadyGames();
-  console.log('[Main] Ready games:', games.map(g => `${g.id} (${g.inputCount}btn)`).join(', '));
-  
-  if (games.length === 0) {
+  const allGames = getReadyGames();
+  const oneBtn = getOneButtonGames();
+  const twoBtn = getTwoButtonGames();
+
+  console.log('[Main] Ready games:', allGames.map(g => `${g.id} (${g.inputCount}btn)`).join(', '));
+  console.log(`[Main] One-button games: ${oneBtn.map(g => g.id).join(', ') || '(none)'}`);
+  console.log(`[Main] Two-button games: ${twoBtn.map(g => g.id).join(', ') || '(none)'}`);
+
+  if (allGames.length === 0) {
     console.error('[Main] No ready games available!');
     elements.minigameRoot.innerHTML = `
       <div style="color: #ff6b57; padding: 20px; text-align: center; font-family: monospace;">
@@ -273,14 +414,28 @@ function init(): void {
     `;
     return;
   }
-  
+
+  if (oneBtn.length === 0) {
+    console.error('[Main] No one-button games for C1!');
+    elements.minigameRoot.innerHTML = `
+      <div style="color: #ff6b57; padding: 20px; text-align: center; font-family: monospace;">
+        Error: Need at least one one-button game for C1.<br>
+        Available: ${allGames.map(g => `${g.id}(${g.inputCount}btn)`).join(', ')}
+      </div>
+    `;
+    return;
+  }
+
+  // Initialize state
+  state = createInitialState();
+
   // Initialize UI
   updateStageDisplay();
   buildDebugButtons();
   updateDebugButtons();
-  
+
   // Start the first game
-  startGame(state.currentGameId);
+  startCurrentStageGame();
 }
 
 // Start the app
