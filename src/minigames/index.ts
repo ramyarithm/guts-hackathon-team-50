@@ -43,7 +43,8 @@ import "./g1-signal-relay";
 import "./g2-lane-crossing";
 import "./g3-tetris";
 import "./g4-rhythm";
-import "./g6-pressure-valves"
+import "./g6-pressure-valves";
+
 // Re-export game entries for direct access if needed
 export { g1Entry, G1_ID, createG1Adapter } from "./g1-signal-relay";
 export { g2Entry, G2_ID, createG2Adapter } from "./g2-lane-crossing";

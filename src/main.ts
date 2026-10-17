@@ -42,6 +42,7 @@ const elements = {
   btnG2: document.getElementById('btn-g2') as HTMLButtonElement,
   btnG3: document.getElementById('btn-g3') as HTMLButtonElement,
   btnG4: document.getElementById('btn-g4') as HTMLButtonElement,
+  btnG6: document.getElementById('btn-g6') as HTMLButtonElement,
   btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
   leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
@@ -90,6 +91,7 @@ function updateDebugButtons(): void {
   elements.btnG2.classList.toggle('active', state.currentGameId === 'G2');
   elements.btnG3.classList.toggle('active', state.currentGameId === 'G3');
   elements.btnG4.classList.toggle('active', state.currentGameId === 'G4');
+  elements.btnG6.classList.toggle('active', state.currentGameId === 'G6');
 }
 
 // ---- Game Management ----
@@ -261,6 +263,13 @@ elements.btnG4.addEventListener('click', () => {
   if (state.currentGameId !== 'G4') {
     console.log('[Main] Switching to G4');
     startGame('G4');
+  }
+});
+
+elements.btnG6.addEventListener('click', () => {
+  if (state.currentGameId !== 'G6') {
+    console.log('[Main] Switching to G6');
+    startGame('G6');
   }
 });
 
