@@ -48,6 +48,7 @@ import "./e1-vault-lock";
 import "./e2-morse-pad";
 import "./g6-pressure-valves";
 import "./g7-signal-lock";
+import "./g8-shelf-shuffle";
 
 // Re-export game entries for direct access if needed
 export { g1Entry, G1_ID, createG1Adapter } from "./g1-signal-relay";
@@ -59,3 +60,4 @@ export { e1Entry, E1_ID, createE1Adapter } from "./e1-vault-lock";
 export { e2Entry, E2_ID, createE2Adapter } from "./e2-morse-pad";
 export { g6Entry, G6_ID, createG6Adapter } from "./g6-pressure-valves";
 export { g7Entry, G7_ID, createG7Adapter } from "./g7-signal-lock";
+export { g8Entry, G8_ID, createG8Adapter } from "./g8-shelf-shuffle";

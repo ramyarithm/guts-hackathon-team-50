@@ -12,17 +12,24 @@
 
 ## Project state
 
-There is **no implementation yet**. `src/` contains only `.gitkeep` and `assets/` only `.gitkeep`. There is no `package.json`, no `tsconfig.json`, no test runner, and no build, lint or format configuration.
+The Node/TypeScript scaffold is implemented. `package.json` provides `dev` (Vite),
+`build` (`tsc && vite build`), and `preview`. Minigames live under `src/minigames/`
+and register through `src/minigames/index.ts`; inspect current files rather than
+assuming every task-table entry is up to date.
 
-Consequences:
+Run `npm run build` for typechecking and production bundling. Shelf Shuffle has
+self-contained Node tests using the installed TypeScript compiler:
 
-- Do not report build, test or typecheck results. Nothing is wired up to run.
-- Do not assume a project layout, entry point or module exists.
-- Do not invent npm scripts. If you need one, create the config that provides it, then document it here.
+```
+node --test src/minigames/g8-shelf-shuffle/logic.test.mjs src/minigames/g8-shelf-shuffle/adapter.test.mjs
+```
 
-Intended stack is **Node / TypeScript** (team-confirmed). `.gitignore` also carries Python entries (`__pycache__/`, `*.py[cod]`, `.venv/`, `venv/`) — that is boilerplate, not an indication that Python is used.
+The root has no general test-runner script; do not claim that running one
+minigame's tests validates unrelated games. The legacy E1 tests use Vitest from
+`chicken-cross/` when that subproject's dependencies are installed.
 
-Update this section once the scaffold lands.
+Intended stack is **Node / TypeScript** (team-confirmed). Python ignore entries
+are boilerplate, not an indication that the game uses Python.
 
 ## Environment variables
 
@@ -68,4 +75,4 @@ Do not modify another slot or the central configuration to make your puzzle work
 
 ## Before opening a PR
 
-The pull request template asks for what changed and how to try it. There is no test suite yet, so verify the interaction manually and state the steps in "How to try it" so a teammate can reproduce it on their machine — `docs/PLAN.md` lists "test on another teammate's machine" as an MVP goal.
+The pull request template asks for what changed and how to try it. Run any relevant minigame tests and verify the interaction manually and state the steps in "How to try it" so a teammate can reproduce it on their machine — `docs/PLAN.md` lists "test on another teammate's machine" as an MVP goal.
