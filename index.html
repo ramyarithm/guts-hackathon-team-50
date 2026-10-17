@@ -4,10 +4,44 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>guts-hackathon-team-50</title>
+    <title>Please Hold</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Header with game title and debug controls -->
+      <header id="header">
+        <h1>Please Hold</h1>
+        <div id="debug-panel">
+          <span class="debug-label">Debug:</span>
+          <button id="toggle-game" type="button">Switch to G2</button>
+        </div>
+      </header>
+
+      <!-- Stage progress indicator -->
+      <nav id="stage-nav">
+        <div class="stage" data-stage="C1"><span class="stage-num">1</span><span class="stage-digit">?</span></div>
+        <div class="stage" data-stage="C2"><span class="stage-num">2</span><span class="stage-digit">?</span></div>
+        <div class="stage" data-stage="C3"><span class="stage-num">3</span><span class="stage-digit">?</span></div>
+        <div class="stage" data-stage="C4"><span class="stage-num">4</span><span class="stage-digit">?</span></div>
+      </nav>
+
+      <!-- Main game area -->
+      <main id="game-area">
+        <div id="minigame-root"></div>
+      </main>
+
+      <!-- Control buttons -->
+      <footer id="controls">
+        <button id="btn-left" type="button" class="control-btn">
+          <span class="key-hint">← A</span>
+          <span class="label">Left</span>
+        </button>
+        <button id="btn-right" type="button" class="control-btn">
+          <span class="label">Right</span>
+          <span class="key-hint">D →</span>
+        </button>
+      </footer>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

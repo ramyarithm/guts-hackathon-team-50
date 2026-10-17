@@ -1,60 +1,277 @@
-import './style.css'
-import heroImg from './assets/hero.png'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import { setupCounter } from './counter.ts'
+/**
+ * Please Hold - Main Game Controller
+ * 
+ * Simple SPA that manages game stages and routes button inputs to minigames.
+ */
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+import './style.css';
+import { 
+  createAdapter, 
+  getReadyGames, 
+  type Button, 
+  type ControlLabels, 
+  type MinigameAdapter 
+} from './minigames';
 
-<div class="ticks"></div>
+// ---- Game State ----
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+interface GameState {
+  currentStage: 'C1' | 'C2' | 'C3' | 'C4';
+  currentGameId: string;
+  runId: string;
+  completed: Record<string, boolean>;
+  digits: Record<string, string>;
+}
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+const PIN_DIGITS = ['7', '3', '1', '9']; // From TECH_SPEC
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+let state: GameState = {
+  currentStage: 'C1',
+  currentGameId: 'G1',
+  runId: `run-${Date.now()}`,
+  completed: { C1: false, C2: false, C3: false, C4: false },
+  digits: { C1: '?', C2: '?', C3: '?', C4: '?' },
+};
+
+let currentAdapter: MinigameAdapter | null = null;
+
+// ---- DOM Elements ----
+
+const elements = {
+  toggleGame: document.getElementById('toggle-game') as HTMLButtonElement,
+  btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
+  btnRight: document.getElementById('btn-right') as HTMLButtonElement,
+  leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
+  rightLabel: document.querySelector('#btn-right .label') as HTMLSpanElement,
+  stages: document.querySelectorAll('.stage') as NodeListOf<HTMLDivElement>,
+  minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
+};
+
+// ---- UI Updates ----
+
+function updateControlLabels(labels: ControlLabels): void {
+  elements.leftLabel.textContent = labels.left;
+  elements.rightLabel.textContent = labels.right;
+  
+  // Handle disabled state for inactive buttons
+  const leftDisabled = labels.left === '—' || labels.left === '';
+  const rightDisabled = labels.right === '—' || labels.right === '';
+  
+  elements.btnLeft.classList.toggle('disabled', leftDisabled);
+  elements.btnRight.classList.toggle('disabled', rightDisabled);
+}
+
+function updateStageDisplay(): void {
+  const stageIndex = ['C1', 'C2', 'C3', 'C4'].indexOf(state.currentStage);
+  
+  elements.stages.forEach((el, i) => {
+    const stageId = `C${i + 1}` as keyof typeof state.completed;
+    const digitEl = el.querySelector('.stage-digit') as HTMLSpanElement;
+    
+    // Update digit display
+    digitEl.textContent = state.digits[stageId];
+    
+    // Update stage states
+    el.classList.remove('active', 'completed');
+    if (i === stageIndex) {
+      el.classList.add('active');
+    }
+    if (state.completed[stageId]) {
+      el.classList.add('completed');
+    }
+  });
+}
+
+function updateToggleButton(): void {
+  const games = getReadyGames();
+  const otherGame = games.find(g => g.id !== state.currentGameId);
+  if (otherGame) {
+    elements.toggleGame.textContent = `Switch to ${otherGame.id}`;
+  }
+}
+
+// ---- Game Management ----
+
+function startGame(gameId: string): void {
+  // Clean up existing adapter
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  
+  // Clear the minigame root
+  elements.minigameRoot.innerHTML = '';
+  
+  // Update state
+  state.currentGameId = gameId;
+  updateToggleButton();
+  
+  // Create and start new adapter
+  try {
+    currentAdapter = createAdapter(gameId);
+    currentAdapter.startMinigame({
+      gameId,
+      stageId: state.currentStage,
+      runId: state.runId,
+      setControlLabels: updateControlLabels,
+      onComplete: handleGameComplete,
+      container: elements.minigameRoot,
+    });
+    console.log(`[Main] Started ${gameId} for stage ${state.currentStage}`);
+  } catch (error) {
+    console.error(`[Main] Failed to start ${gameId}:`, error);
+    elements.minigameRoot.innerHTML = `
+      <div style="color: #ff6b57; padding: 20px; text-align: center; font-family: monospace;">
+        Error: Could not load ${gameId}
+      </div>
+    `;
+  }
+}
+
+function handleGameComplete(): void {
+  console.log(`[Main] Game ${state.currentGameId} completed for stage ${state.currentStage}`);
+  
+  // Mark stage as completed
+  state.completed[state.currentStage] = true;
+  
+  // Award the PIN digit for this stage
+  const stageIndex = ['C1', 'C2', 'C3', 'C4'].indexOf(state.currentStage);
+  state.digits[state.currentStage] = PIN_DIGITS[stageIndex];
+  
+  // Update UI
+  updateStageDisplay();
+  
+  // Check if all stages are complete
+  const allComplete = Object.values(state.completed).every(Boolean);
+  if (allComplete) {
+    console.log('[Main] All stages complete! PIN:', PIN_DIGITS.join(''));
+    // For now, just log it. Later this would trigger the PIN door scene.
+  } else {
+    // Auto-advance to next stage after a short delay
+    setTimeout(() => {
+      advanceToNextStage();
+    }, 1500);
+  }
+}
+
+function advanceToNextStage(): void {
+  const stages: Array<'C1' | 'C2' | 'C3' | 'C4'> = ['C1', 'C2', 'C3', 'C4'];
+  const currentIndex = stages.indexOf(state.currentStage);
+  
+  if (currentIndex < stages.length - 1) {
+    state.currentStage = stages[currentIndex + 1];
+    updateStageDisplay();
+    // Start the same game type for the next stage (for testing)
+    startGame(state.currentGameId);
+  }
+}
+
+// ---- Input Handling ----
+
+function sendInput(button: Button): void {
+  if (!currentAdapter) return;
+  
+  // Check if button is disabled
+  const btnEl = button === 'LEFT' ? elements.btnLeft : elements.btnRight;
+  if (btnEl.classList.contains('disabled')) return;
+  
+  currentAdapter.handleInput(button);
+}
+
+function handleButtonPress(button: Button, btnEl: HTMLButtonElement): void {
+  if (btnEl.classList.contains('disabled')) return;
+  
+  btnEl.classList.add('pressed');
+  sendInput(button);
+}
+
+function handleButtonRelease(btnEl: HTMLButtonElement): void {
+  btnEl.classList.remove('pressed');
+}
+
+// ---- Event Listeners ----
+
+// Mouse/touch for control buttons
+elements.btnLeft.addEventListener('mousedown', () => handleButtonPress('LEFT', elements.btnLeft));
+elements.btnLeft.addEventListener('mouseup', () => handleButtonRelease(elements.btnLeft));
+elements.btnLeft.addEventListener('mouseleave', () => handleButtonRelease(elements.btnLeft));
+elements.btnLeft.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  handleButtonPress('LEFT', elements.btnLeft);
+});
+elements.btnLeft.addEventListener('touchend', () => handleButtonRelease(elements.btnLeft));
+
+elements.btnRight.addEventListener('mousedown', () => handleButtonPress('RIGHT', elements.btnRight));
+elements.btnRight.addEventListener('mouseup', () => handleButtonRelease(elements.btnRight));
+elements.btnRight.addEventListener('mouseleave', () => handleButtonRelease(elements.btnRight));
+elements.btnRight.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  handleButtonPress('RIGHT', elements.btnRight);
+});
+elements.btnRight.addEventListener('touchend', () => handleButtonRelease(elements.btnRight));
+
+// Keyboard input
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  
+  const key = e.key.toLowerCase();
+  if (key === 'arrowleft' || key === 'a') {
+    e.preventDefault();
+    handleButtonPress('LEFT', elements.btnLeft);
+  } else if (key === 'arrowright' || key === 'd') {
+    e.preventDefault();
+    handleButtonPress('RIGHT', elements.btnRight);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  const key = e.key.toLowerCase();
+  if (key === 'arrowleft' || key === 'a') {
+    handleButtonRelease(elements.btnLeft);
+  } else if (key === 'arrowright' || key === 'd') {
+    handleButtonRelease(elements.btnRight);
+  }
+});
+
+// Debug toggle button
+elements.toggleGame.addEventListener('click', () => {
+  const games = getReadyGames();
+  const currentIndex = games.findIndex(g => g.id === state.currentGameId);
+  const nextIndex = (currentIndex + 1) % games.length;
+  const nextGame = games[nextIndex];
+  
+  if (nextGame) {
+    console.log(`[Main] Switching from ${state.currentGameId} to ${nextGame.id}`);
+    startGame(nextGame.id);
+  }
+});
+
+// ---- Initialization ----
+
+function init(): void {
+  console.log('[Main] Initializing Please Hold...');
+  
+  // Log available games
+  const games = getReadyGames();
+  console.log('[Main] Ready games:', games.map(g => `${g.id} (${g.inputCount}btn)`).join(', '));
+  
+  if (games.length === 0) {
+    console.error('[Main] No ready games available!');
+    elements.minigameRoot.innerHTML = `
+      <div style="color: #ff6b57; padding: 20px; text-align: center; font-family: monospace;">
+        No games available.<br>Check console for errors.
+      </div>
+    `;
+    return;
+  }
+  
+  // Initialize UI
+  updateStageDisplay();
+  updateToggleButton();
+  
+  // Start the first game
+  startGame(state.currentGameId);
+}
+
+// Start the app
+init();

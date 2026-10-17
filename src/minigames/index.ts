@@ -1,0 +1,47 @@
+/**
+ * Minigames Module
+ *
+ * Public API for the minigame system. Import from here, not from individual files.
+ *
+ * Usage:
+ *   import { register, getReadyGames, createAdapter } from './minigames';
+ *   import type { MinigameAdapter, MinigameRegistryEntry } from './minigames';
+ *
+ * To auto-register all games, import this module:
+ *   import './minigames';
+ */
+
+// Types
+export type {
+  Button,
+  ControlLabels,
+  MinigameAdapter,
+  MinigameAdapterFactory,
+  MinigameInfo,
+  MinigameRegistryEntry,
+  MinigameStartArgs,
+} from "./types";
+
+// Registry functions
+export {
+  clearRegistry,
+  createAdapter,
+  getAllGames,
+  getGame,
+  getInputCount,
+  getOneButtonGames,
+  getReadyGames,
+  getTwoButtonGames,
+  register,
+  unregister,
+  validateReadiness,
+} from "./registry";
+
+// Import game modules for side-effect registration
+// Each module calls register() when imported
+import "./g1-signal-relay";
+import "./g2-lane-crossing";
+
+// Re-export game entries for direct access if needed
+export { g1Entry, G1_ID, createG1Adapter } from "./g1-signal-relay";
+export { g2Entry, G2_ID, createG2Adapter } from "./g2-lane-crossing";
