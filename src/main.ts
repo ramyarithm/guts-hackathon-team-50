@@ -7,6 +7,7 @@
 import './style.css';
 import { 
   createAdapter, 
+  getAllGames,
   getReadyGames, 
   type Button, 
   type ControlLabels, 
@@ -38,11 +39,7 @@ let currentAdapter: MinigameAdapter | null = null;
 // ---- DOM Elements ----
 
 const elements = {
-  btnG1: document.getElementById('btn-g1') as HTMLButtonElement,
-  btnG2: document.getElementById('btn-g2') as HTMLButtonElement,
-  btnG3: document.getElementById('btn-g3') as HTMLButtonElement,
-  btnG4: document.getElementById('btn-g4') as HTMLButtonElement,
-  btnG6: document.getElementById('btn-g6') as HTMLButtonElement,
+  debugGames: document.getElementById('debug-games') as HTMLDivElement,
   btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
   leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
@@ -87,11 +84,30 @@ function updateStageDisplay(): void {
 }
 
 function updateDebugButtons(): void {
-  elements.btnG1.classList.toggle('active', state.currentGameId === 'G1');
-  elements.btnG2.classList.toggle('active', state.currentGameId === 'G2');
-  elements.btnG3.classList.toggle('active', state.currentGameId === 'G3');
-  elements.btnG4.classList.toggle('active', state.currentGameId === 'G4');
-  elements.btnG6.classList.toggle('active', state.currentGameId === 'G6');
+  elements.debugGames.querySelectorAll<HTMLButtonElement>('.debug-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.gameId === state.currentGameId);
+  });
+}
+
+/** Build one debug button per registered game (every game, pool or special, ready or not). */
+function buildDebugButtons(): void {
+  elements.debugGames.innerHTML = '';
+  for (const game of getAllGames()) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'debug-btn';
+    btn.dataset.gameId = game.id;
+    btn.textContent = game.id;
+    btn.title = `${game.name} (${game.inputCount} button${game.inputCount === 1 ? '' : 's'})${game.ready ? '' : ' - not ready'}`;
+    if (!game.ready) btn.classList.add('not-ready');
+    btn.addEventListener('click', () => {
+      if (state.currentGameId !== game.id) {
+        console.log(`[Main] Switching to ${game.id}`);
+        startGame(game.id);
+      }
+    });
+    elements.debugGames.appendChild(btn);
+  }
 }
 
 // ---- Game Management ----
@@ -237,41 +253,7 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-// Debug game selection buttons
-elements.btnG1.addEventListener('click', () => {
-  if (state.currentGameId !== 'G1') {
-    console.log('[Main] Switching to G1');
-    startGame('G1');
-  }
-});
-
-elements.btnG2.addEventListener('click', () => {
-  if (state.currentGameId !== 'G2') {
-    console.log('[Main] Switching to G2');
-    startGame('G2');
-  }
-});
-
-elements.btnG3.addEventListener('click', () => {
-  if (state.currentGameId !== 'G3') {
-    console.log('[Main] Switching to G3');
-    startGame('G3');
-  }
-});
-
-elements.btnG4.addEventListener('click', () => {
-  if (state.currentGameId !== 'G4') {
-    console.log('[Main] Switching to G4');
-    startGame('G4');
-  }
-});
-
-elements.btnG6.addEventListener('click', () => {
-  if (state.currentGameId !== 'G6') {
-    console.log('[Main] Switching to G6');
-    startGame('G6');
-  }
-});
+// Debug game selection buttons are built from the registry in init().
 
 // ---- Initialization ----
 
@@ -294,6 +276,7 @@ function init(): void {
   
   // Initialize UI
   updateStageDisplay();
+  buildDebugButtons();
   updateDebugButtons();
   
   // Start the first game

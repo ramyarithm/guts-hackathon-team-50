@@ -73,6 +73,17 @@ html, body {
   gap: 8px;
 }
 
+#debug-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.debug-btn.not-ready {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
 .debug-label {
   font-size: 11px;
   color: var(--text-dim);
