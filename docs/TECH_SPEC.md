@@ -24,6 +24,7 @@ Edit the Owner and Status columns when claiming work. Puzzle mechanics and solut
 | G5 | Minigame placeholder 5 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event |
 | G6 | Pressure Valves — balance two tanks | Implemented | Ready | 2-button adapter; completion event |
 | G7 | Minigame placeholder 7 — design open | Unclaimed | Not started | Adapter with declared `inputCount`; completion event |
+| G8 | Shelf Shuffle — seeded two-shelf matching puzzle | Codex / mk | Ready | 2-button adapter; 24 objects; eight matches; tested controller completion and cleanup |
 | E1 | Ending minigame 1 — PIN entry variant | Unclaimed | Not started | PIN entry adapter; validates against pinDigits |
 | E2 | Ending minigame 2 — PIN entry variant | Unclaimed | Not started | PIN entry adapter; validates against pinDigits |
 | CORE | Main scene, shared state, intro, PIN door and ending | In progress | Partial | Run plan generation done; PIN entry phase placeholder |
