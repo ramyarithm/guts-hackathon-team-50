@@ -44,6 +44,7 @@ import "./g2-lane-crossing";
 import "./g3-tetris";
 import "./g4-rhythm";
 import "./e1-vault-lock";
+import "./e2-morse-pad";
 import "./g6-pressure-valves";
 import "./g7-coffee-run";
 
@@ -53,5 +54,6 @@ export { g2Entry, G2_ID, createG2Adapter } from "./g2-lane-crossing";
 export { g3Entry, G3_ID, createG3Adapter } from "./g3-tetris";
 export { g4Entry, G4_ID, createG4Adapter } from "./g4-rhythm";
 export { e1Entry, E1_ID, createE1Adapter } from "./e1-vault-lock";
+export { e2Entry, E2_ID, createE2Adapter } from "./e2-morse-pad";
 export { g6Entry, G6_ID, createG6Adapter } from "./g6-pressure-valves";
 export { g7Entry, G7_ID, createG7Adapter } from "./g7-coffee-run";

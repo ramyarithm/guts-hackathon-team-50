@@ -91,6 +91,18 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+.debug-pin {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--accent);
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+}
+
 #toggle-game {
   font-family: var(--font-mono);
   font-size: 11px;

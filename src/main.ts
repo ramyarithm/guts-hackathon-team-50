@@ -116,7 +116,13 @@ function generateRunPlan(seed: number): RunPlan {
 }
 
 function createInitialState(): GameState {
-  const seed = Date.now();
+  // Read seed from URL ?seed=123 or generate random
+  const params = new URLSearchParams(window.location.search);
+  const seedParam = params.get('seed');
+  const seed = seedParam ? parseInt(seedParam, 10) || Date.now() : Date.now();
+  
+  console.log(`[Main] Seed: ${seed}${seedParam ? ' (from URL)' : ' (random)'}`);
+  
   const runPlan = generateRunPlan(seed);
   return {
     phase: 'STAGES',
@@ -134,6 +140,7 @@ function createInitialState(): GameState {
 
 const elements = {
   debugGames: document.getElementById('debug-games') as HTMLDivElement,
+  debugPin: document.getElementById('debug-pin') as HTMLSpanElement,
   btnLeft: document.getElementById('btn-left') as HTMLButtonElement,
   btnRight: document.getElementById('btn-right') as HTMLButtonElement,
   leftLabel: document.querySelector('#btn-left .label') as HTMLSpanElement,
@@ -234,7 +241,8 @@ function startGame(gameId: string): void {
       setControlLabels: updateControlLabels,
       onComplete: handleGameComplete,
       container: elements.minigameRoot,
-    });
+      targetPin: state.runPlan.pinDigits, // For E1/E2 ending games
+    } as any);
     console.log(`[Main] Started ${gameId} for stage ${state.currentStage}`);
   } catch (error) {
     console.error(`[Main] Failed to start ${gameId}:`, error);
@@ -433,6 +441,7 @@ function init(): void {
   updateStageDisplay();
   buildDebugButtons();
   updateDebugButtons();
+  elements.debugPin.textContent = state.runPlan.pinDigits.join('');
 
   // Start the first game
   startCurrentStageGame();
