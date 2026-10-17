@@ -47,6 +47,14 @@ html, body {
   border-right: 1px solid var(--border);
 }
 
+#app:not(.ready) {
+  visibility: hidden;
+}
+
+#app.ready {
+  visibility: visible;
+}
+
 /* Header */
 #header {
   display: flex;
@@ -304,6 +312,10 @@ html, body {
 }
 
 /* Single button mode */
+#btn-single {
+  display: none;
+}
+
 #controls.single-button-mode #btn-left,
 #controls.single-button-mode #btn-right {
   display: none;
@@ -311,10 +323,6 @@ html, body {
 
 #controls.single-button-mode #btn-single {
   display: flex;
-}
-
-#controls:not(.single-button-mode) #btn-single {
-  display: none;
 }
 
 .control-btn--single {

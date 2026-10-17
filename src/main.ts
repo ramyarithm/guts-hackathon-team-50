@@ -9,7 +9,6 @@
  * Each completed stage reveals one digit of the 4-digit PIN.
  */
 
-import './style.css';
 import {
   createAdapter,
   getAllGames,
@@ -476,6 +475,9 @@ function init(): void {
 
   // Start the first game
   startCurrentStageGame();
+
+  // Show the app (hidden until ready to prevent flash)
+  document.getElementById('app')?.classList.add('ready');
 }
 
 // Start the app
