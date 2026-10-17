@@ -1,5 +1,7 @@
-// G7 adapter: wires the pure game logic to a canvas and the shared minigame contract.
-// Auto-registers when imported. CORE imports this module for the side effect.
+// G7 "Signal Lock" adapter: wires the pure game logic to a canvas and the shared minigame
+// contract. Auto-registers when imported. CORE imports this module for the side effect.
+//
+// One-button game: LEFT locks the needle, RIGHT is inactive and ignored. No audio.
 
 import { WORLD_HEIGHT, WORLD_WIDTH, createGame, hashSeed, type Game } from "./logic";
 import { drawFrame } from "./render";
@@ -7,7 +9,7 @@ import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 
 export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { ROUND_MS } from "./logic";
+export { TARGET_BARS } from "./logic";
 
 export const G7_ID = "G7";
 
@@ -87,7 +89,7 @@ export function createG7Adapter(): MinigameAdapter {
       canvas.style.display = "block";
       canvas.style.margin = "0 auto";
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Coffee run balancing minigame");
+      canvas.setAttribute("aria-label", "Signal lock tuning minigame");
       host.appendChild(canvas);
 
       const context = canvas.getContext("2d");
@@ -99,7 +101,7 @@ export function createG7Adapter(): MinigameAdapter {
       ctx = context;
 
       game = createGame({
-        // Wobble and hazards are seeded from the run id: reproducible per run, identical for every stage.
+        // Zone positions and interference are seeded from the run id: reproducible per run.
         seed: hashSeed(startArgs.runId),
         onLabels: (labels) => {
           if (!disposed) args?.setControlLabels(labels);
@@ -125,7 +127,8 @@ export function createG7Adapter(): MinigameAdapter {
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      // One-button game: only LEFT does anything. RIGHT is inactive.
+      if (button !== "LEFT") return;
       game.press(button);
     },
 
@@ -140,12 +143,12 @@ export function createG7Adapter(): MinigameAdapter {
   return adapter;
 }
 
-/** Registry entry for G7 Coffee Run. */
+/** Registry entry for G7 Signal Lock. */
 export const g7Entry: MinigameRegistryEntry = {
   id: G7_ID,
-  name: "Coffee Run",
+  name: "Signal Lock",
   ready: true,
-  inputCount: 2, // LEFT tips the cup back left, RIGHT tips it back right
+  inputCount: 1, // LEFT = Lock; RIGHT is inactive
   adapter: createG7Adapter,
 };
 
