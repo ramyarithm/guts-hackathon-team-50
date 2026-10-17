@@ -2,7 +2,7 @@
 // Auto-registers when imported, like G1 and G2. CORE imports this module for the side
 // effect (see README: it is not yet imported by src/minigames/index.ts).
 
-import { WORLD_HEIGHT, WORLD_WIDTH, createGame, hashSeed, type Game } from "./logic";
+import { WORLD_HEIGHT, WORLD_WIDTH, DROP_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
 import { createRenderer } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -73,6 +73,7 @@ export function createE1Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
   let lastClickSeen = -Infinity;
   const renderer = createRenderer();
@@ -104,6 +105,12 @@ export function createE1Adapter(): MinigameAdapter {
       if (Number.isFinite(lastClickSeen)) clicker.click();
     }
     renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after drop lockout period
+    if (game.state.phase === "DROPPED" && game.state.phaseMs >= DROP_LOCKOUT_MS && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
   };
 
   const teardownScene = (): void => {

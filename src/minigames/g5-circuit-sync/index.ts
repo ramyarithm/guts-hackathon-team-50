@@ -16,6 +16,7 @@ export function createG5Adapter(): MinigameAdapter {
   let rafId: number | null = null;
   let lastFrameTs: number | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
 
   function frame(ts: number): void {
@@ -26,6 +27,12 @@ export function createG5Adapter(): MinigameAdapter {
 
     game.step(delta);
     drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after 1 second in FAILED state
+    if (game.state.phase === "FAILED" && game.state.phaseMs >= 1000 && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
 
     rafId = requestAnimationFrame(frame);
   }

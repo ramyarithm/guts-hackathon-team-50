@@ -34,6 +34,12 @@ export interface MinigameStartArgs {
   setControlLabels: (labels: ControlLabels) => void;
   /** Fire exactly once on successful completion; controller validates run/stage/game. */
   onComplete: () => void;
+  /**
+   * Fire when the player fails (out of lives, game over, etc.).
+   * The controller will restart the current game from scratch.
+   * Games should call this after showing a brief failure state, not immediately.
+   */
+  onFail: () => void;
   /** Optional mount point for the game canvas; defaults to #minigame-root. */
   container?: HTMLElement;
 }

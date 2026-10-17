@@ -1,7 +1,7 @@
 // G2 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, createGame, hashSeed, type Game } from "./logic";
+import { WORLD_HEIGHT, WORLD_WIDTH, HIT_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
 import { createRenderer } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -23,6 +23,7 @@ export function createG2Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
   // Static layers are cached per adapter instance, never at module level.
   const renderer = createRenderer();
@@ -49,6 +50,12 @@ export function createG2Adapter(): MinigameAdapter {
     lastFrameTs = ts;
     game.step(elapsed);
     renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after hit lockout period
+    if (game.state.phase === "HIT" && game.state.phaseMs >= HIT_LOCKOUT_MS && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
   };
 
   const teardownScene = (): void => {

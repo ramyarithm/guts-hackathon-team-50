@@ -1,7 +1,7 @@
 // G1 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, createGame, type Game } from "./logic";
+import { WORLD_HEIGHT, WORLD_WIDTH, CRASH_LOCKOUT_MS, createGame, type Game } from "./logic";
 import { drawFrame } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -23,6 +23,7 @@ export function createG1Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
 
   const resize = (): void => {
@@ -47,6 +48,12 @@ export function createG1Adapter(): MinigameAdapter {
     lastFrameTs = ts;
     game.tick(elapsed);
     drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after crash lockout period
+    if (game.state.phase === "CRASHED" && game.state.phaseMs >= CRASH_LOCKOUT_MS && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
   };
 
   const teardownScene = (): void => {

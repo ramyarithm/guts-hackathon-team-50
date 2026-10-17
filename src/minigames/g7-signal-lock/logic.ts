@@ -59,7 +59,10 @@ export const STUTTER_MAX_MS = 160;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "SWEEPING" | "HOLD" | "SUCCESS";
+export type Phase = "READY" | "SWEEPING" | "HOLD" | "SUCCESS" | "FAILED";
+
+/** How long the FAILED state shows before onFail is called. */
+export const FAILURE_HOLD_MS = 1000;
 
 export type Result = "HIT" | "MISS" | null;
 
@@ -117,6 +120,8 @@ export function labelsFor(state: GameState): ControlLabels {
     case "HOLD":
       return { left: state.lastResult === "MISS" ? "—" : "Lock", right: "—" };
     case "SUCCESS":
+      return { left: "—", right: "—" };
+    case "FAILED":
       return { left: "—", right: "—" };
   }
 }
@@ -275,6 +280,9 @@ export function tick(state: GameState): void {
         state.completionFired = true;
       }
       break;
+    case "FAILED":
+      // Wait for adapter to call onFail after FAILURE_HOLD_MS
+      break;
     case "READY":
       break;
   }
@@ -290,20 +298,20 @@ export function step(state: GameState, dtMs: number): void {
   }
 }
 
-/** Stop the needle and judge it. A miss keeps every bar but locks the button out briefly. */
+/** Stop the needle and judge it. A miss ends the game (FAILED state). */
 function lock(state: GameState): void {
   state.attempts += 1;
   if (needleInZone(state)) {
     state.bars = Math.min(TARGET_BARS, state.bars + 1);
     state.lastResult = "HIT";
     state.holdMs = HOLD_MS;
+    setPhase(state, "HOLD");
   } else {
     state.misses += 1;
     state.lastResult = "MISS";
     state.shakeMs = SHAKE_MS;
-    state.holdMs = MISS_LOCKOUT_MS;
+    setPhase(state, "FAILED");
   }
-  setPhase(state, "HOLD");
 }
 
 /**

@@ -292,6 +292,7 @@ function startGame(gameId: string): void {
       runId: `run-${state.runPlan.seed}`,
       setControlLabels: updateControlLabels,
       onComplete: handleGameComplete,
+      onFail: handleGameFail,
       container: elements.minigameRoot,
       targetPin: state.runPlan.pinDigits, // For E1/E2 ending games
     } as any);
@@ -347,6 +348,14 @@ function handleGameComplete(): void {
     // Play door opening animation
     showDoorOpening();
   }
+}
+
+function handleGameFail(): void {
+  const gameId = getCurrentGameId();
+  console.log(`[Main] Game ${gameId} failed for stage ${state.currentStage}, restarting...`);
+  
+  // Simply restart the current game from scratch
+  startGame(gameId);
 }
 
 function advanceToNextStage(): void {

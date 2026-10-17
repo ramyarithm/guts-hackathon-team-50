@@ -160,6 +160,7 @@ function drawNeedle(ctx: CanvasRenderingContext2D, state: GameState): void {
   let color: string = C.needle;
   if (state.phase === "HOLD") color = state.lastResult === "HIT" ? C.green : C.danger;
   if (state.phase === "SUCCESS") color = C.green;
+  if (state.phase === "FAILED") color = C.danger;
   const len = DIAL_R - 4;
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
@@ -237,6 +238,14 @@ function drawText(ctx: CanvasRenderingContext2D, state: GameState): void {
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
       ctx.fillText("Carrier steady.", cx, 420);
+      break;
+    case "FAILED":
+      ctx.fillStyle = C.danger;
+      ctx.font = `bold 18px ${FONT}`;
+      ctx.fillText("SIGNAL LOST", cx, 396);
+      ctx.fillStyle = C.textDim;
+      ctx.font = `11px ${FONT}`;
+      ctx.fillText("Needle missed the zone.", cx, 420);
       break;
   }
 }

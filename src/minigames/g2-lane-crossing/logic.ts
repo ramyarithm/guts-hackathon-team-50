@@ -166,7 +166,7 @@ export function labelsFor(phase: Phase): ControlLabels {
     case "PLAYING":
       return { left: "Back", right: "Forward" };
     case "HIT":
-      return { left: "Retry", right: "Retry" };
+      return { left: "—", right: "—" };
     case "SUCCESS":
       return { left: "—", right: "—" };
   }
@@ -913,14 +913,7 @@ export function press(state: GameState, button: Button): void {
       }
       break;
     case "HIT":
-      // Retry keeps the same verified layout and lane clock; the start row is always
-      // safe and the verifier guarantees a crossing from it at any tick.
-      if (state.phaseMs >= HIT_LOCKOUT_MS) {
-        state.playerRow = 0;
-        state.glide = null;
-        state.bufferedPress = null;
-        setPhase(state, "READY");
-      }
+      // No internal retry - controller will restart via onFail
       break;
     case "SUCCESS":
       break;

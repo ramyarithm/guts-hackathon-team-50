@@ -3,7 +3,7 @@
 //
 // One-button game: LEFT locks the needle, RIGHT is inactive and ignored. No audio.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, createGame, hashSeed, type Game } from "./logic";
+import { WORLD_HEIGHT, WORLD_WIDTH, FAILURE_HOLD_MS, createGame, hashSeed, type Game } from "./logic";
 import { drawFrame } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -25,6 +25,7 @@ export function createG7Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
 
   const resize = (): void => {
@@ -49,6 +50,12 @@ export function createG7Adapter(): MinigameAdapter {
     lastFrameTs = ts;
     game.step(elapsed);
     drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after failure hold period
+    if (game.state.phase === "FAILED" && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
   };
 
   const teardownScene = (): void => {

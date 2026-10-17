@@ -1,6 +1,6 @@
 // Adapter for E2 (morse pad) - PIN entry via Morse code.
 
-import { createGame, type Game } from "./logic";
+import { FAILURE_HOLD_MS, createGame, type Game } from "./logic";
 import { drawFrame } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -16,6 +16,7 @@ export function createE2Adapter(): MinigameAdapter {
   let rafId: number | null = null;
   let lastFrameTs: number | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
 
   function frame(ts: number): void {
@@ -26,6 +27,12 @@ export function createE2Adapter(): MinigameAdapter {
 
     game.step(delta);
     drawFrame(ctx, game.state, canvas.width, canvas.height);
+    
+    // Call onFail after failure hold period
+    if (game.state.phase === "FAILED" && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
 
     rafId = requestAnimationFrame(frame);
   }

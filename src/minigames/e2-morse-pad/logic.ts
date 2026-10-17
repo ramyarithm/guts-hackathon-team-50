@@ -153,6 +153,10 @@ export function createGame(targetPin: string[], callbacks: GameCallbacks = {}): 
         onComplete?.();
       }
     }
+    // Show retry message after failure hold (controller will restart via onFail)
+    if (state.phase === 'FAILED' && state.phaseMs >= FAILURE_HOLD_MS) {
+      state.message = 'RESTARTING...';
+    }
   }
 
   const game: Game = {

@@ -4,7 +4,12 @@ import { createGame, WORLD_WIDTH, WORLD_HEIGHT, type Game } from "./logic";
 import { drawFrame } from "./render";
 
 export const G8_ID = "G8";
+
+// Failure hold period before calling onFail (ms)
+const FAILURE_HOLD_MS = 1000;
+
 export function createG8Adapter(): MinigameAdapter {
+  let args: MinigameStartArgs | null = null;
   let game: Game | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -15,16 +20,21 @@ export function createG8Adapter(): MinigameAdapter {
   let previous = 0;
   let mounted = false;
   let completionFired = false;
+  let failFired = false;
+  let failedAt: number | null = null;
   let generation = 0;
   const cleanup = () => {
     mounted = false;
     generation++;
+    failFired = false;
+    failedAt = null;
     if (raf !== null) cancelAnimationFrame(raf);
     raf = null;
     observer?.disconnect(); observer = null;
     removeResize?.(); removeResize = null;
     game?.dispose(); game = null;
     canvas?.remove(); canvas = null; ctx = null; host = null;
+    args = null;
   };
   const resize = () => {
     if (!canvas || !host) return;
@@ -50,11 +60,12 @@ export function createG8Adapter(): MinigameAdapter {
     game?.step(elapsed); // No timer clamping: a hidden tab still consumes real playing time.
   };
   return {
-    startMinigame(args: MinigameStartArgs) {
+    startMinigame(startArgs: MinigameStartArgs) {
       cleanup();
       completionFired = false;
-      args.setControlLabels({ left: "Left shelf", right: "Right shelf" });
-      host = args.container ?? document.getElementById("minigame-root");
+      args = startArgs;
+      startArgs.setControlLabels({ left: "Left shelf", right: "Right shelf" });
+      host = startArgs.container ?? document.getElementById("minigame-root");
       if (!host) throw new Error("Shelf Shuffle needs a minigame container");
       canvas = document.createElement("canvas");
       canvas.dataset.minigame = G8_ID;
@@ -64,12 +75,12 @@ export function createG8Adapter(): MinigameAdapter {
       ctx = canvas.getContext("2d");
       if (!ctx) { cleanup(); throw new Error("Shelf Shuffle needs a 2D canvas context"); }
       mounted = true;
-      game = createGame({ runId: args.runId,
-        onLabels: labels => { if (mounted) args.setControlLabels(labels); },
+      game = createGame({ runId: startArgs.runId,
+        onLabels: labels => { if (mounted) startArgs.setControlLabels(labels); },
         onComplete: () => {
           if (!mounted || completionFired) return;
           completionFired = true;
-          args.onComplete();
+          startArgs.onComplete();
         },
       });
       previous = performance.now();
@@ -89,7 +100,19 @@ export function createG8Adapter(): MinigameAdapter {
         advance(now);
         if (!mounted || session !== generation) return;
         draw();
-        if (!completionFired) raf = requestAnimationFrame(frame);
+        
+        // Check for failure and call onFail after hold period
+        if (game?.state.phase === "FAILED" && !failFired) {
+          if (failedAt === null) {
+            failedAt = now;
+          } else if (now - failedAt >= FAILURE_HOLD_MS) {
+            failFired = true;
+            args?.onFail();
+            return;
+          }
+        }
+        
+        if (!completionFired && !failFired) raf = requestAnimationFrame(frame);
       };
       raf = requestAnimationFrame(frame);
     },

@@ -34,6 +34,7 @@ export function createG4Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
+  let failFired = false;
   let disposed = false;
   
   // Audio elements
@@ -134,6 +135,12 @@ export function createG4Adapter(): MinigameAdapter {
     pressFlash = Math.max(0, 1 - timeSincePress / 150);
     
     drawFrame(ctx, game.state, canvas.width, canvas.height, pressFlash);
+    
+    // Call onFail after 1 second in FAILED state
+    if (game.state.phase === "FAILED" && game.state.phaseMs >= 1000 && !failFired) {
+      failFired = true;
+      args?.onFail();
+    }
   };
 
   const teardownScene = (): void => {
