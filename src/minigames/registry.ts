@@ -52,14 +52,14 @@ export function getAllGames(): MinigameInfo[] {
 }
 
 /**
- * Get a list of all ready games for selection.
+ * Get a list of all ready games for selection (only pool games).
  */
 export function getReadyGames(): MinigameInfo[] {
-  return getAllGames().filter((g) => g.ready);
+  return getAllGames().filter((g) => g.ready && g.pool !== false);
 }
 
 /**
- * Get ready games that use exactly one button.
+ * Get ready pool games that use exactly one button.
  * C1 (the opening level) must draw from this pool.
  */
 export function getOneButtonGames(): MinigameInfo[] {
@@ -67,7 +67,7 @@ export function getOneButtonGames(): MinigameInfo[] {
 }
 
 /**
- * Get ready games that use two buttons.
+ * Get ready pool games that use two buttons.
  */
 export function getTwoButtonGames(): MinigameInfo[] {
   return getReadyGames().filter((g) => g.inputCount === 2);

@@ -87,7 +87,7 @@ export type MinigameAdapterFactory = () => MinigameAdapter;
  * 3. Instantiate the adapter when the game is selected
  */
 export interface MinigameRegistryEntry {
-  /** Unique identifier: "G1"–"G7" for regular games, "BOSS" for the boss. */
+  /** Unique identifier: "G1"–"G7" for regular games, "E1"/"E2" for ending games. */
   id: string;
   /** Human-readable name for display. */
   name: string;
@@ -102,6 +102,12 @@ export interface MinigameRegistryEntry {
    * This field is declared at registration, not discovered at runtime.
    */
   inputCount: 1 | 2;
+  /**
+   * Whether this game is in the random selection pool for C1-C4.
+   * - true (default): Game can be randomly selected for stages.
+   * - false: Game is special (E1/E2 ending games) and not in the pool.
+   */
+  pool?: boolean;
   /** Factory that creates a fresh adapter instance. */
   adapter: MinigameAdapterFactory;
 }

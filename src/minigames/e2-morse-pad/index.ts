@@ -131,6 +131,7 @@ export const e2Entry: MinigameRegistryEntry = {
   name: "Morse Override",
   ready: true,
   inputCount: 2,
+  pool: false, // Ending game, not in random selection pool
   adapter: createE2Adapter,
 };
 

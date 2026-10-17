@@ -205,6 +205,7 @@ export const e1Entry: MinigameRegistryEntry = {
   name: "Vault Lock",
   ready: true,
   inputCount: 2, // one button turns, the other locks in
+  pool: false, // Ending game, not in random selection pool
   adapter: createE1Adapter,
 };
 
