@@ -2,6 +2,7 @@
  * Please Hold - Main Game Controller
  *
  * Game Flow:
+ * 0. Main menu: Start begins a new run (menu music loops until then)
  * 1. C1: Random one-button game (introduces controls)
  * 2. C2-C4: Random two-button games (no repeats within a run)
  * 3. After C4: PIN entry phase using E1 or E2 ending minigame
@@ -20,7 +21,8 @@ import {
   type ControlLabels,
   type MinigameAdapter,
 } from './minigames';
-import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, MUSIC_DUCK_FOR_VICTORY } from './audio'; // [audio]
+import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
+import { createMainMenuScene } from './scenes/main-menu';
 
 // ---- Seeded PRNG ----
 
@@ -73,9 +75,15 @@ interface GameState {
 
 const STAGES: StageId[] = ['C1', 'C2', 'C3', 'C4'];
 
+/** Anything that receives button input and can be disposed: a minigame adapter or the main menu. */
+type InputScene = Pick<MinigameAdapter, 'handleInput' | 'dispose'>;
+
 let state: GameState;
-let currentAdapter: MinigameAdapter | null = null;
+let currentAdapter: InputScene | null = null;
 let currentInputCount: 1 | 2 = 2; // Track current game's input mode
+let inMainMenu = false;
+/** Delay before the ending screen offers Replay, so the victory sound is heard first. */
+const ENDING_REPLAY_DELAY_MS = 4000;
 
 // ---- Run Plan Generation ----
 
@@ -249,9 +257,8 @@ function restartRun(): void {
 }
 
 function goToMainMenu(): void {
-  console.log('[Main] Going to main menu (not implemented yet)');
-  // For now, just restart
-  restartRun();
+  hideGameOver();
+  showMainMenu(); // [audio] crossfades the game over music into the menu track
 }
 
 function updateStageDisplay(): void {
@@ -304,6 +311,11 @@ function buildDebugButtons(): void {
     btn.title = `${game.name} (${game.inputCount} button${game.inputCount === 1 ? '' : 's'})${game.ready ? '' : ' - not ready'}`;
     if (!game.ready) btn.classList.add('not-ready');
     btn.addEventListener('click', () => {
+      if (inMainMenu) {
+        // Debug shortcut from the menu: begin a run, then jump to the chosen game.
+        leaveMainMenu();
+        beginRun();
+      }
       if (getCurrentGameId() !== game.id) {
         console.log(`[Main] Switching to ${game.id}`);
         startGame(game.id);
@@ -311,6 +323,77 @@ function buildDebugButtons(): void {
     });
     elements.debugGames.appendChild(btn);
   }
+}
+
+// ---- Main Menu ----
+
+/** Show the main menu (the entry scene) with the menu music; Start begins a new run. */
+function showMainMenu(): void {
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  hideGameOver();
+  inMainMenu = true;
+  document.getElementById('app')?.classList.add('in-menu');
+  elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+  elements.sceneBg.classList.add('scene-menu');
+  currentInputCount = 2;
+  elements.controls.classList.remove('single-button-mode');
+
+  // [audio] Menu music from the moment the menu opens; unlock() succeeds straight away if
+  // the page has had a gesture. If the browser blocks it, the first press (which also
+  // calls unlock()) gets it going without being swallowed: RIGHT starts the run, LEFT
+  // turns the music on. LEFT is the global music toggle (music bus only, saved).
+  audio.playMusic('menu');
+  audio.unlock();
+
+  const menu = createMainMenuScene();
+  menu.start({
+    container: elements.minigameRoot,
+    setControlLabels: updateControlLabels,
+    getAudioState: () => audio.outputState(),
+    musicEnabled: audio.isMusicEnabled(),
+    onToggleMusic: (enabled) => audio.setMusicEnabled(enabled),
+    onStart: startNewRun,
+    // A click/tap on the on-screen Start button behaves like pressing RIGHT.
+    onPointerStart: () => {
+      handleButtonPress('RIGHT', elements.btnRight);
+      handleButtonRelease(elements.btnRight);
+    },
+  });
+  currentAdapter = menu;
+  console.log('[Main] Main menu');
+}
+
+function leaveMainMenu(): void {
+  if (!inMainMenu) return;
+  inMainMenu = false;
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  elements.sceneBg.classList.remove('scene-menu');
+  document.getElementById('app')?.classList.remove('in-menu');
+}
+
+/** Fresh run plan (new seed, new shuffle) and reset stage and lives displays. */
+function beginRun(): void {
+  state = createInitialState();
+  updateStageDisplay();
+  updateLivesDisplay();
+  updateDebugButtons();
+  elements.debugPin.textContent = state.runPlan.pinDigits.join('');
+}
+
+/** Start a brand-new run from the menu. The menu logic already fires onStart only once. */
+function startNewRun(): void {
+  if (!inMainMenu) return; // guards a second call from a double press
+  leaveMainMenu();
+  beginRun();
+  startCurrentStageGame(); // [audio] its playMusic crossfades out of the menu track
 }
 
 // ---- Game Management ----
@@ -354,8 +437,9 @@ function startGame(gameId: string): void {
   elements.controls.classList.toggle('single-button-mode', inputCount === 1);
 
   try {
-    currentAdapter = createAdapter(gameId);
-    currentAdapter.startMinigame({
+    const adapter = createAdapter(gameId);
+    currentAdapter = adapter;
+    adapter.startMinigame({
       gameId,
       stageId: state.currentStage,
       runId: `run-${state.runPlan.seed}`,
@@ -506,8 +590,10 @@ function showDoorOpening(): void {
 function showEnding(): void {
   state.phase = 'ENDING';
 
-  // [audio] Victory sting over ducked music.
-  audio.duckMusic(MUSIC_DUCK_FOR_VICTORY);
+  // [audio] Silence after the win: fade out and stop every music track and ambience,
+  // cancelling anything scheduled (a pending loop handoff or crossfade), then play the
+  // victory sound once. Nothing starts music again until Replay returns to the menu.
+  audio.stopMusic();
   audio.playSfx('victory');
   
   // Show sunrise ending
@@ -524,6 +610,25 @@ function showEnding(): void {
   `;
   
   updateControlLabels({ left: '—', right: '—' });
+
+  // Ending scene input: after the victory sound, either button replays (back to the menu).
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  let replayReady = false;
+  const replayTimer = window.setTimeout(() => {
+    replayReady = true;
+    updateControlLabels({ left: 'Replay', right: 'Replay' });
+  }, ENDING_REPLAY_DELAY_MS);
+  currentAdapter = {
+    handleInput: () => {
+      if (!replayReady) return;
+      console.log('[Main] Replay: back to the main menu');
+      showMainMenu(); // [audio] plays the menu track again
+    },
+    dispose: () => window.clearTimeout(replayTimer),
+  };
 }
 
 // ---- Input Handling ----
@@ -590,8 +695,8 @@ window.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   
-  // Handle game over screen with A/D keys
-  if (state.phase === 'GAME_OVER') {
+  // Handle game over screen with A/D keys (there is no run state while the menu is open)
+  if (!inMainMenu && state.phase === 'GAME_OVER') {
     if (key === 'arrowleft' || key === 'a') {
       e.preventDefault();
       restartRun();
@@ -665,20 +770,13 @@ function init(): void {
     return;
   }
 
-  // Initialize state
-  state = createInitialState();
-
-  // Initialize UI
-  updateStageDisplay();
-  updateLivesDisplay();
+  // Initialize UI (stage and lives displays are set up per run in beginRun)
   buildDebugButtons();
-  updateDebugButtons();
-  elements.debugPin.textContent = state.runPlan.pinDigits.join('');
 
   void audio.preload(); // [audio] decode every track now so transitions are instant
 
-  // Start the first game
-  startCurrentStageGame();
+  // The main menu is the entry scene; Start creates the run and starts its first game.
+  showMainMenu();
 
   // Show the app (hidden until ready to prevent flash)
   document.getElementById('app')?.classList.add('ready');

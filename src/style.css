@@ -585,3 +585,127 @@ html, body {
 .overlay-btn--secondary:hover .overlay-btn-key {
   color: var(--text);
 }
+/* ============================================
+   MAIN MENU (src/scenes/main-menu)
+   ============================================ */
+
+/* The bunker, scaled to cover the screen (aspect kept, edges cropped), under a dark gradient. */
+#scene-bg.scene-menu {
+  background-image:
+    linear-gradient(180deg, rgba(4, 8, 10, 0.45) 0%, rgba(4, 8, 10, 0.7) 60%, rgba(4, 8, 10, 0.9) 100%),
+    url('/assets/scenes/bunker_after_level1.png');
+}
+
+#app.in-menu #stage-nav,
+#app.in-menu #lives-display {
+  visibility: hidden;
+}
+
+.main-menu {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-align: center;
+  background:
+    radial-gradient(ellipse at center, rgba(10, 20, 17, 0.2) 0%, rgba(4, 8, 10, 0.92) 100%),
+    #04080a;
+  animation: menu-vignette 7s ease-in-out infinite;
+}
+
+/* Faint CRT scanlines; purely decorative. */
+.main-menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+}
+
+.main-menu__eyebrow,
+.main-menu__hint {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.main-menu__title {
+  margin: 6px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  line-height: 1.1;
+  color: #ffb347;
+  text-shadow:
+    0 0 6px rgba(255, 179, 71, 0.9),
+    0 0 18px rgba(255, 179, 71, 0.45),
+    0 0 34px rgba(92, 255, 157, 0.25);
+}
+
+.main-menu__sub {
+  margin-bottom: 14px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.main-menu__start {
+  min-width: 170px;
+  padding: 14px 28px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #04080a;
+  background: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(92, 255, 157, 0.55);
+  animation: menu-start-pulse 1.6s ease-in-out infinite;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.main-menu__start:disabled {
+  animation: none;
+  opacity: 0.6;
+  cursor: default;
+}
+
+.main-menu__music {
+  margin-top: 8px;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+
+.main-menu__hint {
+  margin-top: 10px;
+}
+
+@keyframes menu-start-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(92, 255, 157, 0.45); }
+  50% { transform: scale(1.05); box-shadow: 0 0 28px rgba(92, 255, 157, 0.85); }
+}
+
+@keyframes menu-vignette {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu,
+  .main-menu__start {
+    animation: none;
+  }
+}

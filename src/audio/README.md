@@ -11,13 +11,13 @@ beat clock.
 | `webaudio-backend.ts` | The real backend: AudioContext, `fetch` + `decodeAudioData`, thin GainNode / BufferSourceNode adapters. |
 | `tracks.ts` | The manifest, `MINIGAME_TRACKS` (games whose music overrides the stage track) and `GAMES_WITH_OWN_AUDIO`. Imports the files from `assets/` exactly as named (spaces and brackets included); Vite hashes them into the build. |
 | `index.ts` | The shared `audio` instance plus re-exports (`trackForScene`, `trackForMinigame`, `trackForHub`, `MINIGAME_TRACKS`, `GAMES_WITH_OWN_AUDIO`). |
-| `engine.test.ts` | 23 tests against a fake backend. |
+| `engine.test.ts` | 33 tests against a fake backend. |
 
 ## Track map
 
 | Key | File | Where it plays | Loop |
 | --- | --- | --- | --- |
-| `menu` | `main menu music.mp3` (22.68 s) | Main menu. **Not played anywhere yet** (no menu scene exists). | yes |
+| `menu` | `main menu music.mp3` (22.68 s) | The main menu (`src/scenes/main-menu`), the entry scene | yes |
 | `c1` | `c1.mp3` (7.44 s, with drums) | Stage C1, whatever minigame is assigned (except G4) | yes, whole bars |
 | `g4` → `c1_loop` | `c1.mp3` once, then `c1(no drums).mp3` (7.44 s each) | The G4 rhythm game, whichever stage it is in: the drums intro once, then the no-drums loop forever | intro once, loop yes |
 | `c2` | `c2.mp3` (10.73 s) | Stage C2 | yes |
@@ -54,12 +54,28 @@ hub scene exists; `trackForScene({ kind: "hub", completed })` wraps it.
 - Loops use `AudioBufferSourceNode.loop = true` with trimmed `loopStart` / `loopEnd`,
   never `<audio loop>`.
 - Every track is decoded into an `AudioBuffer` by `preload()` at startup.
-- **Autoplay:** nothing plays until `unlock()`, which the controller calls on the first
-  LEFT/RIGHT input (`handleButtonPress`). A `playMusic` before that is remembered and
+- **Autoplay:** nothing plays until `unlock()`. The controller calls it when the main menu
+  opens (it succeeds straight away if the page already had a gesture, or if the browser
+  allows autoplay) and on every LEFT/RIGHT input (`handleButtonPress`). While the browser
+  keeps the context suspended, every call retries `resume()`, so the first real press
+  always gets sound going; `outputState()` reports `"running"`, `"suspended"` (blocked,
+  waiting for a gesture) or `"unavailable"`. A `playMusic` before unlock is remembered and
   started on unlock. Audio that fails to load or a browser without Web Audio only logs a
   warning once; every call is a silent no-op and the game runs normally.
 - **Volumes:** `MASTER_GAIN` 0.9, `MUSIC_GAIN` 0.5, `SFX_GAIN` 0.8 (music under effects).
-  No UI, no new inputs.
+- **Music toggle:** `setMusicEnabled(on)` / `isMusicEnabled()` is the global music on/off
+  for the whole session. It ramps the **music bus only** (`MUSIC_TOGGLE_FADE_MS`, 150 ms);
+  sound effects are unaffected and the tracks keep running underneath, so turning music
+  back on resumes the current scene's track in place, never restarting it. It composes
+  with ducking/suppression (`level = on ? MUSIC_GAIN × factor : 0`). `index.ts` restores it
+  from `localStorage` (`MUSIC_SETTING_KEY`, `"on"`/`"off"`, wrapped in try/catch) and saves
+  every change through `onMusicEnabledChange`. The main menu's LEFT button drives it.
+- **Ending silence:** `stopMusic()` fades out and stops every music source on the clock,
+  including a no-drums loop that was only scheduled, clears the pending track and cancels
+  an in-flight start. `showEnding()` calls it and then `playSfx("victory")` once, so after
+  the sting nothing plays until Replay returns to the menu (`playMusic("menu")`). Nothing
+  else in the engine restarts music on its own: there is no `ended` handler or timer that
+  re-schedules a track.
 - `GAMES_WITH_OWN_AUDIO` silences the music bus while a game that plays audio outside this
   engine runs (`setMusicSuppressed(true)`) and restores it afterwards without restarting
   the stage track. It is empty now: G4's music comes from the engine.
@@ -114,19 +130,23 @@ but nothing reads it.
 ## Controller hooks (`src/main.ts`, marked `// [audio]`)
 
 1. `import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, MUSIC_DUCK_FOR_VICTORY } from './audio'`
-2. `startGame()`: `audio.playMusic(trackForMinigame(gameId, E-game ? end : stage, MINIGAME_TRACKS))`
+2. `showMainMenu()`: `audio.playMusic('menu'); audio.unlock()` as soon as the menu opens;
+   the menu's LEFT button calls `audio.setMusicEnabled()` (initial value from
+   `audio.isMusicEnabled()`), and the scene polls `audio.outputState()` so that, while the
+   browser still blocks audio, the first LEFT press turns the music on instead of off.
+   RIGHT starts the run; `startGame()`'s `playMusic` crossfades out of the menu track.
+3. `startGame()`: `audio.playMusic(trackForMinigame(gameId, E-game ? end : stage, MINIGAME_TRACKS))`
    (the stage track, or `g4` for G4) and `audio.setMusicSuppressed(GAMES_WITH_OWN_AUDIO.has(gameId))`
-3. `handleGameComplete()` (stages): `audio.playMusic(trackForScene(stage))`, which crossfades
+4. `handleGameComplete()` (stages): `audio.playMusic(trackForScene(stage))`, which crossfades
    out of `g4` after G4 and is a no-op after any other game
-4. `showEnding()`: `audio.duckMusic(MUSIC_DUCK_FOR_VICTORY); audio.playSfx('victory')`
-5. `handleButtonPress()`: `audio.unlock()` (first LEFT/RIGHT input)
-6. `init()`: `void audio.preload()`
+5. `showEnding()`: `audio.stopMusic(); audio.playSfx('victory')`, then silence; Replay
+   (either button, after the sting) calls `showMainMenu()`
+6. `handleButtonPress()`: `audio.unlock()` (every LEFT/RIGHT input; retries while blocked)
+7. `init()`: `void audio.preload()`
 
 ## Hooking up later
 
-- **Main menu:** when a title/menu scene exists, call `audio.playMusic("menu")` when it
-  shows (after the first input has unlocked audio) and let the first stage's `playMusic`
-  crossfade out of it. Do not play it on an intro/dialogue screen.
+- **Main menu:** wired (hook 2), including Replay from the ending (hook 5).
 - **Boss fight:** `creepy sounds.mp3` is the only boss file present (there is no audio in
   `assets/scenes/`). At 26 s of continuous texture it is an ambience, so it is registered
   as the looping music key `boss`; there is no separate stinger file. When the boss is
@@ -157,8 +177,16 @@ restarted; C4 → end stage does not restart; crossfade ramps and exactly one ac
 afterwards; reset then G4 plays the intro again; ducking; one-shots; failed loads and a
 missing Web Audio implementation never throw.
 
-The G4 timing tests live next to the game:
+Also covered: the menu track loops and `outputState()`; with autoplay blocked a later
+`unlock()` (the first press) resumes the context without restarting the track; a backend
+without audio reports `unavailable`; menu → first stage crossfades with no overlap after;
+the music toggle (music bus only, short fade, no restart, composes with ducking, persists
+across scene changes, restored from and reported to storage); the ending stops music and
+ambience including a scheduled loop, plays the sting once and starts or schedules nothing
+over a long simulated period; Replay then starts the menu track again.
+
+The G4 and main-menu tests live next to their scenes:
 
 ```sh
-./chicken-cross/node_modules/.bin/vitest run src/minigames/g4-rhythm
+./chicken-cross/node_modules/.bin/vitest run src/minigames/g4-rhythm src/scenes/main-menu
 ```

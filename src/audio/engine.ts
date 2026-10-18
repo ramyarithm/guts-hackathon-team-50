@@ -11,6 +11,8 @@ export const MUSIC_GAIN = 0.5;
 export const SFX_GAIN = 0.8;
 /** Crossfade between music tracks, and fade used for duck/stop. */
 export const CROSSFADE_MS = 800;
+/** Fade used by the global music on/off toggle. */
+export const MUSIC_TOGGLE_FADE_MS = 150;
 /** Music level while the victory sting plays (fraction of MUSIC_GAIN). */
 export const MUSIC_DUCK_FOR_VICTORY = 0.2;
 /** Samples with |value| below this are "silence" when trimming encoder padding (~ -48 dB). */
@@ -111,14 +113,31 @@ export interface LoopPoints {
   bars: number | null;
 }
 
+export interface AudioEngineOptions {
+  /** Initial music on/off setting (default on), e.g. restored from storage. */
+  musicEnabled?: boolean;
+  /** Called whenever the setting changes, e.g. to save it. */
+  onMusicEnabledChange?: (enabled: boolean) => void;
+}
+
 export interface AudioEngine {
   /** Create the context and decode every track. Safe to call once at startup. */
   preload(): Promise<void>;
-  /** Call on the first user input: resumes the context and starts the pending track. */
+  /**
+   * Resume the context and start the pending track. Call it when a scene opens (it may
+   * succeed if the page already had a gesture) and on every button press: while the
+   * browser's autoplay policy keeps the context suspended, each call retries resume().
+   */
   unlock(): void;
+  /** Whether sound can be heard: "suspended" means autoplay is blocked until a gesture. */
+  outputState(): "running" | "suspended" | "unavailable";
   /** Switch music; a no-op if that track is already playing. */
   playMusic(key: string): void;
-  /** Fade the music out; the next playMusic starts fresh (C1 plays its intro again). */
+  /**
+   * Fade the music out and stop every music source, including ones only scheduled for
+   * later (a pending intro -> loop handoff); cancels a pending or in-flight track too.
+   * The next playMusic starts fresh (G4 plays its intro again).
+   */
   stopMusic(): void;
   /** Alias of stopMusic for a new playthrough. */
   resetRun(): void;
@@ -128,6 +147,13 @@ export interface AudioEngine {
   duckMusic(factor: number, ms?: number): void;
   /** Silence the music while a minigame plays its own audio; restores afterwards. */
   setMusicSuppressed(suppressed: boolean): void;
+  /**
+   * Global music on/off for the whole session: mutes or unmutes the music bus only (sound
+   * effects are unaffected) with a MUSIC_TOGGLE_FADE_MS fade. Tracks keep running
+   * underneath, so turning music back on resumes the current scene's track in place.
+   */
+  setMusicEnabled(enabled: boolean): void;
+  isMusicEnabled(): boolean;
   isAvailable(key: string): boolean;
   /**
    * Beats elapsed since the first downbeat of the current track (fractional), on the
@@ -248,7 +274,7 @@ interface Voice {
   bpm: number | null;
 }
 
-export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest): AudioEngine {
+export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest, options: AudioEngineOptions = {}): AudioEngine {
   let ctx: AudioContextLike | null = null;
   let master: GainLike | null = null;
   let musicBus: GainLike | null = null;
@@ -264,7 +290,11 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
   let generation = 0;
   let voices: Voice[] = [];
   let musicFactor = 1;
+  let musicEnabled = options.musicEnabled ?? true;
   const warned = new Set<string>();
+
+  /** The music bus level for the current duck/suppress factor and on/off setting. */
+  const musicLevel = (): number => (musicEnabled ? MUSIC_GAIN * musicFactor : 0);
 
   const warn = (what: string, detail?: unknown): void => {
     if (warned.has(what)) return;
@@ -280,7 +310,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       master.setValueAtTime(MASTER_GAIN, ctx.currentTime);
       master.connect(ctx.destination ?? {});
       musicBus = ctx.createGain();
-      musicBus.setValueAtTime(MUSIC_GAIN, ctx.currentTime);
+      musicBus.setValueAtTime(musicLevel(), ctx.currentTime);
       musicBus.connect(master);
       sfxBus = ctx.createGain();
       sfxBus.setValueAtTime(SFX_GAIN, ctx.currentTime);
@@ -429,8 +459,8 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       if (disposed) return;
       const c = ensureContext();
       if (!c) return;
-      if (!unlocked) {
-        unlocked = true;
+      unlocked = true;
+      if (c.state !== "running") {
         try {
           void c.resume().catch((error) => warn("resume failed", error));
         } catch (error) {
@@ -497,15 +527,35 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
     duckMusic(factor: number, ms = CROSSFADE_MS): void {
       musicFactor = Math.max(0, Math.min(1, factor));
       if (!musicBus) return;
-      rampGain(musicBus, MUSIC_GAIN * musicFactor, ms);
+      rampGain(musicBus, musicLevel(), ms);
     },
 
     setMusicSuppressed(suppressed: boolean): void {
       engine.duckMusic(suppressed ? 0 : 1);
     },
 
+    setMusicEnabled(enabled: boolean): void {
+      if (enabled === musicEnabled) return;
+      musicEnabled = enabled;
+      if (musicBus) rampGain(musicBus, musicLevel(), MUSIC_TOGGLE_FADE_MS);
+      try {
+        options.onMusicEnabledChange?.(enabled);
+      } catch (error) {
+        warn("could not save the music setting", error);
+      }
+    },
+
+    isMusicEnabled(): boolean {
+      return musicEnabled;
+    },
+
     isAvailable(key: string): boolean {
       return Boolean(loaded.get(key));
+    },
+
+    outputState(): "running" | "suspended" | "unavailable" {
+      if (!ctx || disposed) return "unavailable";
+      return ctx.state === "running" ? "running" : "suspended";
     },
 
     getBeatClock(): number | null {

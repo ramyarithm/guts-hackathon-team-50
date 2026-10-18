@@ -7,6 +7,8 @@ import {
   C1_BPM,
   CROSSFADE_MS,
   MUSIC_GAIN,
+  MUSIC_TOGGLE_FADE_MS,
+  SFX_GAIN,
   barSeconds,
   computeLoopPoints,
   createAudioEngine,
@@ -51,13 +53,20 @@ function makeBuffer(seconds: number, leadingSilence = 0, trailingSilence = 0, sa
 }
 
 function createFakeBackend(
-  options: { failUrls?: string[]; buffers?: Record<string, AudioBufferLike>; outputLatency?: number } = {},
+  options: {
+    failUrls?: string[];
+    buffers?: Record<string, AudioBufferLike>;
+    outputLatency?: number;
+    /** Simulate the autoplay policy: resume() is ignored until `allowResume()` is called. */
+    blockResume?: boolean;
+  } = {},
 ) {
   const sources: FakeSource[] = [];
   const gains: FakeGain[] = [];
   let now = 10; // the AudioContext clock
   let state: "suspended" | "running" | "closed" = "suspended";
   let resumes = 0;
+  let blocked = options.blockResume ?? false;
   const bufferByUrl = options.buffers ?? {};
 
   const backend: AudioBackend = {
@@ -72,7 +81,7 @@ function createFakeBackend(
         outputLatency: options.outputLatency,
         async resume() {
           resumes++;
-          state = "running";
+          if (!blocked) state = "running";
         },
         async close() {
           state = "closed";
@@ -139,6 +148,10 @@ function createFakeBackend(
     gains,
     get resumes() {
       return resumes;
+    },
+    /** The user has now interacted with the page: the next resume() succeeds. */
+    allowResume() {
+      blocked = false;
     },
     advance(seconds: number) {
       now += seconds;
@@ -324,6 +337,215 @@ describe("engine: unlock, stage C1 and the G4 handoff", () => {
     expect(engine.currentTrack()).toBe("c1");
     const c1 = fake.sources.filter((s) => s.startedAt !== null)[2]!;
     expect(c1.loop).toBe(true);
+  });
+});
+
+describe("engine: main menu and autoplay", () => {
+  it("the menu track loops from the moment the menu opens and reports the output state", async () => {
+    const { fake, engine } = await readyEngine();
+    expect(engine.outputState()).toBe("suspended");
+    engine.playMusic("menu");
+    engine.unlock(); // the menu tries to start without a gesture
+    await flush();
+    expect(engine.outputState()).toBe("running");
+    const started = fake.sources.filter((s) => s.startedAt !== null);
+    expect(started).toHaveLength(1);
+    expect(started[0]!.loop).toBe(true);
+    expect(engine.currentTrack()).toBe("menu");
+  });
+
+  it("when autoplay is blocked, the first press's unlock resumes the context without restarting the track", async () => {
+    const { fake, engine } = await readyEngine({ blockResume: true });
+    engine.playMusic("menu");
+    engine.unlock(); // no gesture yet: the browser ignores resume()
+    await flush();
+    expect(fake.resumes).toBe(1);
+    expect(engine.outputState()).toBe("suspended");
+    fake.allowResume();
+    engine.unlock(); // the first press
+    await flush();
+    expect(fake.resumes).toBe(2);
+    expect(engine.outputState()).toBe("running");
+    expect(engine.currentTrack()).toBe("menu");
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
+    engine.unlock(); // once running, further presses do nothing
+    await flush();
+    expect(fake.resumes).toBe(2);
+  });
+
+  it("without Web Audio the output state is unavailable", async () => {
+    const broken: AudioBackend = {
+      createContext() {
+        throw new Error("no audio");
+      },
+      async fetchArrayBuffer() {
+        throw new Error("offline");
+      },
+    };
+    const engine = createAudioEngine(broken, MANIFEST);
+    await engine.preload();
+    engine.playMusic("menu");
+    engine.unlock();
+    engine.setMusicEnabled(false);
+    expect(engine.outputState()).toBe("unavailable");
+    expect(engine.isMusicEnabled()).toBe(false);
+  });
+
+  it("starting a run crossfades from the menu to the first stage track with no overlap afterwards", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.playMusic("menu");
+    engine.unlock();
+    await flush();
+    fake.advance(5);
+    engine.playMusic(trackForMinigame("G2", { kind: "stage", stage: "C1" }, { G4: "g4" }));
+    await flush();
+    expect(engine.activeTracks().sort()).toEqual(["c1", "menu"]);
+    fake.advance(CROSSFADE_MS / 1000 + 0.1);
+    expect(engine.activeTracks()).toEqual(["c1"]);
+    expect(engine.currentTrack()).toBe("c1");
+  });
+});
+
+describe("engine: music toggle", () => {
+  // The engine creates its gains in a fixed order: master, music bus, sfx bus.
+  const musicBus = (fake: ReturnType<typeof createFakeBackend>) => fake.gains[1]!;
+  const sfxBus = (fake: ReturnType<typeof createFakeBackend>) => fake.gains[2]!;
+
+  it("is on by default and mutes only the music bus with a short fade, without stopping the track", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("c2");
+    await flush();
+    expect(engine.isMusicEnabled()).toBe(true);
+    const sfxRampsBefore = sfxBus(fake).ramps.length;
+    const t = fake.now();
+    engine.setMusicEnabled(false);
+    expect(engine.isMusicEnabled()).toBe(false);
+    const off = musicBus(fake).ramps.at(-1)!;
+    expect(off.value).toBe(0);
+    expect(off.endTime).toBeCloseTo(t + MUSIC_TOGGLE_FADE_MS / 1000, 9);
+    expect(sfxBus(fake).ramps.length).toBe(sfxRampsBefore);
+    // Still playing underneath, so turning it back on resumes where the track is.
+    fake.advance(3);
+    expect(engine.activeTracks()).toEqual(["c2"]);
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
+    engine.setMusicEnabled(true);
+    const on = musicBus(fake).ramps.at(-1)!;
+    expect(on.value).toBeCloseTo(MUSIC_GAIN, 9);
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
+  });
+
+  it("stays muted across scene changes and leaves sound effects audible", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("menu");
+    await flush();
+    engine.setMusicEnabled(false);
+    engine.playMusic("c1"); // starting a run
+    await flush();
+    engine.playMusic("c2");
+    await flush();
+    expect(engine.isMusicEnabled()).toBe(false);
+    expect(musicBus(fake).value).toBe(0);
+    engine.playSfx("victory");
+    await flush();
+    const sfx = fake.sources.filter((s) => s.startedAt !== null && !s.loop);
+    expect(sfx).toHaveLength(1);
+    expect(sfxBus(fake).value).toBe(SFX_GAIN);
+  });
+
+  it("ducking and suppression respect the toggle, and the toggle respects ducking", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("c3");
+    await flush();
+    engine.setMusicEnabled(false);
+    engine.duckMusic(0.5);
+    expect(musicBus(fake).ramps.at(-1)!.value).toBe(0);
+    engine.setMusicEnabled(true);
+    expect(musicBus(fake).ramps.at(-1)!.value).toBeCloseTo(MUSIC_GAIN * 0.5, 9);
+  });
+
+  it("starts from the saved setting and reports changes for saving", async () => {
+    const fake = createFakeBackend();
+    const saved: boolean[] = [];
+    const engine = createAudioEngine(fake.backend, MANIFEST, {
+      musicEnabled: false,
+      onMusicEnabledChange: (on) => saved.push(on),
+    });
+    await engine.preload();
+    engine.unlock();
+    engine.playMusic("menu");
+    await flush();
+    expect(engine.isMusicEnabled()).toBe(false);
+    expect(musicBus(fake).value).toBe(0);
+    engine.setMusicEnabled(true);
+    engine.setMusicEnabled(true); // no change, not reported again
+    engine.setMusicEnabled(false);
+    expect(saved).toEqual([true, false]);
+  });
+});
+
+describe("engine: the ending is silent after the victory sound", () => {
+  it("stops music and ambience, plays the sting once, and schedules nothing afterwards", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("g4"); // an intro with a loop scheduled for later
+    await flush();
+    fake.advance(1);
+    engine.playMusic("c4"); // the end stage track
+    await flush();
+    fake.advance(2);
+    engine.playMusic("boss"); // looping ambience
+    await flush();
+    fake.advance(2);
+
+    const t = fake.now();
+    engine.stopMusic();
+    engine.playSfx("victory");
+    await flush();
+    const sources = fake.sources.filter((s) => s.startedAt !== null);
+    const sting = sources.at(-1)!;
+    expect(sting.loop).toBe(false);
+    expect(sting.startedAt).toBeCloseTo(t, 9);
+    // Every music source, including the loop that was only scheduled, is stopped on the clock.
+    const fade = CROSSFADE_MS / 1000;
+    for (const s of sources) {
+      if (s === sting) continue;
+      expect(s.stoppedAt).not.toBeNull();
+      expect(s.stoppedAt!).toBeLessThanOrEqual(t + fade + 0.02);
+    }
+    expect(engine.currentTrack()).toBeNull();
+    expect(engine.getBeatClock()).toBeNull();
+
+    // Well past the sting (3.8 s): nothing new started, nothing active, no clock.
+    const countAtSting = fake.sources.length;
+    fake.advance(fade + 0.1);
+    expect(engine.activeTracks()).toEqual([]);
+    fake.advance(60);
+    engine.unlock(); // stray presses on the ending screen
+    await flush();
+    expect(fake.sources.length).toBe(countAtSting);
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(sources.length);
+    expect(engine.activeTracks()).toEqual([]);
+    expect(engine.currentTrack()).toBeNull();
+  });
+
+  it("replay returns to the menu, whose music starts again", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("c4");
+    await flush();
+    engine.stopMusic();
+    engine.playSfx("victory");
+    await flush();
+    fake.advance(10);
+    engine.playMusic("menu");
+    await flush();
+    const menuSources = fake.sources.filter((s) => s.startedAt !== null && s.loop && s.stoppedAt === null);
+    expect(menuSources).toHaveLength(1);
+    expect(engine.activeTracks()).toEqual(["menu"]);
+    expect(engine.currentTrack()).toBe("menu");
   });
 });
 
