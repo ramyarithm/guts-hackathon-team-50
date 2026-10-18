@@ -10,11 +10,7 @@
 - [ ] Balance difficulty/timing
 - [ ] Add more feedback/polish
 
-## 3. Improve game over and retry
-- [ ] Discuss with team members first
-- [ ] Implement agreed changes
-
-## 4. Test all minigames
+## 3. Test all minigames
 - [ ] Run unit tests for each minigame
 - [ ] Test full game flow from menu to ending
 - [ ] Play through each minigame (G1-G8, E1, E2)

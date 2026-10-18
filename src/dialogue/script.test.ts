@@ -17,7 +17,7 @@ describe('script loading', () => {
     const warnings: string[] = [];
     const script = loadScript(raw, (m) => warnings.push(m));
     expect(warnings).toEqual([]);
-    expect(script.title).toBe('DEAD SIGNAL');
+    expect(script.title).toBe('PLEASE HOLD');
     expect(Object.keys(script.stages)).toEqual([
       'intro',
       'c1_complete',

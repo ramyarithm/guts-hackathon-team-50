@@ -1,4 +1,4 @@
-# DEAD SIGNAL QA summary
+# PLEASE HOLD QA summary
 
 **18 October 2026** — tested commit `f6fc56b`. Historical results below apply to that revision; later changes have not been retested.
 

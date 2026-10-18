@@ -107,7 +107,7 @@ function drawHeader(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   ctx.fillStyle = C.textBright;
   ctx.font = `bold 16px ${FONT}`;
-  ctx.fillText('DEAD SIGNAL', 12, 26);
+  ctx.fillText('PLEASE HOLD', 12, 26);
 
   // Lock status
   const isOpen = state.phase === 'SUCCESS';

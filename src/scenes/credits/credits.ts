@@ -7,7 +7,7 @@ export interface Person {
   url: string;
 }
 
-export const CREDITS_TITLE = 'DEAD SIGNAL';
+export const CREDITS_TITLE = 'PLEASE HOLD';
 export const CREDITS_SUBTITLE = 'Made by Team 50';
 export const CREDITS_OUTRO = 'Thanks for playing.';
 /** The event, as the repository already names it (README, package name). */

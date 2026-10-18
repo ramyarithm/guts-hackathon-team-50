@@ -54,7 +54,7 @@ describe('CREDITS data', () => {
   });
 
   it('has the title, team line, outro and the event name that already exists in the repo', () => {
-    expect(CREDITS_TITLE).toBe('DEAD SIGNAL');
+    expect(CREDITS_TITLE).toBe('PLEASE HOLD');
     expect(CREDITS_SUBTITLE).toBe('Made by Team 50');
     expect(CREDITS_OUTRO).toBe('Thanks for playing.');
     expect(CREDITS_EVENT.includes('GUTS Hackathon')).toBe(true);

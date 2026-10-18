@@ -1,4 +1,4 @@
-# Dialogue (DEAD SIGNAL)
+# Dialogue (PLEASE HOLD)
 
 The visual-novel layer for `assets/Dialogue/dialogue.json`. The JSON is imported as is
 (never edited here) and validated at load; a malformed section or line logs a warning and
