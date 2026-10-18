@@ -2,10 +2,17 @@
  * G4 Rhythm Game - Pure game logic
  * 
  * A one-button rhythm game where the player taps in time to music.
- * - First 5 seconds: plays drums version (with beat)
- * - After 5 seconds: switches to beatless version, player must keep the rhythm
- * - Tracker bar fills with accurate taps, drains with misses
- * - 129 BPM = ~465ms per beat
+ * - The music (c1.mp3 with drums once, then the no-drums loop) is played by the shared
+ *   audio engine, driven by the controller; this module never touches audio.
+ * - After Start: a listen-in of at least INTRO_BEATS, then PLAYING begins on the next bar
+ * - PLAYING: one cue per beat for GAME_BEATS; the tracker fills with accurate taps and
+ *   drains with misses
+ * - 130 BPM = ~461.5ms per beat, matching the music
+ *
+ * Timing comes from a clock measured in beats (`state.clockBeat`). When the adapter passes
+ * the music's beat clock to tick()/press(), game time is derived from it and can never
+ * drift from the music. Without one (audio unavailable or not yet started) an internal
+ * 130 BPM clock runs from simulation time and the game plays identically, just silently.
  */
 
 import type { ControlLabels } from "../types";
@@ -14,14 +21,31 @@ export type { Button, ControlLabels } from "../types";
 
 // ---- Tuning -----------------------------------------------------------------
 
-/** Beats per minute of the track */
-export const BPM = 129;
+/** Beats per minute of the track (c1.mp3) */
+export const BPM = 130;
 
 /** Milliseconds per beat */
-export const MS_PER_BEAT = 60000 / BPM; // ~582.5ms
+export const MS_PER_BEAT = 60000 / BPM; // ~461.5ms
 
-/** Duration to play the drums version before switching (ms) */
-export const INTRO_DURATION_MS = 5000;
+export const BEATS_PER_BAR = 4;
+export const MS_PER_BAR = MS_PER_BEAT * BEATS_PER_BAR; // ~1846ms
+
+/**
+ * Minimum listen-in after Start, in beats (3 bars, ~5.5 s; was 5 s). PLAYING then starts
+ * on the next bar line of the clock, so the listen-in lasts INTRO_BEATS..INTRO_BEATS+3.
+ */
+export const INTRO_BEATS = 12;
+export const INTRO_DURATION_MS = INTRO_BEATS * MS_PER_BEAT;
+
+/** Beats to tap once PLAYING starts (16 bars, ~29.5 s; was 30 s). */
+export const GAME_BEATS = 64;
+
+/**
+ * Manual calibration added by the adapter to the music beat clock, in ms. Positive if the
+ * cues are heard later than the clock says. The audio engine already subtracts the
+ * AudioContext's reported output latency, so this stays 0 unless tuned by ear.
+ */
+export const AUDIO_LATENCY_OFFSET_MS = 0;
 
 /** 
  * Accuracy windows (ms from perfect beat timing)
@@ -51,8 +75,8 @@ export const TRACKER_MAX = 100;
 export const TRACKER_START = 50;
 export const TRACKER_WIN_THRESHOLD = 80;
 
-/** Game duration after intro (ms) - about 30 seconds of rhythm */
-export const GAME_DURATION_MS = 30000;
+/** Game duration after the listen-in (ms) */
+export const GAME_DURATION_MS = GAME_BEATS * MS_PER_BEAT;
 
 /** Grace period at start where misses don't count (ms) */
 export const GRACE_PERIOD_MS = 1000;
@@ -74,7 +98,19 @@ export interface BeatEvent {
 
 export interface GameState {
   phase: Phase;
-  /** Milliseconds since game started (intro + playing) */
+  /**
+   * Current clock position in beats: the music's beat clock when one is fed to tick()/press(),
+   * otherwise an internal 130 BPM clock accumulated from simulation time.
+   */
+  clockBeat: number;
+  clockSource: "music" | "internal";
+  /** clockBeat when Start was pressed for this attempt (game time 0); null in READY. */
+  startBeat: number | null;
+  /** Game time (ms) of the first PLAYING beat: the first bar line >= INTRO_BEATS after Start. */
+  playStartMs: number;
+  /** Game time (ms) when the song ends. */
+  playEndMs: number;
+  /** Milliseconds since Start was pressed (intro + playing), derived from the clock */
   timeMs: number;
   /** Milliseconds spent in current phase */
   phaseMs: number;
@@ -105,8 +141,13 @@ export interface GameCallbacks {
 export interface Game {
   readonly state: GameState;
   readonly disposed: boolean;
-  tick(elapsedMs: number): void;
-  press(): void;
+  /**
+   * Advance by `elapsedMs` of frame time. `beatClock` is the music's current beat
+   * (fractional) when audio is playing; omit it or pass null to use the internal clock.
+   */
+  tick(elapsedMs: number, beatClock?: number | null): void;
+  /** Handle a press; `beatClock` as for tick(), sampled at the moment of the press. */
+  press(beatClock?: number | null): void;
   dispose(): void;
 }
 
@@ -127,21 +168,18 @@ export function labelsFor(phase: Phase): ControlLabels {
   }
 }
 
-/** Generate all beat timestamps for the song */
-function generateBeats(startOffset: number, duration: number): BeatEvent[] {
+/** Generate `count` beat timestamps, one per beat from `startMs` (game time). */
+function generateBeats(startMs: number, count: number): BeatEvent[] {
   const beats: BeatEvent[] = [];
-  let time = startOffset;
-  
-  while (time < startOffset + duration) {
-    beats.push({
-      time,
-      hit: false,
-      rating: null,
-    });
-    time += MS_PER_BEAT;
+  for (let i = 0; i < count; i++) {
+    beats.push({ time: startMs + i * MS_PER_BEAT, hit: false, rating: null });
   }
-  
   return beats;
+}
+
+/** The first bar line at or after `beat` (absolute clock beats). */
+function nextBarAtOrAfter(beat: number): number {
+  return Math.ceil(beat / BEATS_PER_BAR - 1e-9) * BEATS_PER_BAR;
 }
 
 /** Find the closest beat to a given time */
@@ -183,16 +221,18 @@ function scoreDelta(rating: HitRating): number {
   }
 }
 
-function createInitialState(): GameState {
-  // Beats start after intro, during the playing phase
-  const beats = generateBeats(INTRO_DURATION_MS, GAME_DURATION_MS);
-  
+function createInitialState(clockBeat = 0, clockSource: "music" | "internal" = "internal"): GameState {
   return {
     phase: "READY",
+    clockBeat,
+    clockSource,
+    startBeat: null,
+    playStartMs: INTRO_DURATION_MS,
+    playEndMs: INTRO_DURATION_MS + GAME_DURATION_MS,
     timeMs: 0,
     phaseMs: 0,
     tracker: TRACKER_START,
-    beats,
+    beats: [], // generated when Start is pressed, aligned to the clock's bars
     nextBeatIndex: 0,
     lastRating: null,
     lastRatingTime: 0,
@@ -229,6 +269,42 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     }
   };
 
+  /**
+   * Lay out this attempt's chart on the clock: PLAYING begins on the first bar line at
+   * least INTRO_BEATS after Start, then one cue per beat for GAME_BEATS.
+   */
+  const alignChart = (): void => {
+    const start = state.startBeat ?? state.clockBeat;
+    const playStartBeat = nextBarAtOrAfter(start + INTRO_BEATS);
+    state.playStartMs = (playStartBeat - start) * MS_PER_BEAT;
+    state.playEndMs = state.playStartMs + GAME_DURATION_MS;
+    state.beats = generateBeats(state.playStartMs, GAME_BEATS);
+    state.nextBeatIndex = 0;
+  };
+
+  /** Move the clock on: follow the music's beat when given, else run at 130 BPM from dt. */
+  const advanceClock = (dt: number, beatClock: number | null | undefined): void => {
+    if (typeof beatClock === "number" && Number.isFinite(beatClock)) {
+      if (state.clockSource !== "music" && state.startBeat !== null) {
+        // The music clock appeared mid-attempt (e.g. the Start press also unlocked audio):
+        // keep game time continuous, and while still listening, put the chart on the music's bars.
+        state.startBeat += beatClock - state.clockBeat;
+        if (state.phase === "INTRO") {
+          state.clockBeat = beatClock;
+          alignChart();
+        }
+      }
+      state.clockSource = "music";
+      state.clockBeat = beatClock;
+    } else {
+      state.clockSource = "internal";
+      state.clockBeat += dt / MS_PER_BEAT;
+    }
+    if ((state.phase === "INTRO" || state.phase === "PLAYING") && state.startBeat !== null) {
+      state.timeMs = (state.clockBeat - state.startBeat) * MS_PER_BEAT;
+    }
+  };
+
   const addRating = (rating: HitRating): void => {
     state.lastRating = rating;
     state.lastRatingTime = state.timeMs;
@@ -251,7 +327,7 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
       
       if (state.timeMs > beat.time + missWindow) {
         // This beat was missed
-        if (!beat.hit && state.timeMs > INTRO_DURATION_MS + GRACE_PERIOD_MS) {
+        if (!beat.hit && state.timeMs > state.playStartMs + GRACE_PERIOD_MS) {
           beat.rating = "SKIP";
           addRating("SKIP");
         }
@@ -262,15 +338,12 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     }
   };
 
-  const tick = (elapsedMs: number): void => {
+  const tick = (elapsedMs: number, beatClock?: number | null): void => {
     if (disposed) return;
     
     const dt = Math.min(elapsedMs, 100); // Cap delta time
     state.phaseMs += dt;
-    
-    if (state.phase === "INTRO" || state.phase === "PLAYING") {
-      state.timeMs += dt;
-    }
+    advanceClock(dt, beatClock);
 
     switch (state.phase) {
       case "READY":
@@ -278,8 +351,8 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
         break;
         
       case "INTRO":
-        // Playing drums version
-        if (state.timeMs >= INTRO_DURATION_MS) {
+        // Listening; PLAYING starts on the aligned bar line
+        if (state.timeMs >= state.playStartMs) {
           setPhase("PLAYING");
         }
         break;
@@ -290,13 +363,13 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
         
         // Check win/lose conditions
         if (state.tracker >= TRACKER_WIN_THRESHOLD && 
-            state.timeMs >= INTRO_DURATION_MS + GAME_DURATION_MS * 0.5) {
+            state.timeMs >= state.playStartMs + GAME_DURATION_MS * 0.5) {
           // Won! (reached threshold and played at least half the song)
           setPhase("SUCCESS");
         } else if (state.tracker <= TRACKER_MIN) {
           // Failed - tracker emptied
           setPhase("FAILED");
-        } else if (state.timeMs >= INTRO_DURATION_MS + GAME_DURATION_MS) {
+        } else if (state.timeMs >= state.playEndMs) {
           // Time's up - check if passed
           if (state.tracker >= TRACKER_START) {
             setPhase("SUCCESS");
@@ -319,11 +392,16 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     }
   };
 
-  const press = (): void => {
+  const press = (beatClock?: number | null): void => {
     if (disposed) return;
+    // Judge against the clock as it is right now, not as of the last frame.
+    if (typeof beatClock === "number") advanceClock(0, beatClock);
 
     switch (state.phase) {
       case "READY":
+        state.startBeat = state.clockBeat;
+        state.timeMs = 0;
+        alignChart();
         setPhase("INTRO");
         break;
         
@@ -352,8 +430,8 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
       }
         
       case "FAILED":
-        // Retry
-        state = createInitialState();
+        // Retry: a fresh attempt on the clock that is already running (the music keeps going)
+        state = createInitialState(state.clockBeat, state.clockSource);
         publishLabels();
         break;
         
@@ -383,10 +461,10 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
 
 // ---- Helpers for rendering --------------------------------------------------
 
-/** Get the current beat progress (0-1) within the current beat */
-export function getBeatProgress(timeMs: number): number {
-  const beatPosition = (timeMs % MS_PER_BEAT) / MS_PER_BEAT;
-  return beatPosition;
+/** Get the current beat progress (0-1) within the current beat, on the grid anchored at `originMs`. */
+export function getBeatProgress(timeMs: number, originMs = 0): number {
+  const sinceOrigin = timeMs - originMs;
+  return (((sinceOrigin % MS_PER_BEAT) + MS_PER_BEAT) % MS_PER_BEAT) / MS_PER_BEAT;
 }
 
 /** Get beats that should be visible (upcoming and recent) */

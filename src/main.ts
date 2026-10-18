@@ -20,6 +20,7 @@ import {
   type ControlLabels,
   type MinigameAdapter,
 } from './minigames';
+import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, MUSIC_DUCK_FOR_VICTORY } from './audio'; // [audio]
 
 // ---- Seeded PRNG ----
 
@@ -279,6 +280,12 @@ function startGame(gameId: string): void {
   
   updateDebugButtons();
 
+  // [audio] Music follows the narrative stage, not the minigame; E-games use the end-stage track.
+  // A game listed in MINIGAME_TRACKS (G4) overrides it with its own track while it runs.
+  // Playing the same track again is a no-op, so retries and hub returns never restart it.
+  audio.playMusic(trackForMinigame(gameId, gameId.startsWith('E') ? { kind: 'end' } : { kind: 'stage', stage: state.currentStage }, MINIGAME_TRACKS));
+  audio.setMusicSuppressed(GAMES_WITH_OWN_AUDIO.has(gameId)); // [audio] games with audio outside the engine
+
   // Set input mode based on game's inputCount
   const inputCount = getInputCount(gameId);
   currentInputCount = inputCount;
@@ -312,6 +319,10 @@ function handleGameComplete(): void {
   console.log(`[Main] Game ${gameId} completed for stage ${state.currentStage}`);
 
   if (state.phase === 'STAGES') {
+    // [audio] A game with its own track (G4) hands back to the stage's track for the reveal;
+    // for every other game this is the track already playing, so nothing restarts.
+    audio.playMusic(trackForScene({ kind: 'stage', stage: state.currentStage }));
+
     // Mark stage as completed
     state.completed[state.currentStage] = true;
 
@@ -411,6 +422,10 @@ function showDoorOpening(): void {
 
 function showEnding(): void {
   state.phase = 'ENDING';
+
+  // [audio] Victory sting over ducked music.
+  audio.duckMusic(MUSIC_DUCK_FOR_VICTORY);
+  audio.playSfx('victory');
   
   // Show sunrise ending
   elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
@@ -440,6 +455,7 @@ function sendInput(button: Button): void {
 }
 
 function handleButtonPress(button: Button, btnEl: HTMLButtonElement): void {
+  audio.unlock(); // [audio] browsers only allow sound after a user gesture
   if (btnEl.classList.contains('disabled')) return;
 
   btnEl.classList.add('pressed');
@@ -557,6 +573,8 @@ function init(): void {
   buildDebugButtons();
   updateDebugButtons();
   elements.debugPin.textContent = state.runPlan.pinDigits.join('');
+
+  void audio.preload(); // [audio] decode every track now so transitions are instant
 
   // Start the first game
   startCurrentStageGame();

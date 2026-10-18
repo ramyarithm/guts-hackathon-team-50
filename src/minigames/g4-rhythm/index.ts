@@ -4,24 +4,30 @@
  * One-button rhythm game where the player taps in time to music.
  * Uses LEFT button (or spacebar) only - RIGHT is inactive.
  * 
- * Audio files expected in /assets/audio/:
- * - rhythm-drums.mp3    (version with drums/beat audible)
- * - rhythm-beatless.mp3 (version without drums, just melody/bass)
+ * Music: the controller plays G4's track through the shared audio engine (c1.mp3 with
+ * drums once, then the no-drums loop) when G4 starts, and crossfades back to the stage
+ * track when G4 completes. This adapter plays no audio itself; it only reads the engine's
+ * beat clock each frame and on each press and feeds it to the pure logic, so the cues and
+ * the hit judgement stay locked to the music. Without audio the logic's internal 130 BPM
+ * clock takes over and the game plays identically.
  */
 
-import { WORLD_HEIGHT, WORLD_WIDTH, createGame, type Game, type Phase } from "./logic";
+import { AUDIO_LATENCY_OFFSET_MS, MS_PER_BEAT, WORLD_HEIGHT, WORLD_WIDTH, createGame, type Game } from "./logic";
 import { drawFrame } from "./render";
+import { audio } from "../../audio";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 
 export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { BPM, MS_PER_BEAT } from "./logic";
+export { AUDIO_LATENCY_OFFSET_MS, BPM, MS_PER_BEAT } from "./logic";
 
 export const G4_ID = "G4";
 
-// Audio file paths
-const AUDIO_DRUMS = "/assets/audio/rhythm-drums.mp3";
-const AUDIO_BEATLESS = "/assets/audio/rhythm-beatless.mp3";
+/** The music's current beat as the player hears it, or null when there is no music. */
+function musicBeat(): number | null {
+  const beat = audio.getBeatClock();
+  return beat === null ? null : beat - AUDIO_LATENCY_OFFSET_MS / MS_PER_BEAT;
+}
 
 export function createG4Adapter(): MinigameAdapter {
   let args: MinigameStartArgs | null = null;
@@ -36,11 +42,6 @@ export function createG4Adapter(): MinigameAdapter {
   let completed = false;
   let failFired = false;
   let disposed = false;
-  
-  // Audio elements
-  let audioDrums: HTMLAudioElement | null = null;
-  let audioBeatless: HTMLAudioElement | null = null;
-  let audioError = false;
   
   // Press flash for visual feedback
   let pressFlash = 0;
@@ -60,67 +61,6 @@ export function createG4Adapter(): MinigameAdapter {
     canvas.height = Math.round(drawH * dpr);
   };
 
-  const loadAudio = (): void => {
-    // Create audio elements
-    audioDrums = new Audio(AUDIO_DRUMS);
-    audioBeatless = new Audio(AUDIO_BEATLESS);
-    
-    audioDrums.preload = "auto";
-    audioBeatless.preload = "auto";
-    
-    // Track loading
-    let loadCount = 0;
-    const onLoad = () => {
-      loadCount++;
-      if (loadCount >= 2) {
-        console.log("[G4] Audio loaded successfully");
-      }
-    };
-    
-    const onError = (e: Event) => {
-      console.warn("[G4] Audio failed to load:", e);
-      audioError = true;
-      // Game will still work, just without audio
-    };
-    
-    audioDrums.addEventListener("canplaythrough", onLoad, { once: true });
-    audioBeatless.addEventListener("canplaythrough", onLoad, { once: true });
-    audioDrums.addEventListener("error", onError, { once: true });
-    audioBeatless.addEventListener("error", onError, { once: true });
-    
-    // Start loading
-    audioDrums.load();
-    audioBeatless.load();
-  };
-
-  const handlePhaseChange = (phase: Phase, _introDrums: boolean): void => {
-    if (!audioDrums || !audioBeatless || audioError) return;
-    
-    try {
-      if (phase === "INTRO") {
-        // Start drums version
-        audioBeatless.pause();
-        audioBeatless.currentTime = 0;
-        audioDrums.currentTime = 0;
-        audioDrums.play().catch(e => console.warn("[G4] Audio play failed:", e));
-      } else if (phase === "PLAYING") {
-        // Switch to beatless version, synced
-        const currentTime = audioDrums.currentTime;
-        audioDrums.pause();
-        audioBeatless.currentTime = currentTime;
-        audioBeatless.play().catch(e => console.warn("[G4] Audio play failed:", e));
-      } else if (phase === "SUCCESS" || phase === "FAILED" || phase === "READY") {
-        // Stop all audio
-        audioDrums.pause();
-        audioBeatless.pause();
-        audioDrums.currentTime = 0;
-        audioBeatless.currentTime = 0;
-      }
-    } catch (e) {
-      console.warn("[G4] Audio control error:", e);
-    }
-  };
-
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
     rafId = requestAnimationFrame(frame);
@@ -128,7 +68,7 @@ export function createG4Adapter(): MinigameAdapter {
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     
-    game.tick(elapsed);
+    game.tick(elapsed, musicBeat());
     
     // Update press flash
     const timeSincePress = ts - lastPressTime;
@@ -155,19 +95,6 @@ export function createG4Adapter(): MinigameAdapter {
       window.removeEventListener("resize", windowResizeHandler);
       windowResizeHandler = null;
     }
-    
-    // Stop and clean up audio
-    if (audioDrums) {
-      audioDrums.pause();
-      audioDrums.src = "";
-      audioDrums = null;
-    }
-    if (audioBeatless) {
-      audioBeatless.pause();
-      audioBeatless.src = "";
-      audioBeatless = null;
-    }
-    audioError = false;
     
     game?.dispose();
     game = null;
@@ -205,9 +132,6 @@ export function createG4Adapter(): MinigameAdapter {
       }
       ctx = context;
 
-      // Load audio
-      loadAudio();
-
       game = createGame({
         onLabels: (labels) => {
           if (!disposed) args?.setControlLabels(labels);
@@ -217,7 +141,6 @@ export function createG4Adapter(): MinigameAdapter {
           completed = true;
           args?.onComplete();
         },
-        onPhaseChange: handlePhaseChange,
       });
 
       resize();
@@ -239,7 +162,7 @@ export function createG4Adapter(): MinigameAdapter {
       // RIGHT is ignored
       if (button === "LEFT") {
         lastPressTime = performance.now();
-        game.press();
+        game.press(musicBeat());
       }
       // RIGHT does nothing - this is a one-button game
     },

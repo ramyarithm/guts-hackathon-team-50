@@ -11,7 +11,6 @@
 import {
   BPM,
   GAME_DURATION_MS,
-  INTRO_DURATION_MS,
   MS_PER_BEAT,
   TRACKER_MAX,
   TRACKER_MIN,
@@ -111,7 +110,7 @@ function drawBackground(ctx: CanvasRenderingContext2D, state: GameState): void {
   
   // Pulsing background glow synced to beat
   if (state.phase === "INTRO" || state.phase === "PLAYING") {
-    const beatProgress = getBeatProgress(state.timeMs);
+    const beatProgress = getBeatProgress(state.timeMs, state.playStartMs);
     const pulse = Math.pow(1 - beatProgress, 3); // Sharp attack, slow decay
     
     const glowGrad = ctx.createRadialGradient(
@@ -192,7 +191,7 @@ function drawBeatIndicator(ctx: CanvasRenderingContext2D, state: GameState, pres
   const baseRadius = 60;
   
   // Beat progress animation
-  const beatProgress = getBeatProgress(state.timeMs);
+  const beatProgress = getBeatProgress(state.timeMs, state.playStartMs);
   const beatPulse = Math.pow(1 - beatProgress, 2);
   
   // Outer ring (pulses with beat)
@@ -326,11 +325,11 @@ function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   // Phase indicator
   ctx.textAlign = "right";
   if (state.phase === "INTRO") {
-    const remaining = Math.ceil((INTRO_DURATION_MS - state.timeMs) / 1000);
+    const remaining = Math.ceil((state.playStartMs - state.timeMs) / 1000);
     ctx.fillStyle = C.accent;
     ctx.fillText(`LISTEN: ${remaining}s`, WORLD_WIDTH - 12, 12);
   } else if (state.phase === "PLAYING") {
-    const elapsed = state.timeMs - INTRO_DURATION_MS;
+    const elapsed = state.timeMs - state.playStartMs;
     const remaining = Math.ceil((GAME_DURATION_MS - elapsed) / 1000);
     ctx.fillStyle = C.text;
     ctx.fillText(`${remaining}s`, WORLD_WIDTH - 12, 12);
