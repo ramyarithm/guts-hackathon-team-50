@@ -38,10 +38,10 @@ export function createG8Adapter(): MinigameAdapter {
   };
   const resize = () => {
     if (!canvas || !host) return;
-    const fit = Math.min((host.clientWidth || WORLD_WIDTH) / WORLD_WIDTH,
-      (host.clientHeight || WORLD_HEIGHT) / WORLD_HEIGHT);
-    const drawWidth = Math.max(1, Math.floor(WORLD_WIDTH * fit));
-    const drawHeight = Math.max(1, Math.floor(WORLD_HEIGHT * fit));
+    // Fill the phone screen like the other games; drawFrame letterboxes the 280x320 world
+    // inside it with a uniform scale, so gameplay coordinates never change.
+    const drawWidth = Math.max(1, Math.floor(host.clientWidth || WORLD_WIDTH));
+    const drawHeight = Math.max(1, Math.floor(host.clientHeight || WORLD_HEIGHT));
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     canvas.style.width = `${drawWidth}px`;
     canvas.style.height = `${drawHeight}px`;

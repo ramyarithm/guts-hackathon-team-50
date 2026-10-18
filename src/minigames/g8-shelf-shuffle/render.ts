@@ -8,7 +8,12 @@ const P = { bg: "#0a1411", panel: "#182420", line: "#2f453b", dim: "rgba(184,245
 const NAMES: Record<ObjectType, string> = { BATTERY: "BATTERY", DRIVE: "STORAGE DRIVE", BOX: "TOOLBOX", WRENCH: "WRENCH" };
 const INK: Record<ObjectType, string> = { BATTERY: P.teal, DRIVE: P.cyan, BOX: P.gold, WRENCH: "#ccd2df" };
 export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameState>, width: number, height: number): void {
-  ctx.setTransform(width / WORLD_WIDTH, 0, 0, height / WORLD_HEIGHT, 0, 0);
+  // Uniform scale, centred: the world keeps its aspect ratio inside any canvas size.
+  const scale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, width, height);
+  ctx.setTransform(scale, 0, 0, scale, (width - WORLD_WIDTH * scale) / 2, (height - WORLD_HEIGHT * scale) / 2);
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = 1;
   const box = (x: number, y: number, w: number, h: number, color: string) => {

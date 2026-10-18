@@ -24,6 +24,7 @@ import {
 import { createBossAdapter } from './minigames/boss-tunnel';
 import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
+import { createStageViewport } from './scenes/viewport';
 
 // ---- Seeded PRNG ----
 
@@ -193,6 +194,9 @@ const elements = {
   btnMenu: document.getElementById('btn-menu') as HTMLButtonElement,
 };
 
+// Sizes and places the central play area per scene (see src/scenes/viewport.ts).
+const viewport = createStageViewport({ target: document.getElementById('app') as HTMLElement, header: document.getElementById('header') });
+
 // ---- UI Updates ----
 
 function updateControlLabels(labels: ControlLabels): void {
@@ -266,11 +270,14 @@ function updateStageDisplay(): void {
   const stageIndex = STAGES.indexOf(state.currentStage);
 
   // Update background based on stage
+  elements.sceneBg.style.backgroundImage = ''; // drop any inline door/ending frame
   elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin');
   if (state.phase === 'PIN_ENTRY') {
     elements.sceneBg.classList.add('stage-pin');
+    viewport.setScene('pin');
   } else {
     elements.sceneBg.classList.add(`stage-${state.currentStage.toLowerCase()}`);
+    viewport.setScene(state.currentStage.toLowerCase() as 'c1' | 'c2' | 'c3' | 'c4');
   }
 
   elements.stages.forEach((el, i) => {
@@ -354,9 +361,14 @@ function showMainMenu(): void {
     currentAdapter = null;
   }
   elements.minigameRoot.innerHTML = '';
+  elements.minigameRoot.classList.remove('text-panel');
   hideGameOver();
   inMainMenu = true;
+  viewport.setScene('menu');
   document.getElementById('app')?.classList.add('in-menu');
+  // The door animation and the ending set the background inline, which would override
+  // the menu's class; clear it so the menu's bunker background shows.
+  elements.sceneBg.style.backgroundImage = '';
   elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
   elements.sceneBg.classList.add('scene-menu');
   currentInputCount = 2;
@@ -433,6 +445,7 @@ function startGame(gameId: string): void {
 
   state.currentGameId = gameId;
   elements.minigameRoot.innerHTML = '';
+  elements.minigameRoot.classList.remove('text-panel');
   
   // If starting E1 or E2, switch to PIN_ENTRY phase
   if (gameId === 'E1' || gameId === 'E2') {
@@ -441,6 +454,7 @@ function startGame(gameId: string): void {
     // Update background for the ending game
     elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
     elements.sceneBg.classList.add(gameId === 'E1' ? 'stage-e1' : 'stage-e2');
+    viewport.setScene(gameId === 'E1' ? 'e1' : 'e2');
   }
   
   updateDebugButtons();
@@ -591,6 +605,7 @@ function showDoorOpening(): void {
       ];
   
   let frameIndex = 0;
+  viewport.setScene('door');
   elements.sceneBg.style.backgroundImage = `url('${frames[0]}')`;
   
   const interval = setInterval(() => {
@@ -722,16 +737,15 @@ function showEnding(): void {
   audio.stopMusic();
   audio.playSfx('victory');
   
-  // Show sunrise ending
+  // Show sunrise ending: a small translucent card low on the screen, under the sun.
   elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
-  
+  viewport.setScene('ending');
+  elements.minigameRoot.classList.add('text-panel');
   elements.minigameRoot.innerHTML = `
-    <div style="color: #5cff9d; padding: 40px; text-align: center; font-family: monospace;">
-      <h2 style="color: #5cff9d; margin-bottom: 20px;">ESCAPED!</h2>
-      <p style="color: #8fa89a;">You made it out of the bunker.</p>
-      <p style="color: #5a6a62; margin-top: 20px; font-size: 12px;">
-        The signal is dead. You are free.
-      </p>
+    <div class="text-card">
+      <h2>ESCAPED!</h2>
+      <p>You made it out of the bunker.</p>
+      <p class="text-card__dim">The signal is dead. You are free.</p>
     </div>
   `;
   

@@ -21,6 +21,16 @@
   
   --danger: #ff6b57;
   --danger-dim: rgba(255, 107, 87, 0.3);
+
+  /* Stage (central play area) size limits, % of the viewport. Applied by
+     src/scenes/viewport.ts, which sets the --stage-* values below per scene. */
+  --stage-max-vh: 82;
+  --stage-max-vw: 92;
+  --stage-scale: 1;
+  --stage-w: 320px;
+  --stage-h: 620px;
+  --stage-left: 0px;
+  --stage-top: 0px;
 }
 
 * {
@@ -192,35 +202,40 @@ html, body {
    PHONE CONTAINER (centered game area)
    ============================================ */
 
+/* The stage block (lives + progress + phone + controls) is 320 x 620 logical units,
+   scaled by --stage-scale and placed by src/scenes/viewport.ts. Everything inside is
+   sized in calc(... * var(--stage-scale)) so text and buttons grow with the screen. */
 #phone-container {
-  position: relative;
+  position: absolute;
   z-index: 10;
-  flex: 1;
+  left: var(--stage-left);
+  top: var(--stage-top);
+  width: var(--stage-w);
+  height: var(--stage-h);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
+  justify-content: flex-start;
 }
 
 /* Stage progress - compact bar above game */
 #stage-nav {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: calc(8px * var(--stage-scale));
+  margin-bottom: calc(6px * var(--stage-scale));
 }
 
 .stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 4px 10px;
+  gap: calc(2px * var(--stage-scale));
+  padding: calc(3px * var(--stage-scale)) calc(10px * var(--stage-scale));
   background: rgba(10, 18, 16, 0.8);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  min-width: 44px;
+  border-radius: calc(4px * var(--stage-scale));
+  min-width: calc(44px * var(--stage-scale));
   transition: all 0.2s ease;
   backdrop-filter: blur(4px);
 }
@@ -240,7 +255,7 @@ html, body {
 
 .stage-num {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: calc(9px * var(--stage-scale));
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -248,7 +263,7 @@ html, body {
 
 .stage-digit {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: max(13px, calc(16px * var(--stage-scale)));
   font-weight: 700;
   color: var(--text-dim);
   line-height: 1;
@@ -258,26 +273,76 @@ html, body {
   color: var(--text-bright);
 }
 
-/* Phone frame - contains game and controls */
+/* Phone frame - contains game and controls. A thin bunker-style bezel with a soft shadow,
+   so the background still reads around it. */
 #phone-frame {
   display: flex;
   flex-direction: column;
-  background: #0a0f0d;
-  border-radius: 12px;
-  padding: 8px;
+  background: rgba(10, 15, 13, 0.92);
+  border-radius: calc(10px * var(--stage-scale));
+  padding: calc(6px * var(--stage-scale));
   box-shadow: 
     0 0 0 2px #1a2a24,
-    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(92, 255, 157, 0.12),
+    0 8px 30px rgba(0, 0, 0, 0.6),
     0 0 40px rgba(92, 255, 157, 0.08);
 }
 
-/* Game canvas */
+/* Game screen: 320 x 480 logical units. A game whose world has another aspect (G8) is
+   letterboxed and centred by its own canvas size. */
 #minigame-root {
-  width: 280px;
-  height: 320px;
+  width: calc(320px * var(--stage-scale));
+  height: calc(480px * var(--stage-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #000;
-  border-radius: 6px;
+  border-radius: calc(5px * var(--stage-scale));
   overflow: hidden;
+}
+
+/* Text-heavy screens (the ending) sit on a translucent panel instead of a solid block,
+   and the bezel behind them goes translucent too so the background shows through. */
+#minigame-root.text-panel {
+  background: rgba(4, 10, 8, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+#phone-frame:has(.text-panel) {
+  background: rgba(10, 15, 13, 0.45);
+}
+
+.text-panel .text-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(14px * var(--stage-scale));
+  padding: calc(24px * var(--stage-scale));
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.text-card h2 {
+  margin: 0;
+  font-size: max(18px, calc(22px * var(--stage-scale)));
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(92, 255, 157, 0.6);
+}
+
+.text-card p {
+  margin: 0;
+  font-size: max(12px, calc(13px * var(--stage-scale)));
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.text-card .text-card__dim {
+  font-size: max(11px, calc(11px * var(--stage-scale)));
+  color: var(--text-dim);
 }
 
 #minigame-root canvas {
@@ -293,8 +358,9 @@ html, body {
 #controls {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 0 0 0;
+  gap: calc(8px * var(--stage-scale));
+  padding: calc(6px * var(--stage-scale)) 0 0 0;
+  height: calc(74px * var(--stage-scale));
 }
 
 .control-btn {
@@ -303,11 +369,11 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 10px 8px;
+  gap: calc(2px * var(--stage-scale));
+  padding: calc(8px * var(--stage-scale));
   background: #0d1512;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--stage-scale));
   cursor: pointer;
   transition: all 0.1s ease;
   user-select: none;
@@ -341,7 +407,7 @@ html, body {
 
 .control-btn .label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: max(11px, calc(13px * var(--stage-scale)));
   font-weight: 600;
   color: var(--text-bright);
   text-transform: uppercase;
@@ -350,7 +416,7 @@ html, body {
 
 .control-btn .key-hint {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: calc(9px * var(--stage-scale));
   color: var(--text-dim);
 }
 
@@ -374,57 +440,13 @@ html, body {
 
 .control-btn--single {
   flex: 1;
-  padding: 12px 8px;
 }
 
 .control-btn--single .label {
-  font-size: 14px;
+  font-size: max(12px, calc(15px * var(--stage-scale)));
 }
 
-/* ============================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================ */
-
-@media (min-width: 400px) {
-  #phone-frame {
-    padding: 10px;
-  }
-  
-  #minigame-root {
-    width: 300px;
-    height: 340px;
-  }
-  
-  .control-btn {
-    padding: 12px 10px;
-  }
-  
-  .control-btn .label {
-    font-size: 13px;
-  }
-}
-
-@media (min-height: 700px) {
-  #phone-container {
-    padding: 24px;
-  }
-  
-  #stage-nav {
-    margin-bottom: 12px;
-  }
-  
-  .stage {
-    padding: 6px 12px;
-  }
-  
-  .stage-digit {
-    font-size: 20px;
-  }
-  
-  #minigame-root {
-    height: 360px;
-  }
-}
+/* Responsive sizing is computed by src/scenes/viewport.ts (see --stage-max-vh/vw). */
 
 
 /* ============================================
@@ -435,19 +457,19 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: calc(8px * var(--stage-scale));
+  height: calc(20px * var(--stage-scale));
   font-family: var(--font-mono);
 }
 
 .lives-label {
-  font-size: 10px;
+  font-size: calc(10px * var(--stage-scale));
   color: var(--text-dim);
   letter-spacing: 1px;
 }
 
 #lives-count {
-  font-size: 18px;
+  font-size: calc(16px * var(--stage-scale));
   font-weight: 700;
   color: var(--danger);
   text-shadow: 0 0 10px rgba(255, 107, 87, 0.5);
@@ -609,8 +631,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 16px;
+  gap: calc(10px * var(--stage-scale));
+  padding: calc(16px * var(--stage-scale));
   overflow: hidden;
   font-family: var(--font-mono);
   text-align: center;
@@ -631,14 +653,14 @@ html, body {
 
 .main-menu__eyebrow,
 .main-menu__hint {
-  font-size: 9px;
+  font-size: calc(9px * var(--stage-scale));
   letter-spacing: 2px;
   color: var(--text-dim);
 }
 
 .main-menu__title {
-  margin: 6px 0 0;
-  font-size: 30px;
+  margin: calc(6px * var(--stage-scale)) 0 0;
+  font-size: calc(30px * var(--stage-scale));
   font-weight: 700;
   letter-spacing: 4px;
   line-height: 1.1;
@@ -650,18 +672,18 @@ html, body {
 }
 
 .main-menu__sub {
-  margin-bottom: 14px;
-  font-size: 10px;
+  margin-bottom: calc(14px * var(--stage-scale));
+  font-size: calc(10px * var(--stage-scale));
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text);
 }
 
 .main-menu__start {
-  min-width: 170px;
-  padding: 14px 28px;
+  min-width: calc(170px * var(--stage-scale));
+  padding: calc(14px * var(--stage-scale)) calc(28px * var(--stage-scale));
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: calc(18px * var(--stage-scale));
   font-weight: 700;
   letter-spacing: 4px;
   color: #04080a;
@@ -683,8 +705,8 @@ html, body {
 }
 
 .main-menu__music {
-  margin-top: 8px;
-  font-size: 9px;
+  margin-top: calc(8px * var(--stage-scale));
+  font-size: calc(9px * var(--stage-scale));
   letter-spacing: 1.5px;
   color: var(--text);
 }
