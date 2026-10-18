@@ -63,16 +63,17 @@ async function loadImages(): Promise<TunnelImages> {
 
 // Start loading immediately
 void loadImages();
+import { PALETTE } from "../../util/palette";
 
-// ---- Colors ----
+// ---- Colors (from shared palette) ----
 
-const COLOR_BG = '#030303';
+const COLOR_BG = PALETTE.bgDark;
 const COLOR_PROGRESS_BG = 'rgba(255, 255, 255, 0.1)';
-const COLOR_PROGRESS_FILL = '#5cff9d';
-const COLOR_DANGER_LIGHT = '#ffcc00';
-const COLOR_DANGER_STILL = '#ff6b57';
-const COLOR_TEXT = 'rgba(255, 255, 255, 0.7)';
-const COLOR_TEXT_DIM = 'rgba(255, 255, 255, 0.4)';
+const COLOR_PROGRESS_FILL = PALETTE.accent;
+const COLOR_DANGER_LIGHT = PALETTE.warning;
+const COLOR_DANGER_STILL = PALETTE.danger;
+const COLOR_TEXT = PALETTE.text;
+const COLOR_TEXT_DIM = PALETTE.textDim;
 
 // ---- Main Render ----
 
