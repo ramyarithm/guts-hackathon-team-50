@@ -47,90 +47,124 @@ export function createDialogueScene(): DialogueScene {
   let rafId: number | null = null;
   let lastTs: number | null = null;
   let disposed = false;
-  let rendered = { index: -1, text: "", typing: true };
-
-  const el = {
-    box: null as HTMLElement | null,
-    plate: null as HTMLElement | null,
-    text: null as HTMLElement | null,
-    indicator: null as HTMLElement | null,
-    card: null as HTMLElement | null,
-    cardPosition: null as HTMLElement | null,
-    cardDigit: null as HTMLElement | null,
-    cardSlots: null as HTMLElement | null,
-  };
+  /**
+   * The chat log. One bubble per item up to the current one; earlier bubbles stay on
+   * screen (dimmed) so both voices read together, like a phone conversation.
+   */
+  let log: HTMLElement | null = null;
+  interface Bubble {
+    el: HTMLElement;
+    text: HTMLElement | null;
+    indicator: HTMLElement | null;
+    shown: string;
+    typing: boolean;
+  }
+  const bubbles: Bubble[] = [];
 
   const build = (host: HTMLElement): void => {
     root = document.createElement("div");
-    root.className = "vn";
-    // Dialogue box.
+    root.className = "vn vn--chat";
+    log = document.createElement("div");
+    log.className = "vn__log";
+    root.appendChild(log);
+    host.appendChild(root);
+  };
+
+  const makeLineBubble = (speaker: Speaker): Bubble => {
     const box = document.createElement("div");
-    box.className = "vn__box";
+    box.className = "vn__box vn__box--enter";
+    box.dataset.speaker = speaker;
     const plate = document.createElement("div");
     plate.className = "vn__plate";
+    plate.textContent = PLATES[speaker];
+    plate.hidden = speaker === "SYSTEM";
     const text = document.createElement("p");
     text.className = "vn__text";
     const indicator = document.createElement("span");
     indicator.className = "vn__indicator";
     indicator.textContent = "▶";
+    indicator.hidden = true;
     box.append(plate, text, indicator);
-    // Digit card.
+    return { el: box, text, indicator, shown: "", typing: true };
+  };
+
+  const makeDigitCard = (item: Extract<DialogueItem, { kind: "digit" }>): Bubble => {
     const card = document.createElement("div");
-    card.className = "vn__card";
+    card.className = "vn__card vn__box--enter";
     const title = document.createElement("div");
     title.className = "vn__card-title";
     title.textContent = "DIGIT RECOVERED";
     const position = document.createElement("div");
     position.className = "vn__card-position";
+    position.textContent = `Position ${item.position}`;
     const digit = document.createElement("div");
     digit.className = "vn__card-digit";
+    digit.textContent = item.digit;
     const slots = document.createElement("div");
     slots.className = "vn__card-slots";
+    slots.replaceChildren(
+      ...item.slots.map((d, i) => {
+        const s = document.createElement("span");
+        s.className = "vn__slot" + (i === item.position - 1 ? " vn__slot--new" : "") + (d === "?" ? " vn__slot--empty" : "");
+        s.textContent = d;
+        return s;
+      }),
+    );
     card.append(title, position, digit, slots);
-    root.append(box, card);
-    host.appendChild(root);
-    Object.assign(el, { box, plate, text, indicator, card, cardPosition: position, cardDigit: digit, cardSlots: slots });
+    return { el: card, text: null, indicator: null, shown: "", typing: false };
+  };
+
+  const scrollToEnd = (): void => {
+    if (root) root.scrollTop = root.scrollHeight;
   };
 
   const render = (): void => {
-    if (!player || !root || !el.box || !el.plate || !el.text || !el.indicator || !el.card) return;
-    const item = player.current();
+    if (!player || !root || !log) return;
     const index = player.state.index;
-    if (!item) return;
-    if (item.kind === "digit") {
-      el.box.hidden = true;
-      el.card.hidden = false;
-      if (rendered.index !== index) {
-        el.cardPosition!.textContent = `Position ${item.position}`;
-        el.cardDigit!.textContent = item.digit;
-        el.cardSlots!.replaceChildren(
-          ...item.slots.map((d, i) => {
-            const s = document.createElement("span");
-            s.className = "vn__slot" + (i === item.position - 1 ? " vn__slot--new" : "") + (d === "?" ? " vn__slot--empty" : "");
-            s.textContent = d;
-            return s;
-          }),
-        );
-        rendered = { index, text: "", typing: false };
+    const items = player.items;
+    if (!items[index]) return;
+
+    // Back removed items: drop their bubbles.
+    let changed = false;
+    while (bubbles.length > index + 1) {
+      bubbles.pop()?.el.remove();
+      changed = true;
+    }
+    // New items: append bubbles for everything up to the current one.
+    while (bubbles.length <= index) {
+      const i = bubbles.length;
+      const item = items[i];
+      const bubble = item.kind === "digit" ? makeDigitCard(item) : makeLineBubble(item.speaker);
+      // Everything before the current item shows in full.
+      if (i < index && item.kind === "line" && bubble.text) {
+        bubble.text.textContent = item.text;
+        bubble.shown = item.text;
+        bubble.typing = false;
+        bubble.el.classList.remove("vn__box--enter");
       }
-      return;
+      bubbles.push(bubble);
+      log.appendChild(bubble.el);
+      changed = true;
     }
-    el.card.hidden = true;
-    el.box.hidden = false;
-    if (rendered.index !== index) {
-      el.plate.textContent = PLATES[item.speaker];
-      el.plate.hidden = item.speaker === "SYSTEM";
-      el.box.dataset.speaker = item.speaker;
-      // Restart the SYSTEM fade-in for each narration line.
-      el.box.classList.remove("vn__box--enter");
-      void el.box.offsetWidth;
-      el.box.classList.add("vn__box--enter");
+    // Earlier bubbles sit back; the current one is live.
+    bubbles.forEach((b, i) => b.el.classList.toggle("vn__box--past", i < index));
+
+    // Drive the current bubble's typewriter.
+    const current = bubbles[index];
+    if (current.text && current.indicator) {
+      const text = player.visibleText();
+      if (current.shown !== text) {
+        current.text.textContent = text;
+        current.shown = text;
+        changed = true;
+      }
+      const typing = player.state.typing;
+      if (current.typing !== typing) {
+        current.indicator.hidden = typing;
+        current.typing = typing;
+      }
     }
-    const text = player.visibleText();
-    if (rendered.text !== text || rendered.index !== index) el.text.textContent = text;
-    const typing = player.state.typing;
-    if (rendered.typing !== typing || rendered.index !== index) el.indicator.hidden = typing;
-    rendered = { index, text, typing };
+    if (changed) scrollToEnd();
   };
 
   const frame = (ts: number): void => {
@@ -150,7 +184,8 @@ export function createDialogueScene(): DialogueScene {
     player = null;
     root?.remove();
     root = null;
-    rendered = { index: -1, text: "", typing: true };
+    log = null;
+    bubbles.length = 0;
   };
 
   return {

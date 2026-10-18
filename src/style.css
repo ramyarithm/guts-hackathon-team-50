@@ -743,12 +743,41 @@ html, body {
   font-family: var(--font-mono);
 }
 
+/* Chat mode: the conversation is a scrolling log of bubbles that sticks to the bottom. */
+.vn--chat {
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.vn--chat::-webkit-scrollbar {
+  display: none;
+}
+
+.vn__log {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--stage-scale));
+  width: 100%;
+  margin-top: auto; /* short conversations sit at the bottom, like a phone */
+}
+
+/* Earlier bubbles step back so the live one reads first. */
+.vn__box--past {
+  opacity: 0.72;
+}
+
+.vn__box--past .vn__indicator {
+  display: none;
+}
+
 /* The box: slightly translucent so the bunker shows through, CRT scanlines on top. */
 .vn__box {
   position: relative;
   width: 100%;
-  min-height: calc(118px * var(--stage-scale));
-  padding: calc(12px * var(--stage-scale)) calc(14px * var(--stage-scale)) calc(16px * var(--stage-scale));
+  min-height: calc(54px * var(--stage-scale));
+  padding: calc(10px * var(--stage-scale)) calc(14px * var(--stage-scale)) calc(16px * var(--stage-scale));
   background: rgba(4, 10, 8, 0.78);
   border: 1px solid var(--accent-dim);
   border-radius: calc(6px * var(--stage-scale));
@@ -847,15 +876,20 @@ html, body {
 .vn__box[data-speaker="ENGINEER"],
 .vn__box[data-speaker="COLLEAGUE_RECORDING"] {
   align-self: flex-start;
-  width: 92%;
+  width: 88%;
   border-top-left-radius: 0;
 }
 
 .vn__box[data-speaker="SUPERVISOR"] {
   align-self: flex-end;
-  width: 92%;
+  width: 88%;
   text-align: right;
   border-top-right-radius: 0;
+}
+
+.vn__box[data-speaker="SYSTEM"],
+.vn__card {
+  align-self: center;
 }
 
 .vn__box[data-speaker="ENGINEER"]::before,
