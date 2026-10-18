@@ -3,7 +3,8 @@
  *
  * A one-button rhythm game where the player taps in time to music.
  * - The music (c1.mp3 with drums once, then the no-drums loop) is played by the shared
- *   audio engine, driven by the controller; this module never touches audio.
+ *   audio engine, driven by the controller; this module never touches audio. The drums start
+ *   on the Start press (the adapter passes beat 0 then), so the listen-in is the drums intro.
  * - After Start: a listen-in of at least INTRO_BEATS, then PLAYING begins on the next bar
  * - PLAYING: one cue per beat for GAME_BEATS; the tracker fills with accurate taps and
  *   drains with misses
@@ -31,10 +32,13 @@ export const BEATS_PER_BAR = 4;
 export const MS_PER_BAR = MS_PER_BEAT * BEATS_PER_BAR; // ~1846ms
 
 /**
- * Minimum listen-in after Start, in beats (3 bars, ~5.5 s; was 5 s). PLAYING then starts
- * on the next bar line of the clock, so the listen-in lasts INTRO_BEATS..INTRO_BEATS+3.
+ * Minimum listen-in after Start, in beats: the whole drums intro of c1.mp3 (4 bars,
+ * ~7.4 s; was 12 beats). The music starts fresh on the Start press, so beat 0 is that press,
+ * the drums play for exactly these beats and PLAYING begins on the no-drums handoff. On a
+ * retry the clock is already running and PLAYING starts on the next bar line at least
+ * INTRO_BEATS later, so the listen-in lasts INTRO_BEATS..INTRO_BEATS+3.
  */
-export const INTRO_BEATS = 12;
+export const INTRO_BEATS = 16;
 export const INTRO_DURATION_MS = INTRO_BEATS * MS_PER_BEAT;
 
 /** Beats to tap once PLAYING starts (16 bars, ~29.5 s; was 30 s). */

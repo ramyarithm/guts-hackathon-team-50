@@ -168,7 +168,9 @@ describe('G4 music beat clock', () => {
     expect(game.state.timeMs).toBeCloseTo(before, 6);
     expect(game.state.phase).toBe('INTRO');
     expectOnGrid(game);
-    expect(absoluteBeat(game, game.state.playStartMs)).toBeCloseTo(16, 9);
+    // Start is now at music beat 0.5: PLAYING on the first bar line at least INTRO_BEATS later.
+    const firstBar = Math.ceil((0.5 + INTRO_BEATS) / BEATS_PER_BAR) * BEATS_PER_BAR;
+    expect(absoluteBeat(game, game.state.playStartMs)).toBeCloseTo(firstBar, 9);
   });
 
   it('falls back to the internal clock when the music clock goes away', () => {
@@ -199,5 +201,28 @@ describe('G4 completion', () => {
     runFallback(game, 1100);
     game.press();
     expect(completions).toBe(1);
+  });
+});
+
+describe("G4 gameplay start with the music started fresh", () => {
+  it("beat 0 is the Start press, the listen-in is the whole drums intro, and PLAYING starts exactly at the handoff", () => {
+    const game = createGame();
+    // The adapter passes beat 0 on the Start press: the engine has just scheduled c1 from
+    // its first downbeat at that moment, so game time and the music share the same zero.
+    game.press(0);
+    expect(game.state.phase).toBe("INTRO");
+    expect(game.state.clockSource).toBe("music");
+    expect(game.state.startBeat).toBe(0);
+    expect(INTRO_BEATS).toBe(16); // the whole drums intro (4 bars) is the listen-in
+    expect(game.state.playStartMs).toBeCloseTo(16 * MS_PER_BEAT, 6);
+    game.tick(FRAME_MS, -0.06); // the first frames run just ahead of the scheduled start
+    expect(game.state.phase).toBe("INTRO");
+    expect(game.state.startBeat).toBe(0);
+    game.tick(FRAME_MS, 15.99);
+    expect(game.state.phase).toBe("INTRO");
+    game.tick(FRAME_MS, 16); // the no-drums loop takes over on this very beat
+    expect(game.state.phase).toBe("PLAYING");
+    expect(game.state.timeMs).toBeCloseTo(16 * MS_PER_BEAT, 6);
+    expectOnGrid(game);
   });
 });

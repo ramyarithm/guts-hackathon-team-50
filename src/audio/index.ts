@@ -13,8 +13,14 @@ import { createAudioEngine, type AudioEngine } from './engine';
 import { TRACKS } from './tracks';
 import { createWebAudioBackend } from './webaudio-backend';
 
-export type { AudioEngine, Scene, StageId } from './engine';
-export { trackForHub, trackForMinigame, trackForScene, MUSIC_DUCK_FOR_VICTORY } from './engine';
+export type { AudioEngine, GameplayMusicStart, Scene, StageId } from './engine';
+export {
+  trackForHub,
+  trackForMinigame,
+  trackForScene,
+  trackOnMinigameLoad,
+  MUSIC_DUCK_FOR_VICTORY,
+} from './engine';
 export { GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, TRACKS } from './tracks';
 
 /** localStorage key for the music on/off setting ("on" / "off"). */

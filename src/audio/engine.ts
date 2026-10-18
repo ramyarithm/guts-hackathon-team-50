@@ -1,5 +1,6 @@
-// Audio engine: music with crossfades, seamless loops, the G4 intro -> no-drums handoff,
-// a beat clock for rhythm games and one-shot sound effects. Pure of DOM and Web Audio: everything goes through an
+// Audio engine: music with crossfades, seamless loops, the G4 intro -> no-drums handoff
+// (started fresh on the exact moment G4's gameplay begins), a beat clock for rhythm games
+// and one-shot sound effects. Pure of DOM and Web Audio: everything goes through an
 // injected AudioBackend so it can be tested with a fake. Nothing here ever throws into
 // the game; audio failures only log once and the game continues silently.
 
@@ -13,6 +14,11 @@ export const SFX_GAIN = 0.8;
 export const CROSSFADE_MS = 800;
 /** Fade used by the global music on/off toggle. */
 export const MUSIC_TOGGLE_FADE_MS = 150;
+/**
+ * Fade of the previous track when a new one must start cleanly on its first downbeat
+ * (G4's drums when its gameplay begins): no crossfade in, just a quick fade out.
+ */
+export const QUICK_FADE_MS = 150;
 /** Music level while the victory sting plays (fraction of MUSIC_GAIN). */
 export const MUSIC_DUCK_FOR_VICTORY = 0.2;
 /** Samples with |value| below this are "silence" when trimming encoder padding (~ -48 dB). */
@@ -57,6 +63,13 @@ export interface TrackDef {
 }
 
 export type TrackManifest = Record<string, TrackDef>;
+
+/**
+ * What happened to the music when a minigame's gameplay began: its track was started
+ * fresh from the first downbeat ("fresh"), was already playing and carries on ("continue",
+ * a retry), or nothing could start ("none": audio locked, unavailable, or music off).
+ */
+export type GameplayMusicStart = "fresh" | "continue" | "none";
 
 export interface AudioBufferLike {
   readonly duration: number;
@@ -134,6 +147,21 @@ export interface AudioEngine {
   /** Switch music; a no-op if that track is already playing. */
   playMusic(key: string): void;
   /**
+   * Start `key` from its first downbeat now, scheduled on the context clock, even if it is
+   * already playing: the previous track fades out over QUICK_FADE_MS and the new one starts
+   * at full level (no crossfade, so the first downbeat is clean). Returns the context time
+   * of that first downbeat, or null when nothing could be scheduled right now (locked,
+   * unavailable, music off, or not yet decoded: it then starts as soon as it can, like
+   * playMusic).
+   */
+  restartMusic(key: string): number | null;
+  /**
+   * A minigame's gameplay begins (G4 leaves READY): if `key` is already the track playing,
+   * a retry, keep it running ("continue"); otherwise restart it fresh so its first downbeat
+   * is this very moment ("fresh"); "none" when no music can start.
+   */
+  beginGameplay(key: string): GameplayMusicStart;
+  /**
    * Fade the music out and stop every music source, including ones only scheduled for
    * later (a pending intro -> loop handoff); cancels a pending or in-flight track too.
    * The next playMusic starts fresh (G4 plays its intro again).
@@ -204,6 +232,22 @@ export function trackForMinigame(
   overrides: Readonly<Record<string, string>> = {},
 ): string {
   return overrides[gameId] ?? trackForScene(scene);
+}
+
+/**
+ * The track to ask for when a minigame's scene loads (its READY screen). A game with its
+ * own track (G4) only keeps it if it is already the one playing, i.e. a retry; otherwise
+ * the scene's track carries on and the game's own track starts fresh when its gameplay
+ * begins (beginGameplay). Every other game follows the scene.
+ */
+export function trackOnMinigameLoad(
+  gameId: string,
+  scene: Scene,
+  overrides: Readonly<Record<string, string>>,
+  currentTrack: string | null,
+): string {
+  const own = overrides[gameId];
+  return own !== undefined && own === currentTrack ? own : trackForScene(scene);
 }
 
 // ---- Loop point maths -----------------------------------------------------------------
@@ -381,11 +425,11 @@ export function createAudioEngine(
     }
   };
 
-  const fadeOutVoice = (voice: Voice): void => {
+  const fadeOutVoice = (voice: Voice, ms = CROSSFADE_MS): void => {
     if (!ctx || voice.fading) return;
     voice.fading = true;
-    const stopAt = ctx.currentTime + CROSSFADE_MS / 1000 + 0.01;
-    rampGain(voice.gain, 0, CROSSFADE_MS);
+    const stopAt = ctx.currentTime + ms / 1000 + 0.01;
+    rampGain(voice.gain, 0, ms);
     let remaining = voice.sources.length;
     const done = (): void => {
       remaining--;
@@ -408,21 +452,19 @@ export function createAudioEngine(
     }
   };
 
-  const startVoice = async (key: string, gen: number): Promise<void> => {
-    const def = manifest[key];
-    if (!def || !ctx || !musicBus) return;
-    // Don't create voices at all if music is disabled - avoids any brief audio blip
-    if (!musicEnabled) return;
-    const main = await load(key);
-    const next = def.handoffTo ? await load(def.handoffTo) : null;
-    if (gen !== generation || disposed || !ctx || !musicBus) return;
-    if (!main) return;
-
-    for (const v of voices) fadeOutVoice(v);
+  /**
+   * Put a decoded track on the clock right now. "crossfade": the previous voice fades over
+   * CROSSFADE_MS while this one fades in. "fresh": the previous voice fades over
+   * QUICK_FADE_MS and this one starts at full level, so its first downbeat is clean.
+   * Returns the context time of the first downbeat (t0), or null if nothing was scheduled.
+   */
+  const scheduleVoice = (key: string, def: TrackDef, main: Loaded, next: Loaded | null, mode: "crossfade" | "fresh"): number | null => {
+    if (!ctx || !musicBus) return null;
+    for (const v of voices) fadeOutVoice(v, mode === "fresh" ? QUICK_FADE_MS : CROSSFADE_MS);
     const gain = ctx.createGain();
     gain.connect(musicBus);
     const now = ctx.currentTime;
-    const fadingIn = voices.length > 0;
+    const fadingIn = mode === "crossfade" && voices.length > 0;
     gain.setValueAtTime(fadingIn ? 0 : 1, now);
     if (fadingIn) gain.linearRampToValueAtTime(1, now + CROSSFADE_MS / 1000);
 
@@ -460,9 +502,22 @@ export function createAudioEngine(
       }
     } catch (error) {
       warn(`could not start "${key}"`, error);
-      return;
+      return null;
     }
     voices.push(voice);
+    return t0;
+  };
+
+  const startVoice = async (key: string, gen: number, mode: "crossfade" | "fresh" = "crossfade"): Promise<void> => {
+    const def = manifest[key];
+    if (!def || !ctx || !musicBus) return;
+    // Don't create voices at all if music is disabled - avoids any brief audio blip
+    if (!musicEnabled) return;
+    const main = await load(key);
+    const next = def.handoffTo ? await load(def.handoffTo) : null;
+    if (gen !== generation || disposed || !ctx || !musicBus) return;
+    if (!main) return;
+    scheduleVoice(key, def, main, next, mode);
   };
 
   const engine: AudioEngine = {
@@ -522,6 +577,35 @@ export function createAudioEngine(
         return;
       }
       void startVoice(key, generation);
+    },
+
+    restartMusic(key: string): number | null {
+      if (disposed) return null;
+      const def = manifest[key];
+      if (!def) {
+        warn(`unknown track "${key}"`);
+        return null;
+      }
+      currentKey = key;
+      generation++;
+      if (!unlocked || !ctx) {
+        pendingKey = key; // starts on unlock, like playMusic
+        return null;
+      }
+      if (!musicEnabled) return null; // setMusicEnabled(true) starts currentKey
+      const main = loaded.get(key);
+      const next = def.handoffTo ? loaded.get(def.handoffTo) : null;
+      if (main === null || next === null) return null; // a failed load: silent, as everywhere
+      if (main === undefined || (def.handoffTo && next === undefined)) {
+        void startVoice(key, generation, "fresh"); // still decoding: as soon as it is ready
+        return null;
+      }
+      return scheduleVoice(key, def, main, next ?? null, "fresh");
+    },
+
+    beginGameplay(key: string): GameplayMusicStart {
+      if (currentKey === key && voices.some((v) => v.key === key && !v.fading)) return "continue";
+      return engine.restartMusic(key) === null ? "none" : "fresh";
     },
 
     stopMusic(): void {

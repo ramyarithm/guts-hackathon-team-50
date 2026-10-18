@@ -34,13 +34,20 @@ The end stage uses the same `c4` key as stage C4, so going from C4 into the PIN 
 restarts it.
 
 The one exception is **G4, the rhythm game**, listed in `MINIGAME_TRACKS` (`G4` → `g4`).
-`trackForMinigame(gameId, scene, MINIGAME_TRACKS)` returns the game's own track for it and
-the scene track for everything else. While G4 runs, in any stage (C1 included), the
-controller crossfades into `g4`: `c1.mp3` once, then `c1(no drums).mp3` looping. When G4
-completes, the controller plays the stage's normal track again, which crossfades back for
-the reveal. A G4 retry restarts the minigame, not the music: the controller asks for `g4`
-again, which is already playing, so the no-drums loop just carries on and the intro is
-never replayed. Only a new run (`resetRun()` / reload) plays the intro again. `trackForHub(completed)`
+Its track starts **the moment its gameplay begins**, not when its scene loads. On the READY
+screen the stage's own track keeps playing (`trackOnMinigameLoad(gameId, scene,
+MINIGAME_TRACKS, audio.currentTrack())` only keeps `g4` if it is already the track playing,
+i.e. a retry). On the Start press the G4 adapter calls the controller's `onGameplayStart`
+hook, which calls `audio.beginGameplay("g4")`: the engine fades the previous track out over
+`QUICK_FADE_MS` (150 ms, no crossfade) and schedules `c1.mp3` from its first downbeat at
+`T = currentTime + 30 ms` at full level (`restartMusic`), even if `c1` was already playing
+from stage C1, then the no-drums loop at exactly `T` + 4 bars. Beat 0 of the beat clock is
+`T`, and G4 takes that same instant as its game time 0. When G4 completes, the controller
+plays the stage's normal track again, which crossfades back for the reveal. A G4 retry
+restarts the minigame, not the music: `beginGameplay("g4")` finds `g4` already playing and
+answers "continue", so the no-drums loop just carries on and the intro is never replayed;
+the next run's G4 starts the drums fresh again. If audio is locked or music is off the hook
+answers "none" and G4 runs on its fallback 130 BPM clock. `trackForHub(completed)`
 implements the hub rule (next stage still to complete, `c4` once all are done) for when a
 hub scene exists; `trackForScene({ kind: "hub", completed })` wraps it.
 
@@ -48,6 +55,8 @@ hub scene exists; `trackForScene({ kind: "hub", completed })` wraps it.
 
 - `playMusic(key)` is a **no-op when that key is already playing**, so nothing ever
   restarts; in particular the G4 intro never replays once the no-drums loop has begun.
+  Only `restartMusic(key)` (through `beginGameplay`) starts a track over, and only on the
+  instant a minigame's gameplay begins.
 - Switching tracks **crossfades** over `CROSSFADE_MS` (800 ms): the old voice ramps to 0
   and its sources are stopped on the clock, the new voice ramps to 1. `activeTracks()`
   shows at most the outgoing and incoming track during the fade, then exactly one.

@@ -18,18 +18,24 @@ controller restarts the game. Unchanged.
 ## Music
 
 G4 plays no audio of its own any more. The controller plays G4's track through the shared
-audio engine when the game starts, whichever stage it is in: `c1.mp3` (130 BPM, with
-drums) once as an intro, then `c1(no drums).mp3` looping seamlessly. When G4 completes,
-the controller crossfades back to the stage's normal track. A retry restarts the game,
-not the music: the no-drums loop keeps going and the intro is not replayed. See
-`src/audio/README.md`.
+audio engine, whichever stage it is in: `c1.mp3` (130 BPM, with drums) once as an intro,
+then `c1(no drums).mp3` looping seamlessly. The stage's track keeps playing on the READY
+screen; the drums start **on the Start press**: the adapter calls the controller's
+`onGameplayStart` hook, the engine schedules `c1.mp3` from its first downbeat on the
+AudioContext clock with no crossfade (the previous track fades out in 150 ms), and the
+adapter passes beat 0 to the logic for that press. So game time 0 is the first drum hit,
+the whole drums intro is the listen-in (`INTRO_BEATS` = 16) and PLAYING begins exactly on
+the sample-accurate handoff to the no-drums loop. When G4 completes, the controller
+crossfades back to the stage's normal track. A retry restarts the game, not the music
+(`onGameplayStart` reports "continue"): the no-drums loop keeps going, the intro is not
+replayed and the pattern restarts on the next bar. See `src/audio/README.md`.
 
 ## Tempo and the beat grid (130 BPM)
 
 ```
 BPM            = 130        one beat = 60000 / 130 ≈ 461.5 ms
 BEATS_PER_BAR  = 4          one bar  ≈ 1846 ms
-INTRO_BEATS    = 12         minimum listen-in after Start (3 bars, ≈ 5.5 s)
+INTRO_BEATS    = 16         listen-in after Start: the whole drums intro (4 bars, ≈ 7.4 s)
 GAME_BEATS     = 64         cues to tap once PLAYING starts (16 bars, ≈ 29.5 s)
 AUDIO_LATENCY_OFFSET_MS = 0 manual calibration, see below
 ```
@@ -47,11 +53,13 @@ All timing is measured on a clock in beats, `state.clockBeat`:
   lengths are identical; there is just no sound. If the music clock appears during the
   listen-in (the Start press is also the press that unlocks audio in a fresh run), game
   time stays continuous and the chart is re-laid on the music's bars.
-- **Alignment.** When Start is pressed, `startBeat` is the current clock beat. PLAYING
-  begins on the first bar line at least `INTRO_BEATS` later, and from there one cue per
-  beat for `GAME_BEATS`. The listen-in therefore lasts 12–15 beats depending on where in
-  the bar Start was pressed. A retry does the same on the clock that is already running,
-  so the pattern restarts on the next bar of the music that is still playing.
+- **Alignment.** When Start is pressed, `startBeat` is the current clock beat: 0 when the
+  music was just started fresh on that press (a first attempt), so the listen-in is exactly
+  the 16-beat drums intro and PLAYING starts on the handoff. PLAYING begins on the first
+  bar line at least `INTRO_BEATS` later, and from there one cue per beat for `GAME_BEATS`.
+  A retry does the same on the clock that is already running (16–19 beats depending on
+  where in the bar Retry was pressed), so the pattern restarts on the next bar of the music
+  that is still playing.
 - **Hit windows** are unchanged: PERFECT ±50 ms, GREAT ±100 ms, GOOD ±150 ms, OK ±200 ms,
   MISS beyond that; a missed cue counts as SKIP after a 1 s grace period.
 - **Calibration.** `AUDIO_LATENCY_OFFSET_MS` is subtracted from the music clock by the

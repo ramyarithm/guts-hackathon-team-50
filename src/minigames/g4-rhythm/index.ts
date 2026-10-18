@@ -5,11 +5,14 @@
  * Uses LEFT button (or spacebar) only - RIGHT is inactive.
  *
  * Music: the controller plays G4's track through the shared audio engine (c1.mp3 with
- * drums once, then the no-drums loop) when G4 starts, and crossfades back to the stage
- * track when G4 completes. This adapter plays no audio itself; it only reads the engine's
- * beat clock each frame and on each press and feeds it to the pure logic, so the cues and
- * the hit judgement stay locked to the music. Without audio the logic's internal 130 BPM
- * clock takes over and the game plays identically.
+ * drums once, then the no-drums loop). It starts fresh from its first downbeat on the Start
+ * press, through the controller's onGameplayStart hook, so beat 0 of the game is the moment
+ * the drums start; on a retry the no-drums loop just carries on and the pattern restarts on
+ * its next bar. The controller crossfades back to the stage track when G4 completes. This
+ * adapter plays no audio itself; it only reads the engine's beat clock each frame and on
+ * each press and feeds it to the pure logic, so the cues and the hit judgement stay locked
+ * to the music. Without audio the logic's internal 130 BPM clock takes over and the game
+ * plays identically.
  */
 
 import {
@@ -21,7 +24,7 @@ import {
   type Game,
 } from './logic';
 import { drawFrame } from './render';
-import { audio } from '../../audio';
+import { audio, type GameplayMusicStart } from '../../audio';
 import { register } from '../registry';
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
@@ -29,6 +32,15 @@ export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs 
 export { AUDIO_LATENCY_OFFSET_MS, BPM, MS_PER_BEAT } from './logic';
 
 export const G4_ID = 'G4';
+
+/** Start args with the controller's music hook for the moment gameplay begins. */
+export interface G4StartArgs extends MinigameStartArgs {
+  /**
+   * Called on the Start press. "fresh": the music was just scheduled from its first downbeat,
+   * so that press is beat 0. "continue": it is already running (a retry). "none": no music.
+   */
+  onGameplayStart?: () => GameplayMusicStart;
+}
 
 /** The music's current beat as the player hears it, or null when there is no music. */
 function musicBeat(): number | null {
@@ -170,7 +182,15 @@ export function createG4Adapter(): MinigameAdapter {
       // RIGHT is ignored
       if (button === 'LEFT') {
         lastPressTime = performance.now();
-        game.press(musicBeat());
+        if (game.state.phase === "READY") {
+          // Gameplay begins: the controller starts the drums on this instant, so beat 0 is
+          // now. If the track was already running (a retry) or there is no music, judge from
+          // the clock as it is.
+          const start = (args as G4StartArgs | null)?.onGameplayStart?.() ?? "none";
+          game.press(start === "fresh" ? 0 : musicBeat());
+        } else {
+          game.press(musicBeat());
+        }
       }
       // RIGHT does nothing - this is a one-button game
     },

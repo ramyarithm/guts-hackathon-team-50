@@ -6,6 +6,7 @@ import {
   C1_BARS,
   C1_BPM,
   CROSSFADE_MS,
+  QUICK_FADE_MS,
   MUSIC_GAIN,
   MUSIC_TOGGLE_FADE_MS,
   SFX_GAIN,
@@ -16,6 +17,7 @@ import {
   trackForHub,
   trackForMinigame,
   trackForScene,
+  trackOnMinigameLoad,
   type AudioBackend,
   type AudioBufferLike,
   type BufferSourceLike,
@@ -750,5 +752,105 @@ describe('engine: failures never crash the game', () => {
     engine.duckMusic(0.5);
     engine.dispose();
     expect(engine.currentTrack()).toBeNull();
+  });
+});
+
+// ---- G4 gameplay start: the drums start fresh the moment the game starts -------------------
+
+describe("engine: G4 gameplay start", () => {
+  const bar = C1_BARS * barSeconds(C1_BPM);
+
+  it("restarts c1 from position 0 at a scheduled T with no crossfade, even when c1 is already playing from the stage", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("c1"); // stage C1's own loop, already running on the READY screen
+    await flush();
+    fake.advance(3.3); // part-way through it
+    const before = fake.sources.filter((s) => s.startedAt !== null);
+    expect(before).toHaveLength(1);
+    const stageLoop = before[0]!;
+    const stageGain = fake.gains[3]!; // master, music bus, sfx bus, then the stage voice
+    const now = fake.now();
+
+    expect(engine.beginGameplay("g4")).toBe("fresh");
+
+    const started = fake.sources.filter((s) => s.startedAt !== null);
+    expect(started).toHaveLength(3); // the stage loop (fading out), the intro, the no-drums loop
+    const intro = started[1]!;
+    const loop = started[2]!;
+    const T = intro.startedAt!;
+    expect(T).toBeGreaterThan(now);
+    expect(T - now).toBeLessThan(0.1); // scheduled just ahead on the context clock
+    expect(intro.startOffset).toBeCloseTo(0, 3); // from position 0 after the silence trim (one silent sample in the fake)
+    expect(intro.startOffset).toBeCloseTo(loop.loopStart, 9); // the same trimmed first downbeat as the loop
+    expect(intro.loop).toBe(false);
+    // No fade-in: the new voice sits at full level from the start, with no ramp scheduled.
+    const newGain = fake.gains[4]!;
+    expect(newGain.setValues.at(-1)!.value).toBe(1);
+    expect(newGain.ramps).toHaveLength(0);
+    // The previous track fades out quickly, not over the crossfade time.
+    expect(stageGain.ramps.at(-1)!.value).toBe(0);
+    expect(stageGain.ramps.at(-1)!.endTime - now).toBeCloseTo(QUICK_FADE_MS / 1000, 6);
+    expect(stageLoop.stoppedAt! - now).toBeLessThan(CROSSFADE_MS / 1000);
+    // Beat 0 is T, and the no-drums loop is scheduled exactly one trimmed c1 later, on the grid.
+    fake.advance(T - now);
+    expect(engine.getBeatClock()).toBeCloseTo(0, 6);
+    expect(intro.stoppedAt).toBeCloseTo(T + bar, 9);
+    expect(loop.startedAt).toBeCloseTo(T + bar, 9);
+    expect(loop.loop).toBe(true);
+    fake.advance(bar);
+    expect(engine.getBeatClock()).toBeCloseTo(C1_BARS * 4, 6);
+    fake.advance(0.25 * barSeconds(C1_BPM) * 3);
+    expect(engine.getBeatClock()).toBeCloseTo(C1_BARS * 4 + 3, 6);
+    expect(engine.currentTrack()).toBe("g4");
+    fake.advance(1);
+    expect(engine.activeTracks()).toEqual(["g4"]);
+  });
+
+  it("a retry continues the running track; a new run starts the drums fresh again", async () => {
+    const { fake, engine } = await readyEngine();
+    engine.unlock();
+    engine.playMusic("c1");
+    await flush();
+    const count = () => fake.sources.filter((s) => s.startedAt !== null).length;
+    expect(engine.beginGameplay("g4")).toBe("fresh");
+    const n = count();
+    fake.advance(20); // well into the no-drums loop
+    expect(engine.beginGameplay("g4")).toBe("continue"); // retry: nothing restarts
+    expect(engine.beginGameplay("g4")).toBe("continue");
+    expect(count()).toBe(n);
+    expect(engine.activeTracks()).toEqual(["g4"]);
+    // Won: back to the stage track. Later, a new run reaches G4 again.
+    engine.playMusic("c1");
+    await flush();
+    fake.advance(2);
+    expect(engine.beginGameplay("g4")).toBe("fresh");
+    expect(count()).toBe(n + 1 + 2);
+  });
+
+  it("the scene load keeps a game's own track only when it is already playing (a retry), otherwise the stage track", () => {
+    const overrides = { G4: "g4" };
+    expect(trackOnMinigameLoad("G4", { kind: "stage", stage: "C1" }, overrides, "g4")).toBe("g4");
+    expect(trackOnMinigameLoad("G4", { kind: "stage", stage: "C1" }, overrides, "c1")).toBe("c1");
+    expect(trackOnMinigameLoad("G4", { kind: "stage", stage: "C3" }, overrides, null)).toBe("c3");
+    expect(trackOnMinigameLoad("G2", { kind: "stage", stage: "C1" }, overrides, "g4")).toBe("c1");
+    expect(trackOnMinigameLoad("E1", { kind: "end" }, overrides, "c4")).toBe("c4");
+  });
+
+  it("with audio locked or music off, gameplay start reports none and the game runs on its fallback clock; the track starts on unlock", async () => {
+    const { fake, engine } = await readyEngine(); // never unlocked: autoplay still blocked
+    expect(engine.beginGameplay("g4")).toBe("none");
+    expect(engine.getBeatClock()).toBe(null);
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(0);
+    engine.unlock();
+    await flush();
+    expect(engine.currentTrack()).toBe("g4");
+    expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(2);
+
+    const quiet = await readyEngine();
+    quiet.engine.unlock();
+    quiet.engine.setMusicEnabled(false);
+    expect(quiet.engine.beginGameplay("g4")).toBe("none");
+    expect(quiet.fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(0);
   });
 });

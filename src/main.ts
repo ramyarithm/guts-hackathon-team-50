@@ -24,8 +24,8 @@ import {
 import { createBossAdapter } from './minigames/boss-tunnel';
 import {
   audio,
-  trackForMinigame,
   trackForScene,
+  trackOnMinigameLoad,
   GAMES_WITH_OWN_AUDIO,
   MINIGAME_TRACKS,
 } from './audio'; // [audio]
@@ -597,15 +597,15 @@ function startGame(gameId: string): void {
   updateDebugButtons();
 
   // [audio] Music follows the narrative stage, not the minigame; E-games use the end-stage track.
-  // A game listed in MINIGAME_TRACKS (G4) overrides it with its own track while it runs.
-  // Playing the same track again is a no-op, so retries and hub returns never restart it.
-  audio.playMusic(
-    trackForMinigame(
-      gameId,
-      gameId.startsWith('E') ? { kind: 'end' } : { kind: 'stage', stage: state.currentStage },
-      MINIGAME_TRACKS,
-    ),
-  );
+  // A game listed in MINIGAME_TRACKS (G4) brings its own track, but that track starts fresh
+  // from its first downbeat only when the game's gameplay begins (onGameplayStart below),
+  // not when its READY screen loads: the stage track keeps playing until then. On a retry
+  // the game's track is already playing and the scene load keeps it. Playing the same track
+  // again is a no-op, so retries and hub returns never restart anything.
+  const scene = gameId.startsWith('E')
+    ? ({ kind: 'end' } as const)
+    : ({ kind: 'stage', stage: state.currentStage } as const);
+  audio.playMusic(trackOnMinigameLoad(gameId, scene, MINIGAME_TRACKS, audio.currentTrack()));
   audio.setMusicSuppressed(GAMES_WITH_OWN_AUDIO.has(gameId)); // [audio] games with audio outside the engine
 
   // Set input mode based on game's inputCount
@@ -628,6 +628,13 @@ function startGame(gameId: string): void {
       // For the E1 vault door: the PIN check. The controller owns the PIN, so changing
       // pinDigits changes what opens the door.
       checkPin: (entry: string) => entry === state.runPlan.pinDigits.join(''),
+      // [audio] The moment gameplay begins (G4's Start press): its own track starts fresh on
+      // that instant ("fresh", beat 0 = now), carries on if already playing ("continue", a
+      // retry), or cannot start ("none": locked or music off). Games without a track get "none".
+      onGameplayStart: () => {
+        const own = MINIGAME_TRACKS[gameId];
+        return own ? audio.beginGameplay(own) : 'none';
+      },
     } as any);
     console.log(`[Main] Started ${gameId} for stage ${state.currentStage} (${inputCount}-button)`);
   } catch (error) {
