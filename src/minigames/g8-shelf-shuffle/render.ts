@@ -1,17 +1,29 @@
 import { CAPACITY, ROUND_MS, TARGET_MATCHES, WORLD_WIDTH, WORLD_HEIGHT,
   type GameState, type ObjectType } from "./logic";
+import { PALETTE } from "../../util/palette";
 
 // Same terminal font and palette as Pressure Valves and Coffee Run.
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
-const P = { bg: "#0a1411", panel: "#182420", line: "#2f453b", dim: "rgba(184,245,207,0.6)",
-  text: "#b8f5cf", teal: "#5cff9d", cyan: "#76d5ed", gold: "#ffb347", red: "#ff6b57" };
+const P: Record<string, string> = { 
+  letterbox: PALETTE.letterbox,
+  bg: PALETTE.bg0, 
+  panel: PALETTE.panel, 
+  line: PALETTE.panelEdge, 
+  dim: PALETTE.textDim,
+  text: PALETTE.text, 
+  teal: PALETTE.green, 
+  cyan: PALETTE.cyan, 
+  gold: PALETTE.amber, 
+  red: PALETTE.danger,
+  scanline: PALETTE.scanline,
+};
 const NAMES: Record<ObjectType, string> = { BATTERY: "BATTERY", DRIVE: "STORAGE DRIVE", BOX: "TOOLBOX", WRENCH: "WRENCH" };
 const INK: Record<ObjectType, string> = { BATTERY: P.teal, DRIVE: P.cyan, BOX: P.gold, WRENCH: "#ccd2df" };
 export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameState>, width: number, height: number): void {
   // Uniform scale, centred: the world keeps its aspect ratio inside any canvas size.
   const scale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = P.letterbox;
   ctx.fillRect(0, 0, width, height);
   ctx.setTransform(scale, 0, 0, scale, (width - WORLD_WIDTH * scale) / 2, (height - WORLD_HEIGHT * scale) / 2);
   ctx.imageSmoothingEnabled = false;
@@ -27,8 +39,8 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
   const panel = (x: number, y: number, w: number, h: number, border = P.line) => {
     box(x, y, w, h, border); box(x + 1, y + 1, w - 2, h - 2, P.panel);
   };
-  const icon = (type: ObjectType, x: number, y: number, scale = 1, flash = false) => {
-    ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(scale, scale);
+  const icon = (type: ObjectType, x: number, y: number, iconScale = 1, flash = false) => {
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(iconScale, iconScale);
     const c = flash ? "#ffffff" : INK[type];
     box(-12, 9, 24, 3, "#060b12");
     if (type === "BATTERY") {
@@ -122,4 +134,27 @@ export function drawFrame(ctx: CanvasRenderingContext2D, state: Readonly<GameSta
       text("LEFT OR RIGHT TO RETRY", 140, 211, P.teal, 12, "center");
     }
   }
+  drawCrt(ctx, scale);
+}
+
+function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
+  // Scanlines: one dark line every ~3 device pixels, expressed in world units.
+  const step = Math.max(2, 3 / scale);
+  ctx.fillStyle = P.scanline;
+  for (let y = 0; y < WORLD_HEIGHT; y += step * 2) {
+    ctx.fillRect(0, y, WORLD_WIDTH, step * 0.6);
+  }
+  // Vignette.
+  const g = ctx.createRadialGradient(
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.3,
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.75,
+  );
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

@@ -10,10 +10,12 @@ import {
   toMarks,
   type GameState,
 } from "./logic";
+import { PALETTE } from "../../util/palette";
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
 const C = {
+  letterbox: PALETTE.letterbox,
   bg0: "#0a1411",
   bg1: "#061009",
   panel: "#0d1a15",
@@ -43,7 +45,7 @@ export function drawFrame(
   const offY = (canvasH - WORLD_HEIGHT * scale) / 2;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = C.letterbox;
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   ctx.setTransform(scale, 0, 0, scale, offX, offY);
@@ -343,8 +345,22 @@ function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function drawScanlines(ctx: CanvasRenderingContext2D): void {
+  // Scanlines
   ctx.fillStyle = C.scanline;
   for (let y = 0; y < WORLD_HEIGHT; y += 3) {
     ctx.fillRect(0, y, WORLD_WIDTH, 1);
   }
+  // Vignette
+  const g = ctx.createRadialGradient(
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.3,
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.75,
+  );
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

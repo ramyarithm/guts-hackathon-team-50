@@ -6,6 +6,8 @@
  * - Tracker bar (fills up/down based on accuracy)
  * - Hit rating feedback (PERFECT, GREAT, etc.)
  * - Visual flash on button press
+ * 
+ * Updated to use bunker green theme matching other minigames.
  */
 
 import {
@@ -22,33 +24,50 @@ import {
   getTimeToNextBeat,
   type GameState,
 } from "./logic";
+import { PALETTE } from "../../util/palette";
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
+// Bunker terminal palette - matches G1, G3, G6 etc.
 const C = {
-  bg: "#0a0a12",
-  bgGradient1: "#0a0a12",
-  bgGradient2: "#12121f",
+  letterbox: PALETTE.letterbox,
+  bg0: PALETTE.bg0,
+  bg1: PALETTE.bg1,
+  grid: PALETTE.grid,
   
-  accent: "#ff6b9d",       // Pink accent
-  accentDim: "rgba(255, 107, 157, 0.3)",
-  accentGlow: "rgba(255, 107, 157, 0.15)",
+  // Primary accent (green) - used for beat indicator
+  accent: PALETTE.green,
+  accentDim: PALETTE.greenDim,
+  accentGlow: PALETTE.greenGlow,
   
-  tracker: "#5cff9d",      // Green for tracker
-  trackerBg: "rgba(92, 255, 157, 0.1)",
-  trackerDanger: "#ff6b57", // Red when low
+  // Tracker colors
+  tracker: PALETTE.green,
+  trackerBg: PALETTE.greenGlow,
+  trackerDanger: PALETTE.danger,
   
-  text: "#e0e0e0",
-  textDim: "rgba(224, 224, 224, 0.5)",
-  textBright: "#ffffff",
+  // Text - green tinted
+  text: PALETTE.text,
+  textDim: PALETTE.textDim,
+  textBright: PALETTE.flash,
   
-  perfect: "#ffeb3b",      // Gold
-  great: "#5cff9d",        // Green
-  good: "#64b5f6",         // Blue
-  ok: "#b0bec5",           // Gray
-  miss: "#ff6b57",         // Red
+  // Rating colors
+  perfect: PALETTE.amber,      // Amber for perfect
+  great: PALETTE.green,        // Green
+  good: PALETTE.cyan,         // Cyan
+  ok: PALETTE.teal,           // Teal
+  miss: PALETTE.danger,         // Red
   
-  ring: "rgba(255, 107, 157, 0.4)",
+  // Rings
+  ring: "rgba(92, 255, 157, 0.4)",
+  
+  // Panel
+  panel: PALETTE.panel,
+  panelEdge: PALETTE.panelEdge,
+  panelInner: PALETTE.panelInner,
+  
+  // CRT
+  scanline: PALETTE.scanline,
+  flash: PALETTE.flash,
 } as const;
 
 /** Draw one frame */
@@ -64,7 +83,7 @@ export function drawFrame(
   const offY = (canvasH - WORLD_HEIGHT * scale) / 2;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = C.bg;
+  ctx.fillStyle = C.letterbox;
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   ctx.setTransform(scale, 0, 0, scale, offX, offY);
@@ -79,20 +98,21 @@ export function drawFrame(
   drawRatingFeedback(ctx, state);
   drawHUD(ctx, state);
   drawOverlay(ctx, state);
+  drawCrt(ctx, scale);
 
   ctx.restore();
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, state: GameState): void {
-  // Gradient background
+  // Gradient background - bunker teal
   const g = ctx.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
-  g.addColorStop(0, C.bgGradient1);
-  g.addColorStop(1, C.bgGradient2);
+  g.addColorStop(0, C.bg0);
+  g.addColorStop(1, C.bg1);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   
-  // Subtle grid pattern
-  ctx.strokeStyle = "rgba(255, 107, 157, 0.03)";
+  // Subtle grid pattern - bunker wall style
+  ctx.strokeStyle = C.grid;
   ctx.lineWidth = 1;
   const gridSize = 40;
   for (let x = 0; x <= WORLD_WIDTH; x += gridSize) {
@@ -117,8 +137,8 @@ function drawBackground(ctx: CanvasRenderingContext2D, state: GameState): void {
       WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 0,
       WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH * 0.6
     );
-    glowGrad.addColorStop(0, `rgba(255, 107, 157, ${0.1 * pulse})`);
-    glowGrad.addColorStop(1, "rgba(255, 107, 157, 0)");
+    glowGrad.addColorStop(0, `rgba(92, 255, 157, ${0.08 * pulse})`);
+    glowGrad.addColorStop(1, "rgba(92, 255, 157, 0)");
     ctx.fillStyle = glowGrad;
     ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   }
@@ -135,7 +155,7 @@ function drawTrackerBar(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.fillRect(barX, barY, barW, barH);
   
   // Border
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.strokeStyle = "rgba(92, 255, 157, 0.25)";
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barW, barH);
   
@@ -165,7 +185,7 @@ function drawTrackerBar(ctx: CanvasRenderingContext2D, state: GameState): void {
   
   // Start position marker
   const startX = barX + (barW * (TRACKER_START - TRACKER_MIN) / (TRACKER_MAX - TRACKER_MIN));
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.strokeStyle = "rgba(184, 245, 207, 0.3)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(startX, barY);
@@ -204,7 +224,7 @@ function drawBeatIndicator(ctx: CanvasRenderingContext2D, state: GameState, pres
   
   // Middle ring
   const midRadius = baseRadius + 15 + beatPulse * 10;
-  ctx.strokeStyle = `rgba(255, 107, 157, ${0.2 + beatPulse * 0.2})`;
+  ctx.strokeStyle = `rgba(92, 255, 157, ${0.2 + beatPulse * 0.2})`;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(cx, cy, midRadius, 0, Math.PI * 2);
@@ -231,14 +251,14 @@ function drawBeatIndicator(ctx: CanvasRenderingContext2D, state: GameState, pres
   ctx.restore();
   
   // Inner bright core
-  ctx.fillStyle = pressFlash > 0.5 ? C.textBright : "rgba(255, 255, 255, 0.8)";
+  ctx.fillStyle = pressFlash > 0.5 ? C.flash : "rgba(234, 255, 242, 0.8)";
   ctx.beginPath();
   ctx.arc(cx, cy, mainRadius * 0.3, 0, Math.PI * 2);
   ctx.fill();
   
   // Press flash ring
   if (pressFlash > 0) {
-    ctx.strokeStyle = `rgba(255, 255, 255, ${pressFlash * 0.8})`;
+    ctx.strokeStyle = `rgba(234, 255, 242, ${pressFlash * 0.8})`;
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(cx, cy, mainRadius + (1 - pressFlash) * 40, 0, Math.PI * 2);
@@ -396,7 +416,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
       break;
       
     case "SUCCESS":
-      ctx.fillStyle = "rgba(92, 255, 157, 0.1)";
+      ctx.fillStyle = "rgba(92, 255, 157, 0.08)";
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       
       drawCard(ctx, cx, cy, 240, 100);
@@ -417,7 +437,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
       break;
       
     case "FAILED":
-      ctx.fillStyle = "rgba(255, 107, 87, 0.1)";
+      ctx.fillStyle = "rgba(255, 107, 87, 0.08)";
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       
       drawCard(ctx, cx, cy, 220, 100);
@@ -439,9 +459,33 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function drawCard(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number): void {
-  ctx.fillStyle = "rgba(10, 10, 18, 0.9)";
+  ctx.fillStyle = C.panel;
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = "rgba(255, 107, 157, 0.3)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
+  ctx.strokeStyle = C.panelEdge;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2);
+  ctx.fillStyle = C.panelInner;
+  ctx.fillRect(cx - w / 2 + 5, cy - h / 2 + 5, w - 10, h - 10);
+}
+
+function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
+  // Scanlines: one dark line every ~3 device pixels, expressed in world units.
+  const step = Math.max(2, 3 / scale);
+  ctx.fillStyle = C.scanline;
+  for (let y = 0; y < WORLD_HEIGHT; y += step * 2) {
+    ctx.fillRect(0, y, WORLD_WIDTH, step * 0.6);
+  }
+  // Vignette.
+  const g = ctx.createRadialGradient(
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.3,
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.75,
+  );
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

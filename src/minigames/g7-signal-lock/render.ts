@@ -26,6 +26,7 @@ const C = {
   text: "#b8f5cf",
   textDim: "rgba(184, 245, 207, 0.6)",
   danger: "#ff6b57",
+  scanline: "rgba(0, 0, 0, 0.18)",
 } as const;
 
 // ---- Layout (world units) -------------------------------------------------------
@@ -78,6 +79,7 @@ export function drawFrame(
 
   drawBars(ctx, state);
   drawText(ctx, state);
+  drawCrt(ctx, scale);
 
   ctx.restore();
 }
@@ -248,4 +250,27 @@ function drawText(ctx: CanvasRenderingContext2D, state: GameState): void {
       ctx.fillText("Needle missed the zone.", cx, 420);
       break;
   }
+}
+
+
+function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
+  // Scanlines: one dark line every ~3 device pixels, expressed in world units.
+  const step = Math.max(2, 3 / scale);
+  ctx.fillStyle = C.scanline;
+  for (let y = 0; y < WORLD_HEIGHT; y += step * 2) {
+    ctx.fillRect(0, y, WORLD_WIDTH, step * 0.6);
+  }
+  // Vignette.
+  const g = ctx.createRadialGradient(
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.3,
+    WORLD_WIDTH / 2,
+    WORLD_HEIGHT / 2,
+    WORLD_HEIGHT * 0.75,
+  );
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

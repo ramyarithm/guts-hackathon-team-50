@@ -1,5 +1,7 @@
 # UI Uniformity Plan
 
+**Status: IMPLEMENTED** ✓
+
 This document outlines the visual inconsistencies across minigames and provides a plan to create a unified bunker terminal aesthetic.
 
 ## Executive Summary
@@ -189,15 +191,15 @@ import { PALETTE } from '../../util/palette';
 
 After implementation, verify each game has:
 
-- [ ] Background gradient: `#0a1411` → `#060b0a`
-- [ ] Letterbox: `#04070a`
-- [ ] Primary accent: `#5cff9d` (green)
-- [ ] Danger color: `#ff6b57` (red)
-- [ ] Warning color: `#ffb347` (amber)
-- [ ] Text color: `#b8f5cf` (green-tinted white)
-- [ ] Grid pattern: `rgba(72, 214, 128, 0.07)` at 40px spacing (where applicable)
-- [ ] CRT scanlines: scale-aware, `rgba(0, 0, 0, 0.18)`
-- [ ] CRT vignette: radial gradient darkening edges
+- [x] Background gradient: `#0a1411` → `#060b0a`
+- [x] Letterbox: `#04070a` (via PALETTE.letterbox)
+- [x] Primary accent: `#5cff9d` (green)
+- [x] Danger color: `#ff6b57` (red)
+- [x] Warning color: `#ffb347` (amber)
+- [x] Text color: `#b8f5cf` (green-tinted white)
+- [x] Grid pattern: `rgba(72, 214, 128, 0.07)` at 40px spacing (where applicable)
+- [x] CRT scanlines: scale-aware, `rgba(0, 0, 0, 0.18)`
+- [x] CRT vignette: radial gradient darkening edges
 
 ## Notes
 

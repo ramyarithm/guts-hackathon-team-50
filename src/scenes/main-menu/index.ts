@@ -51,7 +51,7 @@ export function createMainMenuScene(): MainMenuScene {
   const reflect = (): void => {
     if (!menu || !root || !startButton || !musicLine) return;
     startButton.disabled = menu.state.started;
-    musicLine.textContent = `MUSIC: ${menu.state.musicEnabled ? "ON" : "OFF"}  (LEFT TO TOGGLE)`;
+    musicLine.textContent = `MUSIC: ${menu.state.musicEnabled ? "ON" : "OFF"}`;
   };
 
   const poll = (): void => {
@@ -91,7 +91,6 @@ export function createMainMenuScene(): MainMenuScene {
         <div class="main-menu__sub">Underground comms maintenance</div>
         <button class="main-menu__start" type="button">START</button>
         <div class="main-menu__music"></div>
-        <div class="main-menu__hint">RIGHT / D &middot; START</div>
       `;
       root.querySelector(".main-menu__title")!.textContent = GAME_TITLE.toUpperCase();
       startButton = root.querySelector<HTMLButtonElement>(".main-menu__start");

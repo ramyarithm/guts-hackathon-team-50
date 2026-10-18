@@ -67,7 +67,7 @@ import { PALETTE } from "../../util/palette";
 
 // ---- Colors (from shared palette) ----
 
-const COLOR_BG = PALETTE.bgDark;
+const COLOR_BG = PALETTE.letterbox;
 const COLOR_PROGRESS_BG = 'rgba(255, 255, 255, 0.1)';
 const COLOR_PROGRESS_FILL = PALETTE.accent;
 const COLOR_DANGER_LIGHT = PALETTE.warning;
