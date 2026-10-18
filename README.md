@@ -1,26 +1,73 @@
-# Please Hold
+# DEAD SIGNAL
 
-GUTS Hackathon — Team 50, University of Glasgow.
+A single player browser escape game built by **Team 50** for the **GUTS Hackathon at the University of Glasgow**.
 
-A two-button narrative escape game: each new run randomly selects four distinct minigames from a pool of up to seven, always opening with a one-button game. Complete them to recover four PIN digits, then clear the boss to escape with the evidence.
+You are a government telephone engineer sent to repair an underground communications bunker. When the security doors lock behind you, restoring the damaged systems reveals why you were really sent there. Recover the exit code, unlock the door and survive the tunnel with the evidence.
 
-## Start here
+## How it plays
 
-To claim a game and build independently, read the [technical specification](docs/TECH_SPEC.md). Narrative lives separately in [STORY.md](docs/STORY.md) — you do not need it to implement your minigame.
+One player uses just two controls, **LEFT** and **RIGHT**. Each scene displays their current functions; some minigames use only one button.
 
-## Known Issues
+Each run selects four distinct minigames using a seed. The opening stage uses one button, followed by three stages using two buttons. Completing each stage reveals a PIN digit and another part of the story. Enter the recovered code through a vault lock or Morse pad, then face the tunnel escape.
 
-- **G2 Lane Crossing "pinch" bug**: Adjacent lanes can sometimes create situations where obstacles trap the player with no escape route, causing unavoidable hits. The lane generation doesn't currently guarantee overlapping safe windows between adjacent lanes. See `src/minigames/g2-lane-crossing/logic.ts` for details and fix options.
+The project includes eight stage minigames, two PIN entry variants, a tunnel boss, story dialogue, music and pixel art scenes.
 
-## Running the game
+## Run locally
+
+Install Node.js and npm, then run:
 
 ```bash
+git clone https://github.com/ramyarithm/guts-hackathon-team-50.git
+cd guts-hackathon-team-50
 npm install
 npm run dev
 ```
 
-Use the debug toggle in the header to switch between G1 (Signal Relay) and G2 (Lane Crossing).
+Open the local address printed by Vite in your browser.
 
-Controls: A/← for LEFT, D/→ for RIGHT (or tap/click the buttons).
+## Controls
 
-Build four to seven games as time allows. Gameplay selection and order change per run; four fixed story stages keep the narrative coherent. The required flow is intro → four random minigames with story reveals → PIN door → boss → escape ending. Each run always opens with a one-button game to introduce the controls. Minigame mechanics are open for each owner, but each must declare whether it uses one button or two.
+| Action | Keyboard | On screen |
+| --- | --- | --- |
+| LEFT | A or left arrow | Left button |
+| RIGHT | D or right arrow | Right button |
+
+Read the labels before each challenge because the actions change between games. Audio is used for music, atmosphere and the rhythm challenge.
+
+## Build and checks
+
+```bash
+npm run build
+npm run preview
+```
+
+The build command checks TypeScript and creates the production files in `dist`. Preview serves that build locally.
+
+Additional commands:
+
+```bash
+npm run lint
+npm run format:check
+```
+
+## Project structure
+
+| Location | Contents |
+| --- | --- |
+| `src/main.ts` | Main game flow and shared state |
+| `src/minigames/` | Stage games, PIN games and tunnel boss |
+| `src/dialogue/` | Story playback and subtitles |
+| `src/audio/` | Music and sound playback |
+| `src/scenes/` | Menu and viewport layout |
+| `assets/` | Dialogue data, music and scene artwork |
+| `docs/` | Story, technical specification and project notes |
+
+## Team development
+
+Read [AGENTS.md](AGENTS.md) and the [technical specification](docs/TECH_SPEC.md) before changing the shared flow. The [story](docs/STORY.md) is maintained separately from technical requirements.
+
+For minigame integration, see [Adding games](src/minigames/ADDING_GAMES.md). Work on a separate branch and open a pull request with a description and instructions for trying the change.
+
+## Current status
+
+This is a hackathon prototype. See [TODO](todo.md) for remaining work and the [QA summary](docs/QA_SUMMARY.md) for findings and the revision they apply to. Those historical checks do not certify later commits.
