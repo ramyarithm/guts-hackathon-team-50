@@ -2,6 +2,7 @@
 // Game rules can be changed in this section.
 const rules = {
   hitsToWin: 8,
+  hitsPerColour: 4,
   allowedMisses: 3,
   contactCount: 6,
   hitWindow: 0.28,
@@ -24,6 +25,7 @@ const colours = ['#ff6b60', '#76d5ed'];
 let angle = 0;
 let speed = rules.startSpeed;
 let hits = 0;
+let colourHits = [0, 0];
 let missesLeft = rules.allowedMisses;
 let state = 'ready';
 let lastFrame = 0;
@@ -42,15 +44,17 @@ function updateMessage(message, colour = '') {
 }
 
 function updateStats() {
-  el('score').textContent = `${hits} / ${rules.hitsToWin}`;
+  el('score').textContent = `RED ${colourHits[0]}/${rules.hitsPerColour} | BLUE ${colourHits[1]}/${rules.hitsPerColour}`;
   el('lives').textContent = missesLeft;
-  el('speed').textContent = state === 'ready' ? 'â€”' : `${(speed / rules.startSpeed).toFixed(1)}Ã—`;
+  el('speed').textContent = state === 'ready' ? '—' : `${(speed / rules.startSpeed).toFixed(1)}×`;
 }
 
 function startGame() {
   angle = -0.38;
   speed = rules.startSpeed;
   hits = 0;
+  colourHits = [0, 0];
+  lastFrame = performance.now();
   missesLeft = rules.allowedMisses;
   state = 'playing';
   lastThrow = performance.now();
@@ -93,7 +97,7 @@ function finishGame(won) {
     }));
   } else {
     el('dialogText').textContent = 'Three mistakes triggered the terminal lock. Try again.';
-    updateMessage('TERMINAL LOCKED â€” TRY AGAIN', 'danger');
+    updateMessage('TERMINAL LOCKED — TRY AGAIN', 'danger');
   }
 }
 
@@ -103,6 +107,10 @@ function angleDifference(a, b) {
 
 function throwKnife(type) {
   if (state !== 'playing') return;
+  if (colourHits[type] >= rules.hitsPerColour) {
+    updateMessage('THIS COLOUR IS COMPLETE — USE THE OTHER KNIFE');
+    return;
+  }
   const now = performance.now();
   if (now - lastThrow < rules.shotCooldown) return;
   lastThrow = now;
@@ -127,6 +135,7 @@ function throwKnife(type) {
 
   if (success) {
     hits += 1;
+    colourHits[type] += 1;
     knives.push({ localAngle: BOTTOM - angle, type });
     speed = Math.min(rules.maxSpeed, speed + rules.speedPerHit);
     updateMessage('CONTACT RESTORED', 'success');
@@ -134,13 +143,14 @@ function throwKnife(type) {
     missesLeft -= 1;
     shake = 17;
     speed = Math.min(rules.maxSpeed, speed * rules.mistakeMultiplier + rules.mistakeBonus);
-    updateMessage(goodTiming ? 'WRONG KNIFE â€” SPEED INCREASED' : 'MISALIGNED â€” SPEED INCREASED', 'danger');
+    updateMessage(goodTiming ? 'WRONG KNIFE — SPEED INCREASED' : 'MISALIGNED — SPEED INCREASED', 'danger');
   }
 
   updateStats();
-  if (hits >= rules.hitsToWin || missesLeft <= 0) {
+  const complete = colourHits.every(count => count >= rules.hitsPerColour);
+  if (complete || missesLeft <= 0) {
     state = 'ending';
-    hasWon = hits >= rules.hitsToWin;
+    hasWon = complete;
     finishAt = now + 350;
     el('red').disabled = true;
     el('blue').disabled = true;
@@ -192,7 +202,11 @@ function circle(x, y, radius, fill, stroke = '', width = 1) {
 function rounded(x, y, width, height, radius, fill) {
   ctx.fillStyle = fill;
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, radius);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
   ctx.fill();
 }
 function text(label, x, y, colour, size = 12) {
