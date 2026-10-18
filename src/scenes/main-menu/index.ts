@@ -28,6 +28,8 @@ export interface MainMenuStartArgs {
   getAudioState: () => AudioOutputState;
   /** A click or tap on the on-screen Start button. The controller routes it like a RIGHT press. */
   onPointerStart: () => void;
+  /** A click or tap on the small Credits link in the corner. Omit it to hide the link. */
+  onCredits?: () => void;
 }
 
 export interface MainMenuScene {
@@ -44,8 +46,10 @@ export function createMainMenuScene(): MainMenuScene {
   let root: HTMLElement | null = null;
   let startButton: HTMLButtonElement | null = null;
   let musicLine: HTMLElement | null = null;
+  let creditsLink: HTMLButtonElement | null = null;
   let pollId: number | null = null;
   let onClick: (() => void) | null = null;
+  let onCreditsClick: (() => void) | null = null;
   let disposed = false;
 
   const reflect = (): void => {
@@ -66,6 +70,9 @@ export function createMainMenuScene(): MainMenuScene {
     }
     if (startButton && onClick) startButton.removeEventListener("click", onClick);
     onClick = null;
+    if (creditsLink && onCreditsClick) creditsLink.removeEventListener("click", onCreditsClick);
+    onCreditsClick = null;
+    creditsLink = null;
     menu?.dispose();
     menu = null;
     root?.remove();
@@ -91,10 +98,22 @@ export function createMainMenuScene(): MainMenuScene {
         <div class="main-menu__sub">Underground comms maintenance</div>
         <button class="main-menu__start" type="button">START</button>
         <div class="main-menu__music"></div>
+        <button class="main-menu__credits" type="button">Credits</button>
       `;
       root.querySelector(".main-menu__title")!.textContent = GAME_TITLE.toUpperCase();
       startButton = root.querySelector<HTMLButtonElement>(".main-menu__start");
       musicLine = root.querySelector<HTMLElement>(".main-menu__music");
+      creditsLink = root.querySelector<HTMLButtonElement>(".main-menu__credits");
+      if (startArgs.onCredits) {
+        // Click or tap only: LEFT and RIGHT keep their meaning (music toggle, start).
+        onCreditsClick = () => {
+          if (!disposed && menu && !menu.state.started) args?.onCredits?.();
+        };
+        creditsLink?.addEventListener("click", onCreditsClick);
+      } else {
+        creditsLink?.remove();
+        creditsLink = null;
+      }
       host.appendChild(root);
 
       menu = createMenu({

@@ -728,6 +728,241 @@ html, body {
 }
 
 /* ============================================
+   CREDITS (src/scenes/credits) and the menu's Credits link
+   ============================================ */
+
+#app.in-credits #stage-nav,
+#app.in-credits #lives-display {
+  visibility: hidden;
+}
+
+/* Small link in the menu's corner: click or tap only, the two buttons stay as they are. */
+.main-menu__credits {
+  position: absolute;
+  right: calc(10px * var(--stage-scale));
+  bottom: calc(8px * var(--stage-scale));
+  padding: calc(4px * var(--stage-scale)) calc(8px * var(--stage-scale));
+  font-family: var(--font-mono);
+  font-size: max(10px, calc(10px * var(--stage-scale)));
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--amber);
+  background: rgba(4, 8, 10, 0.55);
+  border: 1px solid rgba(255, 179, 71, 0.55);
+  border-radius: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-shadow: 0 0 6px rgba(255, 179, 71, 0.6);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.main-menu__credits:hover,
+.main-menu__credits:focus-visible {
+  color: #fff;
+  border-color: var(--amber);
+  box-shadow: 0 0 10px rgba(255, 179, 71, 0.5);
+  outline: none;
+}
+
+.credits {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(6px * var(--stage-scale));
+  padding: calc(14px * var(--stage-scale));
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(10, 20, 17, 0.15) 0%, rgba(4, 8, 10, 0.85) 100%);
+}
+
+/* Faint CRT scanlines, as on the menu. */
+.credits::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+}
+
+.credits__eyebrow {
+  font-size: calc(9px * var(--stage-scale));
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.credits__title {
+  margin: calc(4px * var(--stage-scale)) 0 0;
+  font-size: calc(26px * var(--stage-scale));
+  font-weight: 700;
+  letter-spacing: 4px;
+  line-height: 1.1;
+  color: var(--amber);
+  text-shadow:
+    0 0 6px rgba(255, 179, 71, 0.9),
+    0 0 18px rgba(255, 179, 71, 0.45),
+    0 0 34px rgba(92, 255, 157, 0.25);
+  animation: credits-flicker 5s steps(1, end) infinite;
+}
+
+.credits__sub {
+  margin-bottom: calc(6px * var(--stage-scale));
+  font-size: calc(10px * var(--stage-scale));
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.credits__list {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--stage-scale));
+}
+
+/* Rows fade in one by one; the logic is live from the first frame regardless. */
+.credits__row {
+  opacity: 0;
+  transform: translateY(calc(6px * var(--stage-scale)));
+  animation: credits-row-in 420ms ease-out forwards;
+  animation-delay: calc(150ms + var(--i) * 140ms);
+}
+
+.credits__person,
+.credits__menu {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--stage-scale));
+  width: 100%;
+  padding: calc(7px * var(--stage-scale)) calc(10px * var(--stage-scale));
+  font-family: var(--font-mono);
+  font-size: max(11px, calc(12px * var(--stage-scale)));
+  color: var(--text);
+  text-decoration: none;
+  text-align: left;
+  background: rgba(4, 10, 8, 0.55);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* The highlight marker: a slot on every row so names stay aligned, lit on the current one. */
+.credits__person::before,
+.credits__menu::before {
+  content: "\25B6";
+  flex: 0 0 auto;
+  width: 1em;
+  font-size: calc(9px * var(--stage-scale));
+  color: transparent;
+}
+
+.credits__row.is-highlighted .credits__person,
+.credits__row.is-highlighted .credits__menu {
+  color: var(--text-bright);
+  border-color: var(--amber);
+  background: rgba(255, 179, 71, 0.1);
+  box-shadow: 0 0 10px rgba(255, 179, 71, 0.35), inset 0 0 12px rgba(255, 179, 71, 0.08);
+}
+
+.credits__row.is-highlighted .credits__person::before,
+.credits__row.is-highlighted .credits__menu::before {
+  color: var(--amber);
+  text-shadow: 0 0 6px rgba(255, 179, 71, 0.8);
+}
+
+.credits__person:hover,
+.credits__menu:hover,
+.credits__person:focus-visible,
+.credits__menu:focus-visible {
+  border-color: var(--text);
+  outline: none;
+}
+
+.credits__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "LinkedIn" label drawn with CSS (no logo). */
+.credits__tag {
+  flex: 0 0 auto;
+  padding: calc(2px * var(--stage-scale)) calc(5px * var(--stage-scale));
+  font-size: max(8px, calc(8.5px * var(--stage-scale)));
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.credits__menu {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.credits__menu .credits__name {
+  text-align: center;
+}
+
+.credits__outro {
+  margin-top: calc(6px * var(--stage-scale));
+  font-size: max(11px, calc(11px * var(--stage-scale)));
+  letter-spacing: 1px;
+  color: var(--text);
+}
+
+.credits__event,
+.credits__hint {
+  font-size: calc(8.5px * var(--stage-scale));
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+@keyframes credits-row-in {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes credits-flicker {
+  0%, 100% { opacity: 1; }
+  91% { opacity: 1; }
+  92% { opacity: 0.72; }
+  93% { opacity: 1; }
+  96% { opacity: 0.85; }
+  97% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credits__row {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .credits__title {
+    animation: none;
+  }
+}
+
+/* ============================================
    DIALOGUE (src/dialogue): visual-novel box, digit card, tunnel subtitles
    ============================================ */
 

@@ -24,6 +24,8 @@ import {
 import { createBossAdapter } from './minigames/boss-tunnel';
 import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
+import { createCreditsScene } from './scenes/credits';
+import { enterCreditsAudio, enterEndingAudio, leaveCreditsToMenuAudio, type CreditsEntry } from './scenes/credits/flow';
 import { createStageViewport } from './scenes/viewport';
 import {
   createDialogueScene,
@@ -45,7 +47,7 @@ import vaultDoorFrame3 from '../assets/scenes/vault_door_open_frame_3.png';
 
 // ---- Game State ----
 
-type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'BOSS' | 'ENDING' | 'GAME_OVER';
+type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'BOSS' | 'ENDING' | 'CREDITS' | 'GAME_OVER';
 type StageId = 'C1' | 'C2' | 'C3' | 'C4';
 
 const INITIAL_LIVES = 3;
@@ -416,6 +418,7 @@ function showMainMenu(): void {
   inMainMenu = true;
   viewport.setScene('menu');
   document.getElementById('app')?.classList.add('in-menu');
+  document.getElementById('app')?.classList.remove('in-credits');
   // The door animation and the ending set the background inline, which would override
   // the menu's class; clear it so the menu's bunker background shows.
   elements.sceneBg.style.backgroundImage = '';
@@ -439,6 +442,8 @@ function showMainMenu(): void {
     musicEnabled: audio.isMusicEnabled(),
     onToggleMusic: (enabled) => audio.setMusicEnabled(enabled),
     onStart: startNewRun,
+    // The small Credits link in the corner (click or tap only; the two buttons are unchanged).
+    onCredits: () => showCredits('menu'),
     // A click/tap on the on-screen Start button behaves like pressing RIGHT.
     onPointerStart: () => {
       handleButtonPress('RIGHT', elements.btnRight);
@@ -791,26 +796,54 @@ function showEnding(): void {
 
   // [audio] Silence after the win: fade out and stop every music track and ambience,
   // cancelling anything scheduled (a pending loop handoff or crossfade), then play the
-  // victory sound once. Nothing starts music again until Replay returns to the menu.
-  audio.stopMusic();
-  audio.playSfx('victory');
+  // victory sound once. Nothing starts music again until the credits return to the menu.
+  enterEndingAudio(audio);
   
-  // The surface: the ending lines from the script over the sunrise, then Replay.
+  // The surface: the ending lines from the script over the sunrise, then the credits.
   elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
   viewport.setScene('ending');
-  playDialogue(itemsForSection(dialogueScript, 'ending'), () => {
-    updateControlLabels({ left: 'Replay', right: 'Replay' });
-    let left = false;
-    currentAdapter = {
-      handleInput: () => {
-        if (left) return;
-        left = true;
-        console.log('[Main] Replay: back to the main menu');
-        showMainMenu(); // [audio] plays the menu track again
-      },
-      dispose: () => {},
-    };
+  playDialogue(itemsForSection(dialogueScript, 'ending'), () => showCredits('win'));
+}
+
+/**
+ * The credits, on the phone screen over whatever background is up: the sunrise after a
+ * win, the bunker when opened from the main menu's Credits link. LEFT moves the highlight,
+ * RIGHT opens the highlighted LinkedIn profile in a new tab or returns to the main menu.
+ * [audio] Touches no music: silence stays after a win, the menu track keeps playing from
+ * the menu; Main menu asks for the menu track (a no-op when it is already playing).
+ */
+function showCredits(entry: CreditsEntry): void {
+  const wasMenu = inMainMenu;
+  inMainMenu = false;
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  disposeTunnelSubtitles();
+  hideGameOver();
+  elements.minigameRoot.innerHTML = '';
+  elements.minigameRoot.classList.add('text-panel');
+  const app = document.getElementById('app');
+  app?.classList.remove('in-menu');
+  app?.classList.add('in-credits'); // hides lives and stage progress, keeps the background
+  if (wasMenu) viewport.setScene('menu');
+  if (state) state.phase = 'CREDITS'; // there is no run state before the first Start
+  currentInputCount = 2;
+  elements.controls.classList.remove('single-button-mode');
+  enterCreditsAudio(audio, entry);
+
+  const credits = createCreditsScene();
+  credits.start({
+    container: elements.minigameRoot,
+    setControlLabels: updateControlLabels,
+    onMainMenu: () => {
+      console.log('[Main] Credits: back to the main menu');
+      leaveCreditsToMenuAudio(audio);
+      showMainMenu();
+    },
   });
+  currentAdapter = credits;
+  console.log(`[Main] Credits (from ${entry})`);
 }
 
 // ---- Input Handling ----
@@ -878,7 +911,7 @@ window.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
   
   // Handle game over screen with A/D keys (there is no run state while the menu is open)
-  if (!inMainMenu && state.phase === 'GAME_OVER') {
+  if (!inMainMenu && state?.phase === 'GAME_OVER') {
     if (key === 'arrowleft' || key === 'a') {
       e.preventDefault();
       restartRun();
