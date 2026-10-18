@@ -731,3 +731,242 @@ html, body {
     animation: none;
   }
 }
+
+/* ============================================
+   DIALOGUE (src/dialogue): visual-novel box, digit card, tunnel subtitles
+   ============================================ */
+
+.vn {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: calc(10px * var(--stage-scale));
+  font-family: var(--font-mono);
+}
+
+/* The box: slightly translucent so the bunker shows through, CRT scanlines on top. */
+.vn__box {
+  position: relative;
+  width: 100%;
+  min-height: calc(118px * var(--stage-scale));
+  padding: calc(12px * var(--stage-scale)) calc(14px * var(--stage-scale)) calc(16px * var(--stage-scale));
+  background: rgba(4, 10, 8, 0.78);
+  border: 1px solid var(--accent-dim);
+  border-radius: calc(6px * var(--stage-scale));
+  box-shadow: 0 0 0 2px rgba(26, 42, 36, 0.8), 0 6px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  overflow: hidden;
+}
+
+.vn__box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+}
+
+.vn__plate {
+  display: inline-block;
+  margin-bottom: calc(6px * var(--stage-scale));
+  padding: calc(2px * var(--stage-scale)) calc(8px * var(--stage-scale));
+  font-size: max(9px, calc(9px * var(--stage-scale)));
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border-radius: calc(3px * var(--stage-scale));
+}
+
+.vn__text {
+  margin: 0;
+  font-size: max(12px, calc(12.5px * var(--stage-scale)));
+  line-height: 1.5;
+  color: var(--text-bright);
+  white-space: pre-wrap;
+}
+
+/* ENGINEER: amber plate, normal text. */
+.vn__box[data-speaker="ENGINEER"] .vn__plate {
+  color: #04080a;
+  background: #ffb347;
+  box-shadow: 0 0 10px rgba(255, 179, 71, 0.45);
+}
+
+/* SUPERVISOR: green intercom plate with a radio icon and a faint static flicker. */
+.vn__box[data-speaker="SUPERVISOR"] .vn__plate {
+  color: #04080a;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(92, 255, 157, 0.45);
+}
+
+.vn__box[data-speaker="SUPERVISOR"] .vn__plate::before {
+  content: "◉ ";
+}
+
+.vn__box[data-speaker="SUPERVISOR"] .vn__text {
+  color: #c8e6d0;
+  text-shadow: 0 0 6px rgba(92, 255, 157, 0.35);
+  animation: vn-static 0.9s steps(3, end) infinite;
+}
+
+/* COLLEAGUE_RECORDING: archived tape, desaturated italic playback. */
+.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__plate {
+  color: var(--text-bright);
+  background: #2a3a35;
+  border: 1px solid var(--border-light);
+}
+
+.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__plate::before {
+  content: "▮▮▯ ";
+  letter-spacing: 0;
+}
+
+.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__text {
+  font-style: italic;
+  color: #a9b4ae;
+}
+
+/* SYSTEM: no plate, centred narration, larger, slow fade-in. */
+.vn__box[data-speaker="SYSTEM"] {
+  background: rgba(4, 10, 8, 0.6);
+  border-color: transparent;
+}
+
+.vn__box[data-speaker="SYSTEM"] .vn__text {
+  text-align: center;
+  font-size: max(14px, calc(15px * var(--stage-scale)));
+  letter-spacing: 1px;
+  color: var(--text-bright);
+}
+
+.vn__box[data-speaker="SYSTEM"].vn__box--enter .vn__text {
+  animation: vn-fade-in 1.4s ease-out;
+}
+
+.vn__indicator {
+  position: absolute;
+  right: calc(12px * var(--stage-scale));
+  bottom: calc(6px * var(--stage-scale));
+  font-size: max(10px, calc(11px * var(--stage-scale)));
+  color: var(--accent);
+  animation: vn-pulse 0.9s ease-in-out infinite;
+}
+
+/* Digit card. */
+.vn__card {
+  width: 100%;
+  padding: calc(16px * var(--stage-scale));
+  text-align: center;
+  background: rgba(4, 10, 8, 0.82);
+  border: 1px solid var(--accent-dim);
+  border-radius: calc(6px * var(--stage-scale));
+  box-shadow: 0 0 24px rgba(92, 255, 157, 0.12);
+}
+
+.vn__card-title {
+  font-size: max(10px, calc(10px * var(--stage-scale)));
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.vn__card-position {
+  margin-top: calc(6px * var(--stage-scale));
+  font-size: max(11px, calc(11px * var(--stage-scale)));
+  color: var(--text);
+}
+
+.vn__card-digit {
+  margin: calc(6px * var(--stage-scale)) 0 calc(10px * var(--stage-scale));
+  font-size: max(34px, calc(40px * var(--stage-scale)));
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(92, 255, 157, 0.6);
+}
+
+.vn__card-slots {
+  display: flex;
+  justify-content: center;
+  gap: calc(8px * var(--stage-scale));
+}
+
+.vn__slot {
+  min-width: calc(30px * var(--stage-scale));
+  padding: calc(6px * var(--stage-scale)) 0;
+  font-size: max(14px, calc(16px * var(--stage-scale)));
+  font-weight: 700;
+  color: var(--text-bright);
+  background: rgba(10, 18, 16, 0.9);
+  border: 1px solid var(--border);
+  border-radius: calc(4px * var(--stage-scale));
+}
+
+.vn__slot--empty {
+  color: var(--text-dim);
+}
+
+.vn__slot--new {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(92, 255, 157, 0.4);
+}
+
+/* Tunnel subtitles: over the fullscreen boss canvas, never intercepting input. */
+.vn-subtitle {
+  position: fixed;
+  left: 50%;
+  bottom: 12vh;
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: min(720px, 90vw);
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: clamp(13px, 1.4vw, 18px);
+  line-height: 1.4;
+  color: var(--text-bright);
+  background: rgba(4, 10, 8, 0.75);
+  border: 1px solid var(--accent-dim);
+  border-radius: 6px;
+  text-align: center;
+  pointer-events: none;
+  animation: vn-fade-in 0.4s ease-out;
+}
+
+.vn-subtitle__plate {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #ffb347;
+}
+
+.vn-subtitle[data-speaker="SUPERVISOR"] .vn-subtitle__plate {
+  color: var(--accent);
+}
+
+@keyframes vn-pulse {
+  0%, 100% { opacity: 0.35; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(2px); }
+}
+
+@keyframes vn-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vn-static {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.93; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vn__indicator,
+  .vn__box[data-speaker="SUPERVISOR"] .vn__text,
+  .vn__box[data-speaker="SYSTEM"].vn__box--enter .vn__text,
+  .vn-subtitle {
+    animation: none;
+  }
+}

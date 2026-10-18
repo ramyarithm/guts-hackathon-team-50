@@ -6,7 +6,7 @@
  * by main.ts after PIN entry.
  */
 
-import { CAUGHT_HOLD_MS, createGame, type TunnelGame } from "./logic";
+import { CAUGHT_HOLD_MS, MAX_LIGHT_TIME_MS, createGame, type TunnelGame } from "./logic";
 import { drawFrame } from "./render";
 import type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
 
@@ -14,9 +14,29 @@ export type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
 
 export const BOSS_ID = "BOSS";
 
+/** Gameplay moments the tunnel reports, for the dialogue subtitles. Emitted once each. */
+export type TunnelEvent = "tunnel_enter" | "monster_first_detected" | "monster_reacts_to_flashlight" | "light_mechanic_revealed";
+
+export interface BossStartArgs extends MinigameStartArgs {
+  /** Optional: called at the matching gameplay moment. Never affects the game. */
+  onEvent?: (name: TunnelEvent) => void;
+}
+
 export function createBossAdapter(): MinigameAdapter {
-  let args: MinigameStartArgs | null = null;
+  let args: BossStartArgs | null = null;
   let game: TunnelGame | null = null;
+  const emitted = new Set<TunnelEvent>();
+  let lightSeen = false;
+
+  const emit = (name: TunnelEvent): void => {
+    if (disposed || emitted.has(name)) return;
+    emitted.add(name);
+    try {
+      args?.onEvent?.(name);
+    } catch (error) {
+      console.warn("[BOSS] onEvent failed", error);
+    }
+  };
   let host: HTMLElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -46,7 +66,22 @@ export function createBossAdapter(): MinigameAdapter {
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.tick(elapsed);
+    // onComplete runs inside tick() and the controller disposes this scene synchronously.
+    if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
+
+    // Dialogue events (observed from state; they change nothing).
+    const s = game.state;
+    if (s.phase === 'PLAYING') {
+      if (s.lightOn) {
+        lightSeen = true;
+        emit('monster_first_detected'); // the first time the light shows what is in the tunnel
+        if (s.lightOnTime >= MAX_LIGHT_TIME_MS * 0.5) emit('monster_reacts_to_flashlight'); // it turns to the light
+      } else if (lightSeen) {
+        emit('light_mechanic_revealed'); // light off again: the player has the mechanic
+      }
+      if (s.distanceTraveled > 0) emit('light_mechanic_revealed');
+    }
 
     // Call onFail after caught hold period
     if (game.state.phase === 'CAUGHT' && game.state.phaseMs >= CAUGHT_HOLD_MS && !failFired) {
@@ -79,9 +114,11 @@ export function createBossAdapter(): MinigameAdapter {
     startMinigame(startArgs: MinigameStartArgs): void {
       if (disposed) return;
       teardownScene();
-      args = startArgs;
+      args = startArgs as BossStartArgs;
       completed = false;
       failFired = false;
+      emitted.clear();
+      lightSeen = false;
 
       host = startArgs.container ?? document.getElementById("minigame-root");
       if (!host) {
@@ -130,6 +167,7 @@ export function createBossAdapter(): MinigameAdapter {
       window.addEventListener("resize", windowResizeHandler);
 
       rafId = requestAnimationFrame(frame);
+      emit('tunnel_enter');
     },
 
     handleInput(button: Button): void {

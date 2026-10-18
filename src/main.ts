@@ -25,6 +25,16 @@ import { createBossAdapter } from './minigames/boss-tunnel';
 import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
 import { createStageViewport } from './scenes/viewport';
+import {
+  createDialogueScene,
+  createTunnelSubtitles,
+  itemsForIntro,
+  itemsForSection,
+  itemsForStageCompletion,
+  script as dialogueScript,
+  type DialogueItem,
+  type TunnelSubtitles,
+} from './dialogue';
 import { createSeededRng, shuffleArray } from './util/random';
 
 // ---- Game State ----
@@ -62,8 +72,45 @@ let state: GameState;
 let currentAdapter: InputScene | null = null;
 let currentInputCount: 1 | 2 = 2; // Track current game's input mode
 let inMainMenu = false;
-/** Delay before the ending screen offers Replay, so the victory sound is heard first. */
-const ENDING_REPLAY_DELAY_MS = 4000;
+/** Tunnel subtitles while the boss runs (non-blocking). */
+let tunnelSubtitles: TunnelSubtitles | null = null;
+
+// ---- Dialogue ----
+
+/**
+ * Play a dialogue section on the phone screen. The previous scene is disposed first, so
+ * dialogue never runs over an active minigame; `onDone` continues the flow after the last
+ * line's Continue.
+ */
+function playDialogue(items: readonly DialogueItem[], onDone: () => void): void {
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  elements.minigameRoot.classList.add('text-panel');
+  currentInputCount = 2;
+  elements.controls.classList.remove('single-button-mode');
+  const scene = createDialogueScene();
+  currentAdapter = scene;
+  scene.start({
+    container: elements.minigameRoot,
+    items,
+    setControlLabels: updateControlLabels,
+    onDone: () => {
+      if (currentAdapter === scene) currentAdapter = null;
+      scene.dispose();
+      elements.minigameRoot.innerHTML = '';
+      elements.minigameRoot.classList.remove('text-panel');
+      onDone();
+    },
+  });
+}
+
+/** The collected digits by position, "?" where not yet earned (matches the progress display). */
+function collectedSlots(): string[] {
+  return STAGES.map((s) => state.digits[s]);
+}
 
 // ---- Run Plan Generation ----
 
@@ -346,6 +393,7 @@ function showMainMenu(): void {
   elements.minigameRoot.innerHTML = '';
   elements.minigameRoot.classList.remove('text-panel');
   hideGameOver();
+  disposeTunnelSubtitles();
   inMainMenu = true;
   viewport.setScene('menu');
   document.getElementById('app')?.classList.add('in-menu');
@@ -408,7 +456,9 @@ function startNewRun(): void {
   if (!inMainMenu) return; // guards a second call from a double press
   leaveMainMenu();
   beginRun();
-  startCurrentStageGame(); // [audio] its playMusic crossfades out of the menu track
+  // [audio] the stage track starts under the intro and carries into the first game.
+  audio.playMusic(trackForScene({ kind: 'stage', stage: state.currentStage }));
+  playDialogue(itemsForIntro(dialogueScript), () => startCurrentStageGame());
 }
 
 // ---- Game Management ----
@@ -498,32 +548,21 @@ function handleGameComplete(): void {
 
     updateStageDisplay();
 
-    // Check if all stages are complete
+    // The minigame has signalled completion: dispose it, then the reaction for this game,
+    // the story for this stage (by completion order) and the digit card.
     const allComplete = STAGES.every(s => state.completed[s]);
-    if (allComplete) {
-      console.log('[Main] All stages complete! PIN:', state.runPlan.pinDigits.join(''));
-      setTimeout(() => {
-        startPinEntryPhase();
-      }, 1500);
-    } else {
-      // Advance to next stage
-      setTimeout(() => {
-        advanceToNextStage();
-      }, 1500);
-    }
+    if (allComplete) console.log('[Main] All stages complete! PIN:', state.runPlan.pinDigits.join(''));
+    const completedStage = state.currentStage;
+    const items = itemsForStageCompletion(dialogueScript, gameId, completedStage, stageIndex + 1, state.digits[completedStage], collectedSlots());
+    playDialogue(items, () => {
+      if (allComplete) startPinEntryPhase();
+      else advanceToNextStage();
+    });
   } else if (state.phase === 'PIN_ENTRY') {
     // PIN entry game completed successfully
     console.log('[Main] PIN entry successful! Opening door...');
-    
-    // Clean up the game
-    if (currentAdapter) {
-      currentAdapter.dispose();
-      currentAdapter = null;
-    }
-    elements.minigameRoot.innerHTML = '';
-    
-    // Play door opening animation
-    showDoorOpening();
+    // The vault has opened: a couple of lines, then the door animation and the tunnel.
+    playDialogue(itemsForSection(dialogueScript, 'pin_success'), () => showDoorOpening());
   }
 }
 
@@ -572,7 +611,9 @@ function startPinEntryPhase(): void {
   console.log(`[Main] Starting PIN entry phase with ${state.endingGame}...`);
   
   updateStageDisplay(); // Update background to PIN stage
-  startGame(state.endingGame);
+  // At the door, before the lock appears.
+  const endingGame = state.endingGame;
+  playDialogue(itemsForSection(dialogueScript, 'pin_entry'), () => startGame(endingGame));
 }
 
 function showDoorOpening(): void {
@@ -628,6 +669,10 @@ function startBoss(): void {
   // [audio] Play boss music
   audio.playMusic(trackForScene({ kind: 'boss' }));
   
+  // Tunnel subtitles: non-blocking, driven by the boss fight's events.
+  tunnelSubtitles?.dispose();
+  tunnelSubtitles = createTunnelSubtitles(document.body);
+
   // Create and start boss adapter
   const bossAdapter = createBossAdapter();
   currentAdapter = bossAdapter;
@@ -641,13 +686,20 @@ function startBoss(): void {
     setControlLabels: updateControlLabels,
     onComplete: handleBossComplete,
     onFail: handleBossFail,
-  });
+    onEvent: (name: string) => tunnelSubtitles?.fire(name),
+  } as any);
   
   updateDebugButtons();
 }
 
+function disposeTunnelSubtitles(): void {
+  tunnelSubtitles?.dispose();
+  tunnelSubtitles = null;
+}
+
 function handleBossComplete(): void {
   console.log('[Main] Boss completed! Escaping...');
+  disposeTunnelSubtitles();
   
   // Clean up boss
   if (currentAdapter) {
@@ -662,6 +714,7 @@ function handleBossComplete(): void {
 
 function handleBossFail(): void {
   console.log('[Main] Boss failed - Game Over!');
+  disposeTunnelSubtitles();
   // Boss is instant death
   showGameOver();
 }
@@ -723,38 +776,22 @@ function showEnding(): void {
   audio.stopMusic();
   audio.playSfx('victory');
   
-  // Show sunrise ending: a small translucent card low on the screen, under the sun.
+  // The surface: the ending lines from the script over the sunrise, then Replay.
   elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
   viewport.setScene('ending');
-  elements.minigameRoot.classList.add('text-panel');
-  elements.minigameRoot.innerHTML = `
-    <div class="text-card">
-      <h2>ESCAPED!</h2>
-      <p>You made it out of the bunker.</p>
-      <p class="text-card__dim">The signal is dead. You are free.</p>
-    </div>
-  `;
-  
-  updateControlLabels({ left: '—', right: '—' });
-
-  // Ending scene input: after the victory sound, either button replays (back to the menu).
-  if (currentAdapter) {
-    currentAdapter.dispose();
-    currentAdapter = null;
-  }
-  let replayReady = false;
-  const replayTimer = window.setTimeout(() => {
-    replayReady = true;
+  playDialogue(itemsForSection(dialogueScript, 'ending'), () => {
     updateControlLabels({ left: 'Replay', right: 'Replay' });
-  }, ENDING_REPLAY_DELAY_MS);
-  currentAdapter = {
-    handleInput: () => {
-      if (!replayReady) return;
-      console.log('[Main] Replay: back to the main menu');
-      showMainMenu(); // [audio] plays the menu track again
-    },
-    dispose: () => window.clearTimeout(replayTimer),
-  };
+    let left = false;
+    currentAdapter = {
+      handleInput: () => {
+        if (left) return;
+        left = true;
+        console.log('[Main] Replay: back to the main menu');
+        showMainMenu(); // [audio] plays the menu track again
+      },
+      dispose: () => {},
+    };
+  });
 }
 
 // ---- Input Handling ----
