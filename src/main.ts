@@ -36,6 +36,12 @@ import {
   type TunnelSubtitles,
 } from './dialogue';
 import { createSeededRng, shuffleArray } from './util/random';
+import pinDoorFrame1 from '../assets/scenes/pin_door_open_frame_1.png';
+import pinDoorFrame2 from '../assets/scenes/pin_door_open_frame_2.png';
+import pinDoorFrame3 from '../assets/scenes/pin_door_open_frame_3.png';
+import vaultDoorFrame1 from '../assets/scenes/vault_door_open_frame_1.png';
+import vaultDoorFrame2 from '../assets/scenes/vault_door_open_frame_2.png';
+import vaultDoorFrame3 from '../assets/scenes/vault_door_open_frame_3.png';
 
 // ---- Game State ----
 
@@ -633,14 +639,14 @@ function showDoorOpening(): void {
   // Use vault frames for E1, pin door frames for E2
   const frames = state.endingGame === 'E1' 
     ? [
-        '/assets/scenes/vault_door_open_frame_1.png',
-        '/assets/scenes/vault_door_open_frame_2.png',
-        '/assets/scenes/vault_door_open_frame_3.png',
+        vaultDoorFrame1,
+        vaultDoorFrame2,
+        vaultDoorFrame3,
       ]
     : [
-        '/assets/scenes/pin_door_open_frame_1.png',
-        '/assets/scenes/pin_door_open_frame_2.png',
-        '/assets/scenes/pin_door_open_frame_3.png',
+        pinDoorFrame1,
+        pinDoorFrame2,
+        pinDoorFrame3,
       ];
   
   let frameIndex = 0;
