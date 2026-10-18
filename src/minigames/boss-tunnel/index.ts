@@ -7,7 +7,7 @@
  */
 
 import { CAUGHT_HOLD_MS, createGame, type TunnelGame } from "./logic";
-import { drawFrame, WORLD_WIDTH, WORLD_HEIGHT } from "./render";
+import { drawFrame } from "./render";
 import type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
 
 export type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
@@ -29,17 +29,15 @@ export function createBossAdapter(): MinigameAdapter {
   let disposed = false;
 
   const resize = (): void => {
-    if (disposed || !host || !canvas) return;
-    const cssW = host.clientWidth || WORLD_WIDTH;
-    const cssH = host.clientHeight || (cssW * WORLD_HEIGHT) / WORLD_WIDTH;
-    const fit = Math.min(cssW / WORLD_WIDTH, cssH / WORLD_HEIGHT);
-    const drawW = Math.max(1, Math.floor(WORLD_WIDTH * fit));
-    const drawH = Math.max(1, Math.floor(WORLD_HEIGHT * fit));
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.style.width = `${drawW}px`;
-    canvas.style.height = `${drawH}px`;
-    canvas.width = Math.round(drawW * dpr);
-    canvas.height = Math.round(drawH * dpr);
+    if (disposed || !canvas) return;
+    // Fullscreen: use window dimensions
+    const cssW = window.innerWidth;
+    const cssH = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
   };
 
   const frame = (ts: number): void => {
@@ -93,11 +91,19 @@ export function createBossAdapter(): MinigameAdapter {
 
       canvas = document.createElement("canvas");
       canvas.dataset["minigame"] = BOSS_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
+      // Fullscreen immersive display
+      canvas.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 100;
+        display: block;
+      `;
       canvas.setAttribute("role", "img");
       canvas.setAttribute("aria-label", "Tunnel escape boss minigame");
-      host.appendChild(canvas);
+      document.body.appendChild(canvas);
 
       const context = canvas.getContext("2d");
       if (!context) {
@@ -119,13 +125,9 @@ export function createBossAdapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
-        resizeObserver = new ResizeObserver(() => resize());
-        resizeObserver.observe(host);
-      } else {
-        windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
-      }
+      // For fullscreen, always use window resize
+      windowResizeHandler = () => resize();
+      window.addEventListener("resize", windowResizeHandler);
 
       rafId = requestAnimationFrame(frame);
     },
