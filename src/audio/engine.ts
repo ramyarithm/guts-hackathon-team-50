@@ -397,6 +397,8 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
   const startVoice = async (key: string, gen: number): Promise<void> => {
     const def = manifest[key];
     if (!def || !ctx || !musicBus) return;
+    // Don't create voices at all if music is disabled - avoids any brief audio blip
+    if (!musicEnabled) return;
     const main = await load(key);
     const next = def.handoffTo ? await load(def.handoffTo) : null;
     if (gen !== generation || disposed || !ctx || !musicBus) return;
@@ -460,6 +462,8 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       const c = ensureContext();
       if (!c) return;
       unlocked = true;
+      
+      // Resume context first if needed
       if (c.state !== "running") {
         try {
           void c.resume().catch((error) => warn("resume failed", error));
@@ -467,6 +471,22 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
           warn("resume failed", error);
         }
       }
+      
+      // Ensure musicBus is at the correct level before starting any voices.
+      // Do this AFTER resume attempt so currentTime is advancing.
+      // Cancel any scheduled values and set directly to handle the case where
+      // musicEnabled was false at page load (localStorage) but context was
+      // created with setValueAtTime at time 0 when suspended.
+      if (musicBus) {
+        try {
+          musicBus.cancelScheduledValues(0);
+          musicBus.value = musicLevel();
+        } catch {
+          // Fallback if direct assignment fails
+          musicBus.setValueAtTime(musicLevel(), c.currentTime);
+        }
+      }
+      
       if (pendingKey) {
         const key = pendingKey;
         pendingKey = null;
@@ -538,6 +558,10 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       if (enabled === musicEnabled) return;
       musicEnabled = enabled;
       if (musicBus) rampGain(musicBus, musicLevel(), MUSIC_TOGGLE_FADE_MS);
+      // If music was just enabled and we have a track to play, start it now
+      if (enabled && currentKey && unlocked && ctx && voices.length === 0) {
+        void startVoice(currentKey, generation);
+      }
       try {
         options.onMusicEnabledChange?.(enabled);
       } catch (error) {
