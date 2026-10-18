@@ -1,4 +1,4 @@
-# DEAD SIGNAL
+# Please Hold
 
 A single player browser escape game built by **Team 50** for the **GUTS Hackathon at the University of Glasgow**.
 
