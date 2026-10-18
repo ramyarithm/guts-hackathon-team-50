@@ -9,6 +9,8 @@
 
 import type { Button, ControlLabels } from "../types";
 
+export { hashSeed } from "../../util/random";
+
 export type { Button, ControlLabels } from "../types";
 
 // ---- Difficulty (tweak these by hand) -------------------------------------------------
@@ -136,16 +138,6 @@ export function createSeededRng(seed: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-/** FNV-1a hash of a string to a 32-bit seed, so a runId can seed the dial. */
-export function hashSeed(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
 }
 
 /** Same generator as createSeededRng, but keeps its state inside GameState. */

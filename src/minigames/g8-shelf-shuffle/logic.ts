@@ -1,4 +1,7 @@
 import type { Button, ControlLabels } from "../types";
+import { createSeededRng, hashSeed, shuffleArray } from "../../util/random";
+
+export { hashSeed } from "../../util/random";
 
 export const WORLD_WIDTH = 280;
 export const WORLD_HEIGHT = 320;
@@ -32,39 +35,18 @@ export interface GameState {
   lockMs: number;
   successMs: number;
 }
-export function hashSeed(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
-  return h >>> 0;
-}
-function seededRng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-function shuffle<T>(items: readonly T[], rng: () => number): T[] {
-  const a = [...items];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+
 /** Four independent, shuffled 3+3 rounds. Each empties both shelves when sorted.
  * Each type occurs in the first two rounds, so every run includes all four types.
  * Within a round each type needs at most three slots, below the capacity of four.
  */
 export function generateSequence(runId: string): ObjectType[] {
-  const rng = seededRng(hashSeed(runId));
-  const types = shuffle(OBJECT_TYPES, rng);
+  const rng = createSeededRng(hashSeed(runId));
+  const types = shuffleArray(OBJECT_TYPES, rng);
   const sequence: ObjectType[] = [];
   for (let round = 0; round < 4; round++) {
-    const pair = round < 2 ? types.slice(round * 2, round * 2 + 2) : shuffle(types, rng).slice(0, 2);
-    sequence.push(...shuffle([pair[0], pair[0], pair[0], pair[1], pair[1], pair[1]], rng));
+    const pair = round < 2 ? types.slice(round * 2, round * 2 + 2) : shuffleArray(types, rng).slice(0, 2);
+    sequence.push(...shuffleArray([pair[0], pair[0], pair[0], pair[1], pair[1], pair[1]], rng));
   }
   return sequence;
 }

@@ -25,30 +25,7 @@ import { createBossAdapter } from './minigames/boss-tunnel';
 import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
 import { createStageViewport } from './scenes/viewport';
-
-// ---- Seeded PRNG ----
-
-/** mulberry32: deterministic PRNG for run reproducibility */
-function createSeededRng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Fisher-Yates shuffle using seeded RNG */
-function shuffleArray<T>(arr: T[], rng: () => number): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
+import { createSeededRng, shuffleArray } from './util/random';
 
 // ---- Game State ----
 
