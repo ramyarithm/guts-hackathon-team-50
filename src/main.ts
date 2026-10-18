@@ -924,15 +924,17 @@ window.addEventListener('keydown', (e) => {
   
   if (key === 'arrowleft' || key === 'a') {
     e.preventDefault();
-    handleButtonPress('LEFT', elements.btnLeft);
+    if (currentInputCount === 1) {
+      handleButtonPress('LEFT', elements.btnSingle);
+    } else {
+      handleButtonPress('LEFT', elements.btnLeft);
+    }
   } else if (key === 'arrowright' || key === 'd') {
-    e.preventDefault();
-    handleButtonPress('RIGHT', elements.btnRight);
-  } else if (key === 's') {
-    // S key for single-button games (sends LEFT)
     e.preventDefault();
     if (currentInputCount === 1) {
       handleButtonPress('LEFT', elements.btnSingle);
+    } else {
+      handleButtonPress('RIGHT', elements.btnRight);
     }
   }
 });
@@ -940,11 +942,17 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => {
   const key = e.key.toLowerCase();
   if (key === 'arrowleft' || key === 'a') {
-    handleButtonRelease(elements.btnLeft);
+    if (currentInputCount === 1) {
+      handleButtonRelease(elements.btnSingle);
+    } else {
+      handleButtonRelease(elements.btnLeft);
+    }
   } else if (key === 'arrowright' || key === 'd') {
-    handleButtonRelease(elements.btnRight);
-  } else if (key === 's') {
-    handleButtonRelease(elements.btnSingle);
+    if (currentInputCount === 1) {
+      handleButtonRelease(elements.btnSingle);
+    } else {
+      handleButtonRelease(elements.btnRight);
+    }
   }
 });
 
