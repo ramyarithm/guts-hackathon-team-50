@@ -21,8 +21,3 @@
 - [ ] Verify win/lose conditions work correctly
 - [ ] Check visual consistency across all games
 - [ ] Test on different screen sizes
-
-## 5. Improve lives/health UI
-- [ ] Make lives display more visible
-- [ ] Better visual feedback when losing a life
-- [ ] Consider hearts or other icons instead of number

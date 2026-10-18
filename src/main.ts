@@ -27,6 +27,7 @@ import { createMainMenuScene } from './scenes/main-menu';
 import { createCreditsScene } from './scenes/credits';
 import { enterCreditsAudio, enterEndingAudio, leaveCreditsToMenuAudio, type CreditsEntry } from './scenes/credits/flow';
 import { createStageViewport } from './scenes/viewport';
+import { createGameOverState, drawGameOver, type GameOverState } from './scenes/game-over';
 import {
   createDialogueScene,
   createTunnelSubtitles,
@@ -236,9 +237,6 @@ const elements = {
   minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
   sceneBg: document.getElementById('scene-bg') as HTMLDivElement,
   livesDisplay: document.getElementById('lives-display') as HTMLDivElement,
-  gameOverOverlay: document.getElementById('game-over-overlay') as HTMLDivElement,
-  btnRestart: document.getElementById('btn-restart') as HTMLButtonElement,
-  btnMenu: document.getElementById('btn-menu') as HTMLButtonElement,
 };
 
 // Sizes and places the central play area per scene (see src/scenes/viewport.ts).
@@ -270,6 +268,13 @@ function updateLivesDisplay(): void {
   });
 }
 
+// Game over canvas state
+let gameOverState: GameOverState | null = null;
+let gameOverCanvas: HTMLCanvasElement | null = null;
+let gameOverCtx: CanvasRenderingContext2D | null = null;
+let gameOverRafId: number | null = null;
+let gameOverLastTs: number | null = null;
+
 function showGameOver(): void {
   state.phase = 'GAME_OVER';
   
@@ -283,14 +288,60 @@ function showGameOver(): void {
   // Play game over music
   audio.playMusic('gameover_music');
   
-  // Show overlay
-  elements.gameOverOverlay.classList.remove('hidden');
+  // Create canvas for game over screen
+  gameOverState = createGameOverState();
+  gameOverCanvas = document.createElement('canvas');
+  gameOverCanvas.style.display = 'block';
+  gameOverCanvas.style.width = '100%';
+  gameOverCanvas.style.height = '100%';
+  elements.minigameRoot.appendChild(gameOverCanvas);
+  
+  gameOverCtx = gameOverCanvas.getContext('2d');
+  if (!gameOverCtx) {
+    console.error('[Main] Failed to get game over canvas context');
+    return;
+  }
+  
+  // Size the canvas
+  resizeGameOverCanvas();
+  
+  // Start render loop
+  gameOverLastTs = null;
+  gameOverRafId = requestAnimationFrame(gameOverFrame);
   
   console.log('[Main] Game Over!');
 }
 
+function resizeGameOverCanvas(): void {
+  if (!gameOverCanvas) return;
+  const rect = elements.minigameRoot.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  gameOverCanvas.width = Math.round(rect.width * dpr);
+  gameOverCanvas.height = Math.round(rect.height * dpr);
+}
+
+function gameOverFrame(ts: number): void {
+  if (!gameOverState || !gameOverCtx || !gameOverCanvas) return;
+  
+  const elapsed = gameOverLastTs === null ? 0 : ts - gameOverLastTs;
+  gameOverLastTs = ts;
+  gameOverState.timeMs += elapsed;
+  
+  drawGameOver(gameOverCtx, gameOverState, gameOverCanvas.width, gameOverCanvas.height);
+  
+  gameOverRafId = requestAnimationFrame(gameOverFrame);
+}
+
 function hideGameOver(): void {
-  elements.gameOverOverlay.classList.add('hidden');
+  if (gameOverRafId !== null) {
+    cancelAnimationFrame(gameOverRafId);
+    gameOverRafId = null;
+  }
+  gameOverCanvas?.remove();
+  gameOverCanvas = null;
+  gameOverCtx = null;
+  gameOverState = null;
+  gameOverLastTs = null;
 }
 
 function restartRun(): void {
@@ -870,10 +921,6 @@ function handleButtonRelease(btnEl: HTMLButtonElement): void {
 }
 
 // ---- Event Listeners ----
-
-// Game over buttons
-elements.btnRestart.addEventListener('click', restartRun);
-elements.btnMenu.addEventListener('click', goToMainMenu);
 
 // Mouse/touch for control buttons
 elements.btnLeft.addEventListener('mousedown', () => handleButtonPress('LEFT', elements.btnLeft));
