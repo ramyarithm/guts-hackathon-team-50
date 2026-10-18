@@ -1,6 +1,6 @@
 // Adapter for G5 (Circuit Sync) - timing game with spinning wheel and colored contacts.
 
-import { createGame, type Game } from "./logic";
+import { createGame, hashSeed, type Game } from "./logic";
 import { drawFrame } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
@@ -76,6 +76,7 @@ export function createG5Adapter(): MinigameAdapter {
 
       // Create game
       game = createGame({
+        seed: hashSeed(startArgs.runId),
         onComplete: () => {
           if (!completed && args?.onComplete) {
             completed = true;

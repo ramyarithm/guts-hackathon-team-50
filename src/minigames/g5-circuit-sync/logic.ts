@@ -1,8 +1,8 @@
 // Pure game state and rules for G5 (Circuit Sync). No DOM access.
 //
-// A spinning wheel has alternating red/blue contacts. The player throws
-// matching colored connectors when a contact aligns with the bottom marker.
-// Hit all required contacts to restore the circuit.
+// A spinning wheel has randomly colored red/blue contacts (seeded from runId).
+// The player throws matching colored connectors when a contact aligns
+// with the bottom marker. Hit all contacts to restore the circuit.
 
 import type { Button, ControlLabels } from "../types";
 
@@ -18,9 +18,9 @@ export const TICK_MS = 1000 / 60;
 const DT = TICK_MS / 1000;
 
 /** Game rules */
-export const HITS_TO_WIN = 8;
+export const HITS_TO_WIN = 6; // Must hit all contacts once
 export const ALLOWED_MISSES = 3;
-export const CONTACT_COUNT = 6; // Number of contacts on wheel (alternating colors)
+export const CONTACT_COUNT = 6; // Number of contacts on wheel
 export const HIT_WINDOW = 0.28; // Radians tolerance for a valid hit
 export const START_SPEED = 1.3; // Initial rotation speed (radians/sec)
 export const SPEED_PER_HIT = 0.10; // Speed increase per successful hit
@@ -36,6 +36,40 @@ export const SUCCESS_HOLD_MS = 1500;
 
 const TWO_PI = Math.PI * 2;
 const BOTTOM = Math.PI / 2; // Target angle (bottom of wheel)
+
+// ---- Seeded PRNG ----
+
+/** mulberry32: small deterministic PRNG. */
+function createSeededRng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** FNV-1a hash of a string to a 32-bit seed. */
+export function hashSeed(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** Generate random contact colors from seed. */
+function generateContactColors(seed: number): ConnectorType[] {
+  const rng = createSeededRng(seed);
+  const colors: ConnectorType[] = [];
+  for (let i = 0; i < CONTACT_COUNT; i++) {
+    colors.push(rng() < 0.5 ? 0 : 1);
+  }
+  return colors;
+}
 
 // ---- Types ----
 
@@ -54,6 +88,8 @@ export interface FlyingConnector {
 
 export interface GameState {
   phase: Phase;
+  /** Color of each contact point (seeded random) */
+  contactColors: ConnectorType[];
   /** Current wheel rotation angle */
   angle: number;
   /** Current rotation speed (radians/sec) */
@@ -83,6 +119,7 @@ export interface GameState {
 }
 
 export interface GameCallbacks {
+  seed?: number;
   onComplete?: () => void;
   onLabels?: (labels: ControlLabels) => void;
 }
@@ -105,10 +142,11 @@ function angleDifference(a: number, b: number): number {
 // ---- Game Factory ----
 
 export function createGame(callbacks: GameCallbacks = {}): Game {
-  const { onComplete, onLabels } = callbacks;
+  const { seed = 1, onComplete, onLabels } = callbacks;
 
   const state: GameState = {
     phase: "READY",
+    contactColors: generateContactColors(seed),
     angle: -0.38,
     speed: START_SPEED,
     hits: 0,
@@ -163,8 +201,15 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     }
 
     const goodTiming = closestDistance <= HIT_WINDOW;
-    const correctColor = (closestIndex % 2) === type;
-    const success = goodTiming && correctColor;
+    const correctColor = state.contactColors[closestIndex] === type;
+    
+    // Check if this contact is already repaired
+    const contactLocalAngle = closestIndex * TWO_PI / CONTACT_COUNT;
+    const alreadyHit = state.syncedConnectors.some(
+      c => Math.abs(c.localAngle - contactLocalAngle) < 0.01
+    );
+    
+    const success = goodTiming && correctColor && !alreadyHit;
 
     // Add flying connector animation
     state.flyingConnectors.push({ type, startMs: state.timeMs });
@@ -175,12 +220,14 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
 
     if (success) {
       state.hits++;
-      // Store the contact's local angle on the wheel (not relative to BOTTOM)
-      const contactLocalAngle = closestIndex * TWO_PI / CONTACT_COUNT;
       state.syncedConnectors.push({ localAngle: contactLocalAngle, type });
       state.speed = Math.min(MAX_SPEED, state.speed + SPEED_PER_HIT);
       state.message = "CONTACT RESTORED";
       state.messageType = "success";
+    } else if (alreadyHit && goodTiming && correctColor) {
+      // Good timing and color but contact already repaired
+      state.message = "ALREADY REPAIRED";
+      state.messageType = "danger";
     } else {
       state.missesLeft--;
       state.shake = 17;
@@ -246,9 +293,11 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
       // Start game on first press
       if (state.phase === "READY") {
         setPhase("PLAYING");
+        state.lastThrowMs = state.timeMs; // Prevent immediate throw
         state.message = "ALIGN COLOR TO BOTTOM MARKER";
         state.messageType = "";
         updateLabels();
+        return; // This press only starts the game
       }
 
       if (state.phase !== "PLAYING") return;

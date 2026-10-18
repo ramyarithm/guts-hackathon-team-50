@@ -210,7 +210,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
     const a = i * TWO_PI / CONTACT_COUNT;
     const cx = Math.cos(a) * radius;
     const cy = Math.sin(a) * radius;
-    const color = COLORS[i % 2];
+    const color = COLORS[state.contactColors[i]];
 
     // Contact background
     ctx.beginPath();
@@ -392,19 +392,8 @@ function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   const speedMult = state.phase === "READY" ? "—" : `${(state.speed / 1.3).toFixed(1)}×`;
   ctx.fillText(speedMult, WORLD_WIDTH - 18, panelY + 17);
 
-  // Launch area
-  ctx.fillStyle = C.launchBg;
-  ctx.fillRect(WORLD_WIDTH / 2 - 45, 390, 90, 35);
-  ctx.fillStyle = C.launchInner;
-  ctx.fillRect(WORLD_WIDTH / 2 - 38, 396, 76, 24);
-  ctx.fillStyle = C.launchText;
-  ctx.font = `bold 10px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("LAUNCH", WORLD_WIDTH / 2, 408);
-
   // Message
-  const msgY = 445;
+  const msgY = 400;
   ctx.textAlign = "center";
   ctx.font = `11px ${FONT}`;
   if (state.messageType === "success") {
