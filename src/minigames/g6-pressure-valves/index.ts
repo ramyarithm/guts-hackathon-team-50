@@ -9,12 +9,11 @@ import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs 
 export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 export { ROUND_MS } from "./logic";
 
-export const G6_ID = "G6";
+export const G6_ID = "G6"; // this game's ID
 
-export function createG6Adapter(): MinigameAdapter {
-  // Every piece of mutable state lives inside this closure; no module-level state.
+export function createG6Adapter(): MinigameAdapter { // builds an independent copy of the game
   let args: MinigameStartArgs | null = null;
-  let game: Game | null = null;
+  let game: Game | null = null; // the running game logic
   let host: HTMLElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -22,11 +21,11 @@ export function createG6Adapter(): MinigameAdapter {
   let lastFrameTs: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
-  let completed = false;
-  let failFired = false;
-  let disposed = false;
+  let completed = false; // true once the player has won
+  let failFired = false; // true once a burst failure has been reported
+  let disposed = false; // true once the game is permanently shut down
 
-  const resize = (): void => {
+  const resize = (): void => { // fits the canvas to its container
     if (!host || !canvas) return;
     const cssW = host.clientWidth || WORLD_WIDTH;
     // A host with no explicit height gets the game's natural aspect ratio.
@@ -56,7 +55,7 @@ export function createG6Adapter(): MinigameAdapter {
     }
   };
 
-  const teardownScene = (): void => {
+  const teardownScene = (): void => { // removes everything the game set up
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
       rafId = null;
@@ -89,7 +88,7 @@ export function createG6Adapter(): MinigameAdapter {
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
+      canvas = document.createElement("canvas"); // create the canvas
       canvas.dataset["minigame"] = G6_ID;
       canvas.style.display = "block";
       canvas.style.margin = "0 auto";
@@ -97,7 +96,7 @@ export function createG6Adapter(): MinigameAdapter {
       canvas.setAttribute("aria-label", "Pressure valves minigame");
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext("2d"); // get the 2D drawing tool
       if (!context) {
         console.error("[G6] 2D canvas context unavailable");
         teardownScene();
