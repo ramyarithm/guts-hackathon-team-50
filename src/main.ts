@@ -464,7 +464,10 @@ function startGame(gameId: string): void {
       onComplete: handleGameComplete,
       onFail: handleGameFail,
       container: elements.minigameRoot,
-      targetPin: state.runPlan.pinDigits, // For E1/E2 ending games
+      targetPin: state.runPlan.pinDigits, // For the E2 morse pad
+      // For the E1 vault door: the PIN check. The controller owns the PIN, so changing
+      // pinDigits changes what opens the door.
+      checkPin: (entry: string) => entry === state.runPlan.pinDigits.join(''),
     } as any);
     console.log(`[Main] Started ${gameId} for stage ${state.currentStage} (${inputCount}-button)`);
   } catch (error) {

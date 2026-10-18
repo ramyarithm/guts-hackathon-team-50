@@ -1,16 +1,24 @@
-// E1 adapter: wires the pure game logic to a canvas and the shared minigame contract.
-// Auto-registers when imported, like G1 and G2. CORE imports this module for the side
-// effect (see README: it is not yet imported by src/minigames/index.ts).
+// E1 adapter: the PIN door. Wires the pure game logic to a canvas and the shared minigame
+// contract. Registered outside the random pool (`pool: false`): the controller starts it
+// for the ending once all four stages are complete, passing a `checkPin` callback that
+// owns the real PIN. A wrong entry ends the run (onFail). Auto-registers when imported.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, DROP_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
+import { WORLD_HEIGHT, WORLD_WIDTH, createGame, type Game, type PinCheck } from "./logic";
 import { createRenderer } from "./render";
 import { register } from "../registry";
 import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 
 export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
 export { CODE_LENGTH, DIAL_SIZE } from "./logic";
+export type { PinCheck } from "./logic";
 
 export const E1_ID = "E1";
+
+/** Start arguments for the PIN door: the shared contract plus the PIN check. */
+export interface E1StartArgs extends MinigameStartArgs {
+  /** Validates a complete 4-digit entry. The controller derives it from its PIN config. */
+  checkPin?: PinCheck;
+}
 
 /** Optional click sound. Silent when audio is unavailable or blocked; visuals suffice. */
 function createClicker(): { click(): void; close(): void } {
@@ -63,7 +71,7 @@ function createClicker(): { click(): void; close(): void } {
 
 export function createE1Adapter(): MinigameAdapter {
   // Every piece of mutable state lives inside this closure; no module-level state.
-  let args: MinigameStartArgs | null = null;
+  let args: E1StartArgs | null = null;
   let game: Game | null = null;
   let host: HTMLElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
@@ -73,7 +81,7 @@ export function createE1Adapter(): MinigameAdapter {
   let resizeObserver: ResizeObserver | null = null;
   let windowResizeHandler: (() => void) | null = null;
   let completed = false;
-  let failFired = false;
+  let failed = false;
   let disposed = false;
   let lastClickSeen = -Infinity;
   const renderer = createRenderer();
@@ -100,17 +108,14 @@ export function createE1Adapter(): MinigameAdapter {
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.step(elapsed);
+    // onComplete / onFail run inside step() and the controller may dispose this scene
+    // synchronously in response; stop here if it did.
+    if (disposed || !game || !ctx || !canvas) return;
     if (game.state.lastClickMs !== lastClickSeen) {
       lastClickSeen = game.state.lastClickMs;
       if (Number.isFinite(lastClickSeen)) clicker.click();
     }
     renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
-    // Call onFail after drop lockout period
-    if (game.state.phase === "DROPPED" && game.state.phaseMs >= DROP_LOCKOUT_MS && !failFired) {
-      failFired = true;
-      args?.onFail();
-    }
   };
 
   const teardownScene = (): void => {
@@ -138,7 +143,10 @@ export function createE1Adapter(): MinigameAdapter {
       if (disposed) return;
       // Starting twice on one instance replaces the previous scene cleanly.
       teardownScene();
-      args = startArgs;
+      args = startArgs as E1StartArgs;
+      if (typeof args.checkPin !== "function") {
+        console.warn("[E1] started without checkPin; every entry will be denied");
+      }
 
       host = startArgs.container ?? document.getElementById("minigame-root");
       if (!host) {
@@ -151,7 +159,7 @@ export function createE1Adapter(): MinigameAdapter {
       canvas.style.display = "block";
       canvas.style.margin = "0 auto";
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Vault lock minigame");
+      canvas.setAttribute("aria-label", "Exit door: enter the four-digit code on the vault dial");
       host.appendChild(canvas);
 
       const context = canvas.getContext("2d");
@@ -163,16 +171,20 @@ export function createE1Adapter(): MinigameAdapter {
       ctx = context;
 
       game = createGame({
-        // The combination is seeded from the run id: reproducible per run, identical for
-        // every stage, and unrelated to the bunker PIN.
-        seed: hashSeed(startArgs.runId),
+        checkPin: args.checkPin,
         onLabels: (labels) => {
           if (!disposed) args?.setControlLabels(labels);
         },
         onComplete: () => {
-          if (disposed || completed) return;
+          if (disposed || completed || failed) return;
           completed = true;
           args?.onComplete();
+        },
+        // A wrong entry ends the run: signalled once, after the denied flash.
+        onFail: () => {
+          if (disposed || completed || failed) return;
+          failed = true;
+          args?.onFail();
         },
       });
 
@@ -189,7 +201,7 @@ export function createE1Adapter(): MinigameAdapter {
     },
 
     handleInput(button: Button): void {
-      if (disposed || completed || !game) return;
+      if (disposed || completed || failed || !game) return;
       if (button !== "LEFT" && button !== "RIGHT") return;
       game.press(button);
     },
@@ -206,13 +218,13 @@ export function createE1Adapter(): MinigameAdapter {
   return adapter;
 }
 
-/** Registry entry for E1 Vault Lock. */
+/** Registry entry for E1, the PIN door. */
 export const e1Entry: MinigameRegistryEntry = {
   id: E1_ID,
-  name: "Vault Lock",
+  name: "Vault Door",
   ready: true,
-  inputCount: 2, // one button turns, the other locks in
-  pool: false, // Ending game, not in random selection pool
+  inputCount: 2, // LEFT turns the dial, RIGHT sets the digit / opens
+  pool: false, // The ending door: never drawn for C1-C4
   adapter: createE1Adapter,
 };
 

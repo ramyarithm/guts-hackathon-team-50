@@ -25,7 +25,7 @@ beat clock.
 | `c4` | `c4.mp3` (10.73 s) | Stage C4, the PIN door / E-games (E1, E2) and the ending until the sting | yes |
 | `boss` | `creepy sounds.mp3` (26.11 s) | Boss fight ambience (not wired; see below) | yes |
 | `victory` | `victory sound.mp3` (3.81 s) | One-shot on the core ending ("ESCAPED!") | no |
-| `gameover_music` | `game over music.mp3` (69.14 s) | Plays when a minigame fails | yes |
+| `gameover_music` | `game over music.mp3` (69.14 s) | Plays on the game over screen (lives lost, or a wrong PIN at the exit door) | yes |
 
 Music is tied to the **narrative stage**, not to the minigame drawn for it: whatever game
 runs in C2 plays `c2`, and stage C1 just loops `c1.mp3` with drums. A stage's track starts

@@ -1,28 +1,22 @@
-// Pure game state and rules for E1 (vault lock). No DOM access.
+// Pure game state and rules for E1, the PIN door. No DOM access.
 //
-// The player cracks a combination dial with two buttons. At each step one button turns
-// the dial in the required direction (right, left, right) and the other locks in the
-// current position. A proximity meter and a click at the exact number make every
-// combination deducible by observation. The combination is internal to this minigame
-// and has nothing to do with the bunker PIN.
+// The player enters the four-digit code recovered from the four stages on a vault dial:
+// LEFT turns the dial one step (the current digit goes up by one, 9 wraps to 0), RIGHT
+// sets the digit and moves to the next position; on the fourth position RIGHT submits.
+// This module never knows the PIN: the controller passes a `checkPin` callback and the
+// entry is handed to it on submit. A wrong entry is denied once and ends the run: after
+// a brief "ACCESS DENIED" the failure is signalled and no further input is accepted.
 
 import type { Button, ControlLabels } from "../types";
-import { createSeededRng } from "../../util/random";
-
-export { createSeededRng, hashSeed } from "../../util/random";
 
 export type { Button, ControlLabels } from "../types";
 
 // ---- Tuning -----------------------------------------------------------------
 
-/** Positions on the dial, 0..DIAL_SIZE-1, wrapping. */
+/** Positions on the dial: digits 0..9. */
 export const DIAL_SIZE = 10;
-/** Numbers in the combination. */
-export const CODE_LENGTH = 3;
-/** Where the dial sits when an instance starts. The first number is never this. */
-export const START_POSITION = 0;
-/** Turning direction required for each step: +1 right (clockwise), -1 left. */
-export const STEP_DIRECTIONS: readonly (1 | -1)[] = [1, -1, 1];
+/** Digits in the code. */
+export const CODE_LENGTH = 4;
 
 export const WORLD_WIDTH = 320;
 export const WORLD_HEIGHT = 480;
@@ -36,163 +30,76 @@ export const MAX_STEP_MS = 250;
 export const TURN_DURATION_MS = 80;
 export const TURN_TICKS = Math.ceil(TURN_DURATION_MS / TICK_MS);
 
-export const DROP_LOCKOUT_MS = 400;
-/** "Vault open" is shown for this long before onComplete. */
-export const SUCCESS_HOLD_MS = 1000;
-/** Visual durations for the click and lock-in flashes. */
-export const CLICK_FLASH_MS = 260;
-export const LOCK_FLASH_MS = 700;
+/** "Access denied" is shown for this long, then the failure is signalled. */
+export const DENIED_MS = 500;
+/** The handle spins and the door swings open for this long before onComplete. */
+export const OPENING_MS = 1600;
+/** Visual durations. */
+export const CLICK_FLASH_MS = 200;
+export const SET_FLASH_MS = 500;
+export const DENIED_SHAKE_MS = 450;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "PLAYING" | "DROPPED" | "SUCCESS";
+export type Phase = "ENTERING" | "DENIED" | "OPENING";
+
+/** Validates a complete entry. Owned by the controller; E1 never stores the PIN. */
+export type PinCheck = (entry: string) => boolean;
 
 /** An in-progress one-position turn. */
 export interface Rotation {
   from: number;
   to: number;
-  dir: 1 | -1;
   elapsedMs: number;
 }
 
 export interface GameState {
   phase: Phase;
-  seed: number;
-  /** The combination: CODE_LENGTH dial positions. Internal to the minigame. */
-  code: number[];
-  /** Current step, 0..CODE_LENGTH-1. */
-  step: number;
-  /** Dial position under the indicator (the target of any rotation in progress). */
+  /** Position being entered, 0..CODE_LENGTH-1. */
   position: number;
+  /** Entered digits; `digits[position]` is the live dial value while ENTERING. */
+  digits: number[];
   rotation: Rotation | null;
   /** At most one press queued during a rotation; it runs when the rotation ends. */
   bufferedPress: Button | null;
-  /** Numbers locked in during the current attempt. */
-  found: boolean[];
-  /** Numbers ever locked in; shown as faint hints after a drop. */
-  hints: boolean[];
   /** Milliseconds spent in the current phase. */
   phaseMs: number;
   /** Total simulated milliseconds. */
   timeMs: number;
   /** Fixed-step accumulator used by step(). */
   accumulatorMs: number;
-  /** Set exactly once, when the success hold has elapsed. */
+  /** Set exactly once, when the opening animation has finished. */
   completionFired: boolean;
-  /** Wrong lock-ins so far (for display only). */
-  drops: number;
-  /** Simulated time of the last click (dial landed on the target); -Infinity if none. */
+  /** Set exactly once, when the denied flash has finished after a wrong entry. */
+  failureFired: boolean;
+  /** Wrong entries so far (display only). */
+  attempts: number;
+  /** Simulated time of the last dial click; -Infinity if none. */
   lastClickMs: number;
-  /** Simulated time of the last correct lock-in; -Infinity if none. */
-  lastLockMs: number;
-}
-
-export interface CreateStateOptions {
-  /** Test hook: use this combination instead of generating one. */
-  code?: number[];
+  /** Simulated time of the last digit set; -Infinity if none. */
+  lastSetMs: number;
 }
 
 // ---- Pure helpers -----------------------------------------------------------
 
-/**
- * Generate a combination: CODE_LENGTH positions, no two consecutive equal, and the first
- * never equal to the starting position.
- */
-export function generateCode(seed: number, startPosition = START_POSITION): number[] {
-  const rng = createSeededRng(seed);
-  const code: number[] = [];
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    const forbidden = i === 0 ? startPosition : code[i - 1]!;
-    // Pick among the DIAL_SIZE-1 allowed values so the loop always terminates.
-    let n = Math.floor(rng() * (DIAL_SIZE - 1));
-    if (n >= forbidden) n += 1;
-    code.push(n);
-  }
-  return code;
+/** Value after turning the dial one step up, wrapping 9 -> 0. */
+export function turnedValue(value: number): number {
+  return (value + 1) % DIAL_SIZE;
 }
 
-/** Shortest distance between two dial positions going either way. */
-export function circularDistance(a: number, b: number): number {
-  const d = Math.abs(((a - b) % DIAL_SIZE) + DIAL_SIZE) % DIAL_SIZE;
-  return Math.min(d, DIAL_SIZE - d);
-}
-
-/** 1 exactly at the target, falling linearly to 0 at the opposite side of the dial. */
-export function proximity(position: number, target: number): number {
-  return 1 - circularDistance(position, target) / (DIAL_SIZE / 2);
-}
-
-/** Position after turning one step in `dir`, wrapping. */
-export function turnedPosition(position: number, dir: 1 | -1): number {
-  return (position + dir + DIAL_SIZE) % DIAL_SIZE;
-}
-
-/** The button that turns the dial at this step. */
-export function turnButton(stepIndex: number): Button {
-  return (STEP_DIRECTIONS[stepIndex] ?? 1) > 0 ? "RIGHT" : "LEFT";
-}
-
-/** The button that locks in the current position at this step. */
-export function lockButton(stepIndex: number): Button {
-  return turnButton(stepIndex) === "RIGHT" ? "LEFT" : "RIGHT";
-}
-
-/** The number the player is currently listening for. */
-export function currentTarget(state: GameState): number {
-  const index = Math.min(state.step, CODE_LENGTH - 1);
-  return state.code[index]!;
-}
-
-/** What the proximity meter shows: closeness of the dial to the current target. */
-export function meterLevel(state: GameState): number {
-  return proximity(state.position, currentTarget(state));
+/** The entry as a string of CODE_LENGTH digits, as handed to checkPin. */
+export function entryString(state: GameState): string {
+  return state.digits.join("");
 }
 
 export function labelsFor(state: GameState): ControlLabels {
   switch (state.phase) {
-    case "READY":
-      return { left: "Start", right: "Start" };
-    case "PLAYING":
-      return turnButton(state.step) === "RIGHT"
-        ? { left: "Lock in", right: "Turn ▶" }
-        : { left: "Turn ◀", right: "Lock in" };
-    case "DROPPED":
-      return { left: "Retry", right: "Retry" };
-    case "SUCCESS":
+    case "ENTERING":
+      return { left: "Turn dial", right: state.position >= CODE_LENGTH - 1 ? "Open vault" : "Set digit" };
+    case "DENIED":
+    case "OPENING":
       return { left: "—", right: "—" };
   }
-}
-
-/** Short on-screen hint for the current step. */
-export function stepHint(state: GameState): string {
-  if (state.phase !== "PLAYING") return "";
-  return turnButton(state.step) === "RIGHT"
-    ? "Turn RIGHT, listen for the click, then LEFT locks in"
-    : "Turn LEFT, listen for the click, then RIGHT locks in";
-}
-
-// ---- State ------------------------------------------------------------------
-
-export function createState(seed: number, options: CreateStateOptions = {}): GameState {
-  const code = options.code ? [...options.code] : generateCode(seed, START_POSITION);
-  return {
-    phase: "READY",
-    seed,
-    code,
-    step: 0,
-    position: START_POSITION,
-    rotation: null,
-    bufferedPress: null,
-    found: new Array<boolean>(CODE_LENGTH).fill(false),
-    hints: new Array<boolean>(CODE_LENGTH).fill(false),
-    phaseMs: 0,
-    timeMs: 0,
-    accumulatorMs: 0,
-    completionFired: false,
-    drops: 0,
-    lastClickMs: -Infinity,
-    lastLockMs: -Infinity,
-  };
 }
 
 /** Rotation progress in [0, 1]; `alpha` lets the renderer peek between ticks. */
@@ -204,14 +111,39 @@ export function rotationProgress(state: GameState, alpha = 0): number {
 
 /**
  * Fractional dial position to draw, eased (cubic ease-out) along the current turn.
- * May be outside [0, DIAL_SIZE) during a wrap; callers take it modulo DIAL_SIZE.
+ * May reach DIAL_SIZE during a wrap; callers take it modulo DIAL_SIZE.
  */
 export function dialVisualPosition(state: GameState, alpha = 0): number {
   const r = state.rotation;
-  if (!r) return state.position;
+  if (!r) return state.digits[state.position] ?? 0;
   const p = rotationProgress(state, alpha);
   const eased = 1 - Math.pow(1 - p, 3);
-  return r.from + r.dir * eased;
+  return r.from + eased;
+}
+
+/** Door opening progress in [0, 1] (0 unless OPENING). */
+export function openProgress(state: GameState): number {
+  return state.phase === "OPENING" ? Math.min(1, state.phaseMs / OPENING_MS) : 0;
+}
+
+// ---- State ------------------------------------------------------------------
+
+export function createState(): GameState {
+  return {
+    phase: "ENTERING",
+    position: 0,
+    digits: new Array<number>(CODE_LENGTH).fill(0),
+    rotation: null,
+    bufferedPress: null,
+    phaseMs: 0,
+    timeMs: 0,
+    accumulatorMs: 0,
+    completionFired: false,
+    failureFired: false,
+    attempts: 0,
+    lastClickMs: -Infinity,
+    lastSetMs: -Infinity,
+  };
 }
 
 function setPhase(state: GameState, phase: Phase): void {
@@ -219,124 +151,101 @@ function setPhase(state: GameState, phase: Phase): void {
   state.phaseMs = 0;
 }
 
-function beginTurn(state: GameState, dir: 1 | -1): void {
-  const from = state.position;
-  state.position = turnedPosition(from, dir);
-  state.rotation = { from, to: state.position, dir, elapsedMs: 0 };
+function beginTurn(state: GameState): void {
+  const from = state.digits[state.position] ?? 0;
+  const to = turnedValue(from);
+  state.digits[state.position] = to;
+  state.rotation = { from, to, elapsedMs: 0 };
 }
 
-function lockIn(state: GameState): void {
-  if (state.position === currentTarget(state)) {
-    state.found[state.step] = true;
-    state.hints[state.step] = true;
-    state.lastLockMs = state.timeMs;
-    state.step += 1;
-    if (state.step >= CODE_LENGTH) {
-      state.step = CODE_LENGTH;
-      setPhase(state, "SUCCESS");
-    }
+function setDigit(state: GameState, checkPin: PinCheck): void {
+  state.lastSetMs = state.timeMs;
+  if (state.position < CODE_LENGTH - 1) {
+    state.position += 1;
+    state.digits[state.position] = 0;
     return;
   }
-  state.drops += 1;
-  state.rotation = null;
-  state.bufferedPress = null;
-  setPhase(state, "DROPPED");
-}
-
-/** Apply a press while PLAYING and not rotating. */
-function applyPlayingPress(state: GameState, button: Button): void {
-  if (button === turnButton(state.step)) {
-    beginTurn(state, STEP_DIRECTIONS[state.step] ?? 1);
+  // Fourth position: submit. The controller decides; E1 only shows the result.
+  if (checkPin(entryString(state))) {
+    setPhase(state, "OPENING");
   } else {
-    lockIn(state);
+    state.attempts += 1;
+    setPhase(state, "DENIED");
   }
-}
-
-function retry(state: GameState): void {
-  state.step = 0;
-  state.found.fill(false);
   state.rotation = null;
   state.bufferedPress = null;
-  setPhase(state, "PLAYING");
-  // The dial does not move on retry; if it already sits on the first number, click.
-  if (state.position === currentTarget(state)) state.lastClickMs = state.timeMs;
 }
 
-function advanceRotation(state: GameState): void {
+/** Apply a press while ENTERING and not rotating. */
+function applyEnteringPress(state: GameState, button: Button, checkPin: PinCheck): void {
+  if (button === "LEFT") beginTurn(state);
+  else setDigit(state, checkPin);
+}
+
+function advanceRotation(state: GameState, checkPin: PinCheck): void {
   const r = state.rotation;
   if (!r) return;
   r.elapsedMs += TICK_MS;
   if (r.elapsedMs < TURN_DURATION_MS) return;
   state.rotation = null;
-  if (state.position === currentTarget(state)) state.lastClickMs = state.timeMs;
+  state.lastClickMs = state.timeMs; // cosmetic click on every step
   const queued = state.bufferedPress;
   state.bufferedPress = null;
-  if (queued) applyPlayingPress(state, queued);
+  if (queued) applyEnteringPress(state, queued, checkPin);
 }
 
 // ---- Simulation -------------------------------------------------------------
 
 /** Advance exactly one fixed step. */
-export function tick(state: GameState): void {
+export function tick(state: GameState, checkPin: PinCheck = () => false): void {
   state.timeMs += TICK_MS;
   state.phaseMs += TICK_MS;
   switch (state.phase) {
-    case "PLAYING":
-      advanceRotation(state);
+    case "ENTERING":
+      advanceRotation(state, checkPin);
       break;
-    case "SUCCESS":
-      if (state.phaseMs >= SUCCESS_HOLD_MS && !state.completionFired) {
-        state.completionFired = true;
-      }
+    case "OPENING":
+      if (state.phaseMs >= OPENING_MS && !state.completionFired) state.completionFired = true;
       break;
-    case "READY":
-    case "DROPPED":
+    case "DENIED":
+      if (state.phaseMs >= DENIED_MS && !state.failureFired) state.failureFired = true;
       break;
   }
 }
 
 /** Advance by wall-clock time using a fixed-step accumulator. */
-export function step(state: GameState, dtMs: number): void {
+export function step(state: GameState, dtMs: number, checkPin: PinCheck = () => false): void {
   state.accumulatorMs += Math.min(Math.max(dtMs, 0), MAX_STEP_MS);
   // Small epsilon so float drift never swallows a step at an exact boundary.
   while (state.accumulatorMs >= TICK_MS - 1e-6) {
     state.accumulatorMs -= TICK_MS;
-    tick(state);
+    tick(state, checkPin);
   }
 }
 
 /**
- * Apply a button press. READY: either button starts. PLAYING: the step's turn button
- * turns one position (a press during a rotation is buffered, one at most); the other
- * button locks in. DROPPED: after the lockout, either button retries from step 1 with
- * the same code. SUCCESS: ignored.
+ * Apply a button press. ENTERING: LEFT turns one step (a press during a rotation is
+ * buffered, one at most), RIGHT sets the digit or, on the last position, submits via
+ * `checkPin`. DENIED and OPENING: ignored; the run is over either way.
  */
-export function press(state: GameState, button: Button): void {
-  if (state.completionFired) return;
-  switch (state.phase) {
-    case "READY":
-      setPhase(state, "PLAYING");
-      break;
-    case "PLAYING":
-      if (state.rotation) {
-        if (state.bufferedPress === null) state.bufferedPress = button;
-      } else {
-        applyPlayingPress(state, button);
-      }
-      break;
-    case "DROPPED":
-      if (state.phaseMs >= DROP_LOCKOUT_MS) retry(state);
-      break;
-    case "SUCCESS":
-      break;
+export function press(state: GameState, button: Button, checkPin: PinCheck): void {
+  if (state.phase !== "ENTERING") return;
+  if (state.rotation) {
+    if (state.bufferedPress === null) state.bufferedPress = button;
+  } else {
+    applyEnteringPress(state, button, checkPin);
   }
 }
 
 // ---- Controller wrapper with callbacks ----------------------------------------
 
-export interface GameOptions extends CreateStateOptions {
-  seed?: number;
+export interface GameOptions {
+  /** Validates a submitted entry. Required for the door to open. */
+  checkPin?: PinCheck;
+  /** A correct entry, after the opening animation. Fires once. */
   onComplete?: () => void;
+  /** A wrong entry, after the denied flash. Fires once; the run is over. */
+  onFail?: () => void;
   onLabels?: (labels: ControlLabels) => void;
 }
 
@@ -349,11 +258,13 @@ export interface Game {
   dispose(): void;
 }
 
-/** Wraps the pure functions, publishing label changes and firing onComplete once. */
+/** Wraps the pure functions, publishing label changes and firing onComplete / onFail once. */
 export function createGame(opts: GameOptions = {}): Game {
-  const state = createState(opts.seed ?? 1, opts.code ? { code: opts.code } : {});
+  const state = createState();
+  const checkPin: PinCheck = opts.checkPin ?? (() => false);
   let disposed = false;
   let completionNotified = false;
+  let failureNotified = false;
   let lastLabels = labelsFor(state);
 
   const afterChange = (): void => {
@@ -367,6 +278,10 @@ export function createGame(opts: GameOptions = {}): Game {
       completionNotified = true;
       opts.onComplete?.();
     }
+    if (state.failureFired && !failureNotified) {
+      failureNotified = true;
+      opts.onFail?.();
+    }
   };
 
   const game: Game = {
@@ -378,17 +293,17 @@ export function createGame(opts: GameOptions = {}): Game {
     },
     step(dtMs: number): void {
       if (disposed) return;
-      step(state, dtMs);
+      step(state, dtMs, checkPin);
       afterChange();
     },
     tick(): void {
       if (disposed) return;
-      tick(state);
+      tick(state, checkPin);
       afterChange();
     },
     press(button: Button): void {
-      if (disposed || completionNotified) return;
-      press(state, button);
+      if (disposed || completionNotified || failureNotified) return;
+      press(state, button, checkPin);
       afterChange();
     },
     dispose(): void {

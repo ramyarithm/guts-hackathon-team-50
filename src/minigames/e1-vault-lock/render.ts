@@ -1,19 +1,18 @@
-// Canvas drawing for E1 (vault lock). Reads GameState only. Canvas primitives and
+// Canvas drawing for E1 (the PIN door). Reads GameState only. Canvas primitives and
 // gradients only, in the bunker style shared with G1 and G2.
 
 import {
   CLICK_FLASH_MS,
   CODE_LENGTH,
+  DENIED_MS,
+  DENIED_SHAKE_MS,
   DIAL_SIZE,
-  DROP_LOCKOUT_MS,
-  LOCK_FLASH_MS,
-  SUCCESS_HOLD_MS,
+  SET_FLASH_MS,
   TICK_MS,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   dialVisualPosition,
-  meterLevel,
-  stepHint,
+  openProgress,
   type GameState,
 } from "./logic";
 
@@ -48,16 +47,22 @@ const C = {
   scanline: "rgba(0, 0, 0, 0.18)",
 } as const;
 
+// Vertical layout inside the door (y 54..458): dial, entry slots, then the status row
+// (lamp, status text, handle) along the bottom. Nothing shares a row with the slots.
 const DIAL_CX = WORLD_WIDTH / 2;
-const DIAL_CY = 222;
-const DIAL_R = 92;
-const HANDLE_CX = 262;
-const HANDLE_CY = 372;
-const HANDLE_R = 24;
-const METER_X = 20;
-const METER_Y = 406;
-const METER_W = WORLD_WIDTH - 40;
-const METER_H = 44;
+const DIAL_CY = 212;
+const DIAL_R = 90;
+/** Entry slots (the digits being entered) sit under the dial. */
+const SLOTS_Y = 352;
+const SLOT_W = 34;
+const SLOT_H = 42;
+const SLOT_GAP = 10;
+/** Status row: lamp at the left, status text centred, handle at the right. */
+const STATUS_Y = 430;
+const LAMP_X = 44;
+const HANDLE_CX = 272;
+const HANDLE_CY = STATUS_Y;
+const HANDLE_R = 20;
 const DOOR = { x: 14, y: 54, w: WORLD_WIDTH - 28, h: 404 };
 
 export interface Renderer {
@@ -115,11 +120,10 @@ export function createRenderer(): Renderer {
       ctx.setTransform(scale, 0, 0, scale, offX, offY);
       clipWorld(ctx);
       const alpha = Math.min(0.999, Math.max(0, state.accumulatorMs / TICK_MS));
-      const open = state.phase === "SUCCESS" ? Math.min(1, state.phaseMs / SUCCESS_HOLD_MS) : 0;
+      const open = openProgress(state);
 
       drawInterior(ctx, open);
       drawDoor(ctx, state, alpha, open);
-      drawMeter(ctx, state);
       drawHud(ctx, state);
       drawMessage(ctx, state);
       ctx.restore();
@@ -183,7 +187,7 @@ function drawInterior(ctx: CanvasRenderingContext2D, open: number): void {
   ctx.font = `bold 14px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("LINE RESTORED", WORLD_WIDTH / 2, DOOR.y + 44);
+  ctx.fillText("EXIT TUNNEL", WORLD_WIDTH / 2, DOOR.y + 44);
   ctx.restore();
   ctx.fillStyle = C.greenDim;
   for (let i = 0; i < 6; i++) ctx.fillRect(DOOR.x + 40 + i * 40, DOOR.y + 110, 20, 4);
@@ -193,11 +197,17 @@ function drawInterior(ctx: CanvasRenderingContext2D, open: number): void {
 // ---- Door leaf, dial and handle ---------------------------------------------------------
 
 function drawDoor(ctx: CanvasRenderingContext2D, state: GameState, alpha: number, open: number): void {
-  // The leaf swings on its left hinge: foreshorten it horizontally as it opens.
-  const eased = 1 - Math.pow(1 - open, 3);
+  // The leaf swings on its left hinge: foreshorten it horizontally as it opens. The handle
+  // spins first, then the door swings (see drawHandle).
+  const swing = Math.max(0, (open - 0.35) / 0.65);
+  const eased = 1 - Math.pow(1 - swing, 3);
   const widthScale = Math.max(0.06, 1 - eased * 0.94);
+  // A wrong entry shakes the leaf briefly.
+  const shake = state.phase === "DENIED" && state.phaseMs < DENIED_SHAKE_MS
+    ? Math.sin(state.phaseMs / 18) * 4 * (1 - state.phaseMs / DENIED_SHAKE_MS)
+    : 0;
   ctx.save();
-  ctx.translate(DOOR.x, 0);
+  ctx.translate(DOOR.x + shake, 0);
   ctx.scale(widthScale, 1);
   ctx.translate(-DOOR.x, 0);
 
@@ -235,15 +245,17 @@ function drawDoor(ctx: CanvasRenderingContext2D, state: GameState, alpha: number
   }
 
   drawDial(ctx, state, alpha);
-  drawHandle(ctx, state, eased);
+  drawSlots(ctx, state);
+  drawHandle(ctx, state, open);
+  drawLamp(ctx, state);
   ctx.restore();
 }
 
 function drawDial(ctx: CanvasRenderingContext2D, state: GameState, alpha: number): void {
   const pos = dialVisualPosition(state, alpha);
   const stepAngle = (Math.PI * 2) / DIAL_SIZE;
-  // Position k is drawn at -k*step relative to the top; rotating by +pos*step brings the
-  // current position to the top, so turning right (increasing) rotates clockwise.
+  // Digit k is drawn at -k*step relative to the top; rotating by +pos*step brings the
+  // current digit to the top, so turning up rotates clockwise.
   const rotation = pos * stepAngle;
   const sinceClick = state.timeMs - state.lastClickMs;
   const clickFlash = sinceClick < CLICK_FLASH_MS ? 1 - sinceClick / CLICK_FLASH_MS : 0;
@@ -306,21 +318,6 @@ function drawDial(ctx: CanvasRenderingContext2D, state: GameState, alpha: number
     ctx.textBaseline = "middle";
     ctx.fillText(String(k), 0, 0);
     ctx.restore();
-    // Notches: lit for found numbers, faint for hints.
-    const codeIndex = state.code.indexOf(k);
-    const isFound = codeIndex >= 0 && state.found.some((f, i) => f && state.code[i] === k);
-    const isHint = codeIndex >= 0 && state.hints.some((h, i) => h && state.code[i] === k);
-    if (isFound || isHint) {
-      ctx.fillStyle = isFound ? C.green : C.amberDim;
-      if (isFound) {
-        ctx.shadowColor = C.green;
-        ctx.shadowBlur = 10;
-      }
-      ctx.beginPath();
-      ctx.arc(0, -DIAL_R + 48, isFound ? 4 : 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
     ctx.restore();
   }
   // Centre boss.
@@ -360,8 +357,10 @@ function drawDial(ctx: CanvasRenderingContext2D, state: GameState, alpha: number
   }
 }
 
-function drawHandle(ctx: CanvasRenderingContext2D, state: GameState, openEased: number): void {
-  const spin = state.phase === "SUCCESS" ? openEased * Math.PI * 4 : 0;
+function drawHandle(ctx: CanvasRenderingContext2D, state: GameState, open: number): void {
+  // The handle spins during the first part of the opening, before the door swings.
+  const spinPart = Math.min(1, open / 0.35);
+  const spin = state.phase === "OPENING" ? (1 - Math.pow(1 - spinPart, 2)) * Math.PI * 4 : 0;
   ctx.save();
   ctx.translate(HANDLE_CX, HANDLE_CY);
   ctx.rotate(spin);
@@ -382,81 +381,79 @@ function drawHandle(ctx: CanvasRenderingContext2D, state: GameState, openEased: 
   ctx.arc(0, 0, 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  // Tumbler lamps next to the handle: one per number in the code.
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    const lx = 44 + i * 18;
-    const ly = HANDLE_CY;
-    const lit = state.found[i] === true;
-    ctx.fillStyle = lit ? C.green : state.hints[i] ? C.amberDim : "#101a16";
-    if (lit) {
-      ctx.save();
-      ctx.shadowColor = C.green;
-      ctx.shadowBlur = 8;
-    }
-    ctx.beginPath();
-    ctx.arc(lx, ly, 5, 0, Math.PI * 2);
-    ctx.fill();
-    if (lit) ctx.restore();
-    ctx.strokeStyle = C.doorEdge;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-  ctx.fillStyle = C.textDim;
-  ctx.font = `10px ${FONT}`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("TUMBLERS", 36, HANDLE_CY - 16);
 }
 
-// ---- Proximity meter --------------------------------------------------------------------
-
-function drawMeter(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const level = state.phase === "READY" ? 0 : meterLevel(state);
-  const sinceClick = state.timeMs - state.lastClickMs;
-  const clickFlash = sinceClick < CLICK_FLASH_MS ? 1 - sinceClick / CLICK_FLASH_MS : 0;
-
-  ctx.fillStyle = C.meterBg;
-  ctx.fillRect(METER_X, METER_Y, METER_W, METER_H);
-  ctx.strokeStyle = C.greenDim;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(METER_X + 0.5, METER_Y + 0.5, METER_W - 1, METER_H - 1);
-
-  // Oscilloscope trace: amplitude and frequency rise with proximity; a click spikes it.
-  const midY = METER_Y + METER_H / 2;
-  const amp = 2 + level * level * 14 + clickFlash * 12;
-  const freq = 0.05 + level * 0.25;
-  ctx.strokeStyle = level >= 1 || clickFlash > 0 ? C.green : level > 0.66 ? C.amber : C.textDim;
-  ctx.lineWidth = 1.5;
+/**
+ * Status row along the bottom of the door: the lamp at the left, the status text centred
+ * on the door, the handle at the right (drawn by drawHandle). Amber LOCKED while
+ * entering, red DENIED, green OPEN.
+ */
+function drawLamp(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const colour = state.phase === "OPENING" ? C.green : state.phase === "DENIED" ? C.danger : C.amber;
+  const blink = state.phase === "DENIED" && state.phaseMs < DENIED_MS && Math.sin(state.phaseMs / 50) > 0;
+  ctx.save();
+  ctx.shadowColor = colour;
+  ctx.shadowBlur = state.phase === "ENTERING" ? 6 : 14;
+  ctx.fillStyle = blink ? "#3a1410" : colour;
   ctx.beginPath();
-  for (let x = 0; x <= METER_W; x += 2) {
-    const phase = state.timeMs / 60;
-    let y = Math.sin(x * freq + phase) * amp * (0.6 + 0.4 * Math.sin(x * 0.03 + phase * 0.3));
-    if (clickFlash > 0 && Math.abs(x - METER_W / 2) < 6) y -= clickFlash * 16;
-    if (x === 0) ctx.moveTo(METER_X + x, midY + y);
-    else ctx.lineTo(METER_X + x, midY + y);
-  }
+  ctx.arc(LAMP_X, STATUS_Y, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = C.doorEdge;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(LAMP_X, STATUS_Y, 7, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.fillStyle = state.phase === "ENTERING" ? C.textDim : colour;
+  ctx.font = `bold 11px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(state.phase === "OPENING" ? "OPEN" : state.phase === "DENIED" ? "DENIED" : "LOCKED", DIAL_CX, STATUS_Y);
+}
 
-  // Cold-to-hot bar along the bottom edge.
-  const barY = METER_Y + METER_H - 6;
-  const g = ctx.createLinearGradient(METER_X, 0, METER_X + METER_W, 0);
-  g.addColorStop(0, "#1f3b57");
-  g.addColorStop(0.6, C.amber);
-  g.addColorStop(1, C.green);
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
-  ctx.fillRect(METER_X + 4, barY, METER_W - 8, 3);
-  ctx.fillStyle = g;
-  ctx.fillRect(METER_X + 4, barY, (METER_W - 8) * level, 3);
-
+/** The four entry slots: entered digits, the live digit in the active slot, "_" ahead. */
+function drawSlots(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const total = CODE_LENGTH * SLOT_W + (CODE_LENGTH - 1) * SLOT_GAP;
+  const x0 = (WORLD_WIDTH - total) / 2;
+  const sinceSet = state.timeMs - state.lastSetMs;
+  const setFlash = sinceSet < SET_FLASH_MS ? 1 - sinceSet / SET_FLASH_MS : 0;
   ctx.fillStyle = C.textDim;
   ctx.font = `10px ${FONT}`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText("LISTEN", METER_X + 6, METER_Y + 4);
-  ctx.textAlign = "right";
-  const label = level >= 1 ? "CLICK" : level > 0.8 ? "HOT" : level > 0.5 ? "WARM" : "COLD";
-  ctx.fillStyle = level >= 1 ? C.green : C.textDim;
-  ctx.fillText(label, METER_X + METER_W - 6, METER_Y + 4);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("ENTER CODE", WORLD_WIDTH / 2, SLOTS_Y - 4);
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    const x = x0 + i * (SLOT_W + SLOT_GAP);
+    const active = state.phase === "ENTERING" && i === state.position;
+    const entered = state.phase !== "ENTERING" || i < state.position;
+    const tone = state.phase === "DENIED" ? C.danger : state.phase === "OPENING" ? C.green : active ? C.amber : C.text;
+    ctx.fillStyle = "rgba(4, 10, 8, 0.85)";
+    ctx.fillRect(x, SLOTS_Y, SLOT_W, SLOT_H);
+    ctx.strokeStyle = active ? C.amber : state.phase === "DENIED" ? C.danger : state.phase === "OPENING" ? C.green : "rgba(159,179,171,0.35)";
+    ctx.lineWidth = active ? 2 : 1;
+    ctx.strokeRect(x + 0.5, SLOTS_Y + 0.5, SLOT_W - 1, SLOT_H - 1);
+    if (active) {
+      ctx.fillStyle = "rgba(255, 179, 71, 0.12)";
+      ctx.fillRect(x + 1, SLOTS_Y + 1, SLOT_W - 2, SLOT_H - 2);
+    }
+    const label = active || entered ? String(state.digits[i] ?? 0) : "_";
+    ctx.save();
+    if (active || state.phase !== "ENTERING") {
+      ctx.shadowColor = tone;
+      ctx.shadowBlur = 8 + (i === state.position - 1 ? setFlash * 10 : 0);
+    }
+    ctx.fillStyle = tone;
+    ctx.font = `bold 24px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + SLOT_W / 2, SLOTS_Y + SLOT_H / 2 + 1);
+    ctx.restore();
+    // Position number under each slot.
+    ctx.fillStyle = C.textDim;
+    ctx.font = `9px ${FONT}`;
+    ctx.textBaseline = "top";
+    ctx.fillText(String(i + 1), x + SLOT_W / 2, SLOTS_Y + SLOT_H + 3);
+  }
 }
 
 // ---- HUD and messages ----------------------------------------------------------------
@@ -466,75 +463,58 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   ctx.fillStyle = C.text;
-  ctx.fillText("VAULT LOCK", 12, 12);
-  const set = state.found.filter(Boolean).length;
+  ctx.fillText("EXIT DOOR", 12, 12);
   ctx.textAlign = "right";
   ctx.fillStyle = C.textDim;
-  ctx.fillText(`Tumblers ${set}/${CODE_LENGTH} set`, WORLD_WIDTH - 12, 12);
-  if (state.drops > 0) ctx.fillText(`Drops ${state.drops}`, WORLD_WIDTH - 12, 28);
-
-  if (state.phase === "PLAYING") {
+  ctx.fillText(state.phase === "OPENING" ? "UNLOCKED" : `Position ${Math.min(state.position + 1, CODE_LENGTH)}/${CODE_LENGTH}`, WORLD_WIDTH - 12, 12);
+  if (state.phase === "ENTERING") {
     ctx.textAlign = "center";
     ctx.fillStyle = C.textDim;
     ctx.font = `10px ${FONT}`;
-    ctx.fillText(stepHint(state), WORLD_WIDTH / 2, 30);
-    const sinceLock = state.timeMs - state.lastLockMs;
-    if (sinceLock < LOCK_FLASH_MS && set > 0) {
-      ctx.fillStyle = C.green;
-      ctx.font = `bold 13px ${FONT}`;
-      ctx.fillText(`Tumbler ${set}/${CODE_LENGTH} set`, WORLD_WIDTH / 2, DIAL_CY + DIAL_R + 22);
-    }
+    ctx.fillText(
+      state.position >= CODE_LENGTH - 1 ? "LEFT turns the dial, RIGHT opens the vault" : "LEFT turns the dial, RIGHT sets the digit",
+      WORLD_WIDTH / 2,
+      30,
+    );
   }
 }
 
 function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const cy = DIAL_CY;
-  const blink = Math.sin(state.timeMs / 300) > 0;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   switch (state.phase) {
-    case "READY": {
-      drawCard(ctx, cx, cy, 250, 88);
-      ctx.fillStyle = C.text;
-      ctx.font = `bold 15px ${FONT}`;
-      ctx.fillText("CRACK THE VAULT", cx, cy - 24);
-      ctx.fillStyle = C.textDim;
-      ctx.font = `11px ${FONT}`;
-      ctx.fillText("Turn the dial and listen for the click.", cx, cy - 5);
-      ctx.fillText("Reverse direction to lock a number in.", cx, cy + 9);
-      if (blink) {
-        ctx.fillStyle = C.green;
-        ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO START", cx, cy + 29);
-      }
-      break;
-    }
-    case "DROPPED": {
-      ctx.fillStyle = "rgba(255, 107, 87, 0.08)";
+    case "DENIED": {
+      const flash = Math.max(0, 1 - state.phaseMs / DENIED_SHAKE_MS);
+      ctx.fillStyle = `rgba(255, 107, 87, ${0.1 + flash * 0.25})`;
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, cy, 220, 72);
+      ctx.save();
+      ctx.shadowColor = C.danger;
+      ctx.shadowBlur = 12;
       ctx.fillStyle = C.danger;
       ctx.font = `bold 18px ${FONT}`;
-      ctx.fillText("Tumblers dropped", cx, cy - 12);
-      if (state.phaseMs >= DROP_LOCKOUT_MS && blink) {
-        ctx.fillStyle = C.text;
-        ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO RETRY", cx, cy + 16);
-      }
+      ctx.fillText("ACCESS DENIED", cx, cy - 8);
+      ctx.restore();
+      ctx.fillStyle = C.textDim;
+      ctx.font = `10px ${FONT}`;
+      ctx.fillText("The door seals.", cx, cy + 16);
       break;
     }
-    case "SUCCESS": {
+    case "OPENING": {
+      ctx.fillStyle = "rgba(92, 255, 157, 0.06)";
+      ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       ctx.save();
       ctx.shadowColor = C.green;
       ctx.shadowBlur = 16;
       ctx.fillStyle = C.green;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("Vault open", cx, DIAL_CY + 110);
+      ctx.fillText("Vault open", cx, DIAL_CY + DIAL_R + 26);
       ctx.restore();
       break;
     }
-    case "PLAYING":
+    case "ENTERING":
       break;
   }
 }
