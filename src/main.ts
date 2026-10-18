@@ -205,6 +205,15 @@ function createInitialState(): GameState {
 
 // ---- DOM Elements ----
 
+// Check if debug mode is enabled via URL parameter
+const DEBUG_MODE = new URLSearchParams(window.location.search).has('debug');
+
+// Hide debug header if not in debug mode
+const headerEl = document.getElementById('header');
+if (headerEl && !DEBUG_MODE) {
+  headerEl.style.display = 'none';
+}
+
 const elements = {
   debugGames: document.getElementById('debug-games') as HTMLDivElement,
   debugPin: document.getElementById('debug-pin') as HTMLSpanElement,
@@ -225,7 +234,10 @@ const elements = {
 };
 
 // Sizes and places the central play area per scene (see src/scenes/viewport.ts).
-const viewport = createStageViewport({ target: document.getElementById('app') as HTMLElement, header: document.getElementById('header') });
+const viewport = createStageViewport({ 
+  target: document.getElementById('app') as HTMLElement, 
+  header: DEBUG_MODE ? document.getElementById('header') : null 
+});
 
 // ---- UI Updates ----
 

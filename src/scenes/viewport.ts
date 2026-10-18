@@ -10,8 +10,8 @@
 export const STAGE_LOGICAL_W = 320;
 export const STAGE_LOGICAL_H = 620;
 /** Default size limits, as percentages of the viewport (also the CSS --stage-max-vh/vw). */
-export const STAGE_MAX_VH = 82;
-export const STAGE_MAX_VW = 92;
+export const STAGE_MAX_VH = 98;
+export const STAGE_MAX_VW = 98;
 /** How much the stage may shrink to honour a scene offset before it starts overlapping. */
 export const MAX_SHRINK = 0.1;
 /** Canvas backing resolution cap (very high DPR screens are expensive and not sharper). */
