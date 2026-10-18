@@ -48,8 +48,10 @@ function shuffleArray<T>(arr: T[], rng: () => number): T[] {
 
 // ---- Game State ----
 
-type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'ENDING';
+type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'ENDING' | 'GAME_OVER';
 type StageId = 'C1' | 'C2' | 'C3' | 'C4';
+
+const INITIAL_LIVES = 3;
 
 interface RunPlan {
   seed: number;
@@ -66,6 +68,7 @@ interface GameState {
   pinEntered: string;
   endingGame: 'E1' | 'E2' | null;
   currentGameId: string; // The actually-running game (may differ from runPlan when debugging)
+  lives: number; // Global lives for G-games (E-games are instant death)
 }
 
 const STAGES: StageId[] = ['C1', 'C2', 'C3', 'C4'];
@@ -156,6 +159,7 @@ function createInitialState(): GameState {
     pinEntered: '',
     endingGame: null,
     currentGameId: runPlan.games[0], // Start with C1's game
+    lives: INITIAL_LIVES,
   };
 }
 
@@ -174,6 +178,10 @@ const elements = {
   stages: document.querySelectorAll('.stage') as NodeListOf<HTMLDivElement>,
   minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
   sceneBg: document.getElementById('scene-bg') as HTMLDivElement,
+  livesCount: document.getElementById('lives-count') as HTMLSpanElement,
+  gameOverOverlay: document.getElementById('game-over-overlay') as HTMLDivElement,
+  btnRestart: document.getElementById('btn-restart') as HTMLButtonElement,
+  btnMenu: document.getElementById('btn-menu') as HTMLButtonElement,
 };
 
 // ---- UI Updates ----
@@ -190,6 +198,60 @@ function updateControlLabels(labels: ControlLabels): void {
 
   elements.btnLeft.classList.toggle('disabled', leftDisabled);
   elements.btnRight.classList.toggle('disabled', rightDisabled);
+}
+
+function updateLivesDisplay(): void {
+  elements.livesCount.textContent = state.lives.toString();
+  elements.livesCount.classList.toggle('lives-full', state.lives === INITIAL_LIVES);
+  elements.livesCount.classList.toggle('lives-low', state.lives === 1);
+}
+
+function showGameOver(): void {
+  state.phase = 'GAME_OVER';
+  
+  // Stop current game
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  
+  // Play game over music
+  audio.playMusic('gameover_music');
+  
+  // Show overlay
+  elements.gameOverOverlay.classList.remove('hidden');
+  
+  console.log('[Main] Game Over!');
+}
+
+function hideGameOver(): void {
+  elements.gameOverOverlay.classList.add('hidden');
+}
+
+function restartRun(): void {
+  console.log('[Main] Restarting run...');
+  
+  // Hide game over screen
+  hideGameOver();
+  
+  // Reset state
+  state = createInitialState();
+  
+  // Reset UI
+  updateStageDisplay();
+  updateLivesDisplay();
+  updateDebugButtons();
+  elements.debugPin.textContent = state.runPlan.pinDigits.join('');
+  
+  // Start first game
+  startCurrentStageGame();
+}
+
+function goToMainMenu(): void {
+  console.log('[Main] Going to main menu (not implemented yet)');
+  // For now, just restart
+  restartRun();
 }
 
 function updateStageDisplay(): void {
@@ -363,12 +425,30 @@ function handleGameComplete(): void {
 
 function handleGameFail(): void {
   const gameId = getCurrentGameId();
-  console.log(`[Main] Game ${gameId} failed for stage ${state.currentStage}, restarting...`);
+  const isEGame = gameId.startsWith('E');
   
-  // [audio] Play game over music
-  audio.playMusic('gameover_music');
+  console.log(`[Main] Game ${gameId} failed for stage ${state.currentStage}`);
   
-  // Simply restart the current game from scratch
+  // E-games are instant death (no lives)
+  if (isEGame) {
+    console.log('[Main] E-game failed - Game Over!');
+    showGameOver();
+    return;
+  }
+  
+  // G-games use lives
+  state.lives--;
+  updateLivesDisplay();
+  console.log(`[Main] Lives remaining: ${state.lives}`);
+  
+  if (state.lives <= 0) {
+    console.log('[Main] No lives remaining - Game Over!');
+    showGameOver();
+    return;
+  }
+  
+  // Still have lives - restart the current game
+  console.log(`[Main] Restarting ${gameId}...`);
   startGame(gameId);
 }
 
@@ -471,6 +551,10 @@ function handleButtonRelease(btnEl: HTMLButtonElement): void {
 
 // ---- Event Listeners ----
 
+// Game over buttons
+elements.btnRestart.addEventListener('click', restartRun);
+elements.btnMenu.addEventListener('click', goToMainMenu);
+
 // Mouse/touch for control buttons
 elements.btnLeft.addEventListener('mousedown', () => handleButtonPress('LEFT', elements.btnLeft));
 elements.btnLeft.addEventListener('mouseup', () => handleButtonRelease(elements.btnLeft));
@@ -505,6 +589,19 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
 
   const key = e.key.toLowerCase();
+  
+  // Handle game over screen with A/D keys
+  if (state.phase === 'GAME_OVER') {
+    if (key === 'arrowleft' || key === 'a') {
+      e.preventDefault();
+      restartRun();
+    } else if (key === 'arrowright' || key === 'd') {
+      e.preventDefault();
+      goToMainMenu();
+    }
+    return;
+  }
+  
   if (key === 'arrowleft' || key === 'a') {
     e.preventDefault();
     handleButtonPress('LEFT', elements.btnLeft);
@@ -573,6 +670,7 @@ function init(): void {
 
   // Initialize UI
   updateStageDisplay();
+  updateLivesDisplay();
   buildDebugButtons();
   updateDebugButtons();
   elements.debugPin.textContent = state.runPlan.pinDigits.join('');

@@ -25,6 +25,12 @@
 
       <!-- Phone screen area - positioned over the phone in the background -->
       <div id="phone-container">
+        <!-- Lives display -->
+        <div id="lives-display">
+          <span class="lives-label">LIVES:</span>
+          <span id="lives-count">3</span>
+        </div>
+
         <!-- Stage progress indicator -->
         <nav id="stage-nav">
           <div class="stage" data-stage="C1"><span class="stage-num">1</span><span class="stage-digit">?</span></div>
@@ -51,6 +57,24 @@
             <button id="btn-single" type="button" class="control-btn control-btn--single">
               <span class="label">Action</span>
               <span class="key-hint">S</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over overlay -->
+      <div id="game-over-overlay" class="overlay hidden">
+        <div class="overlay-content">
+          <h2 class="overlay-title">GAME OVER</h2>
+          <p class="overlay-message">The signal has been lost.</p>
+          <div class="overlay-buttons">
+            <button id="btn-restart" type="button" class="overlay-btn">
+              <span class="overlay-btn-label">RESTART</span>
+              <span class="overlay-btn-key">A</span>
+            </button>
+            <button id="btn-menu" type="button" class="overlay-btn overlay-btn--secondary">
+              <span class="overlay-btn-label">MAIN MENU</span>
+              <span class="overlay-btn-key">D</span>
             </button>
           </div>
         </div>
