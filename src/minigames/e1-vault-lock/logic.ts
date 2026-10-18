@@ -7,9 +7,9 @@
 // entry is handed to it on submit. A wrong entry is denied once and ends the run: after
 // a brief "ACCESS DENIED" the failure is signalled and no further input is accepted.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export type { Button, ControlLabels } from "../types";
+export type { Button, ControlLabels } from '../types';
 
 // ---- Tuning -----------------------------------------------------------------
 
@@ -41,7 +41,7 @@ export const DENIED_SHAKE_MS = 450;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "ENTERING" | "DENIED" | "OPENING";
+export type Phase = 'ENTERING' | 'DENIED' | 'OPENING';
 
 /** Validates a complete entry. Owned by the controller; E1 never stores the PIN. */
 export type PinCheck = (entry: string) => boolean;
@@ -89,16 +89,19 @@ export function turnedValue(value: number): number {
 
 /** The entry as a string of CODE_LENGTH digits, as handed to checkPin. */
 export function entryString(state: GameState): string {
-  return state.digits.join("");
+  return state.digits.join('');
 }
 
 export function labelsFor(state: GameState): ControlLabels {
   switch (state.phase) {
-    case "ENTERING":
-      return { left: "Turn dial", right: state.position >= CODE_LENGTH - 1 ? "Open vault" : "Set digit" };
-    case "DENIED":
-    case "OPENING":
-      return { left: "—", right: "—" };
+    case 'ENTERING':
+      return {
+        left: 'Turn dial',
+        right: state.position >= CODE_LENGTH - 1 ? 'Open vault' : 'Set digit',
+      };
+    case 'DENIED':
+    case 'OPENING':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -123,14 +126,14 @@ export function dialVisualPosition(state: GameState, alpha = 0): number {
 
 /** Door opening progress in [0, 1] (0 unless OPENING). */
 export function openProgress(state: GameState): number {
-  return state.phase === "OPENING" ? Math.min(1, state.phaseMs / OPENING_MS) : 0;
+  return state.phase === 'OPENING' ? Math.min(1, state.phaseMs / OPENING_MS) : 0;
 }
 
 // ---- State ------------------------------------------------------------------
 
 export function createState(): GameState {
   return {
-    phase: "ENTERING",
+    phase: 'ENTERING',
     position: 0,
     digits: new Array<number>(CODE_LENGTH).fill(0),
     rotation: null,
@@ -167,10 +170,10 @@ function setDigit(state: GameState, checkPin: PinCheck): void {
   }
   // Fourth position: submit. The controller decides; E1 only shows the result.
   if (checkPin(entryString(state))) {
-    setPhase(state, "OPENING");
+    setPhase(state, 'OPENING');
   } else {
     state.attempts += 1;
-    setPhase(state, "DENIED");
+    setPhase(state, 'DENIED');
   }
   state.rotation = null;
   state.bufferedPress = null;
@@ -178,7 +181,7 @@ function setDigit(state: GameState, checkPin: PinCheck): void {
 
 /** Apply a press while ENTERING and not rotating. */
 function applyEnteringPress(state: GameState, button: Button, checkPin: PinCheck): void {
-  if (button === "LEFT") beginTurn(state);
+  if (button === 'LEFT') beginTurn(state);
   else setDigit(state, checkPin);
 }
 
@@ -201,13 +204,13 @@ export function tick(state: GameState, checkPin: PinCheck = () => false): void {
   state.timeMs += TICK_MS;
   state.phaseMs += TICK_MS;
   switch (state.phase) {
-    case "ENTERING":
+    case 'ENTERING':
       advanceRotation(state, checkPin);
       break;
-    case "OPENING":
+    case 'OPENING':
       if (state.phaseMs >= OPENING_MS && !state.completionFired) state.completionFired = true;
       break;
-    case "DENIED":
+    case 'DENIED':
       if (state.phaseMs >= DENIED_MS && !state.failureFired) state.failureFired = true;
       break;
   }
@@ -229,7 +232,7 @@ export function step(state: GameState, dtMs: number, checkPin: PinCheck = () => 
  * `checkPin`. DENIED and OPENING: ignored; the run is over either way.
  */
 export function press(state: GameState, button: Button, checkPin: PinCheck): void {
-  if (state.phase !== "ENTERING") return;
+  if (state.phase !== 'ENTERING') return;
   if (state.rotation) {
     if (state.bufferedPress === null) state.bufferedPress = button;
   } else {

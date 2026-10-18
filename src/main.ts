@@ -22,10 +22,21 @@ import {
   type MinigameAdapter,
 } from './minigames';
 import { createBossAdapter } from './minigames/boss-tunnel';
-import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
+import {
+  audio,
+  trackForMinigame,
+  trackForScene,
+  GAMES_WITH_OWN_AUDIO,
+  MINIGAME_TRACKS,
+} from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
 import { createCreditsScene } from './scenes/credits';
-import { enterCreditsAudio, enterEndingAudio, leaveCreditsToMenuAudio, type CreditsEntry } from './scenes/credits/flow';
+import {
+  enterCreditsAudio,
+  enterEndingAudio,
+  leaveCreditsToMenuAudio,
+  type CreditsEntry,
+} from './scenes/credits/flow';
 import { createStageViewport } from './scenes/viewport';
 import { createGameOverState, drawGameOver, type GameOverState } from './scenes/game-over';
 import {
@@ -129,8 +140,8 @@ function generateRunPlan(seed: number): RunPlan {
   // G4 is a rhythm game that requires audio - exclude if music is off
   const excludeGames = audio.isMusicEnabled() ? new Set<string>() : new Set(['G4']);
 
-  const oneButtonGames = getOneButtonGames().filter(g => !excludeGames.has(g.id));
-  const twoButtonGames = getTwoButtonGames().filter(g => !excludeGames.has(g.id));
+  const oneButtonGames = getOneButtonGames().filter((g) => !excludeGames.has(g.id));
+  const twoButtonGames = getTwoButtonGames().filter((g) => !excludeGames.has(g.id));
 
   // Validate we have enough games
   if (oneButtonGames.length === 0) {
@@ -138,7 +149,9 @@ function generateRunPlan(seed: number): RunPlan {
     throw new Error('Need at least one one-button game for C1');
   }
   if (twoButtonGames.length < 3) {
-    console.warn(`[Main] Only ${twoButtonGames.length} two-button games available, need 3 for C2-C4`);
+    console.warn(
+      `[Main] Only ${twoButtonGames.length} two-button games available, need 3 for C2-C4`,
+    );
   }
 
   // Track used games to prevent duplicates
@@ -150,10 +163,10 @@ function generateRunPlan(seed: number): RunPlan {
   usedGameIds.add(c1Game);
 
   // C2-C4: Random two-button games (no repeats, also excluding C1 game)
-  const availableTwoBtn = shuffleArray(twoButtonGames, rng).filter(g => !usedGameIds.has(g.id));
-  
+  const availableTwoBtn = shuffleArray(twoButtonGames, rng).filter((g) => !usedGameIds.has(g.id));
+
   const games: string[] = [c1Game];
-  
+
   for (let i = 0; i < 3; i++) {
     if (availableTwoBtn[i]) {
       games.push(availableTwoBtn[i].id);
@@ -180,13 +193,13 @@ function generateRunPlan(seed: number): RunPlan {
   console.log('[Main] Generated run plan:', plan);
   console.log('[Main] PIN for this run:', plan.pinDigits.join(''));
   console.log('[Main] Ending game:', plan.endingGame);
-  
+
   // Verify no duplicates
   const uniqueGames = new Set(plan.games);
   if (uniqueGames.size !== plan.games.length) {
     console.warn('[Main] Warning: Run plan contains duplicate games!', plan.games);
   }
-  
+
   return plan;
 }
 
@@ -195,9 +208,9 @@ function createInitialState(): GameState {
   const params = new URLSearchParams(window.location.search);
   const seedParam = params.get('seed');
   const seed = seedParam ? parseInt(seedParam, 10) || Date.now() : Date.now();
-  
+
   console.log(`[Main] Seed: ${seed}${seedParam ? ' (from URL)' : ' (random)'}`);
-  
+
   const runPlan = generateRunPlan(seed);
   return {
     phase: 'STAGES',
@@ -240,9 +253,9 @@ const elements = {
 };
 
 // Sizes and places the central play area per scene (see src/scenes/viewport.ts).
-const viewport = createStageViewport({ 
-  target: document.getElementById('app') as HTMLElement, 
-  header: DEBUG_MODE ? document.getElementById('header') : null 
+const viewport = createStageViewport({
+  target: document.getElementById('app') as HTMLElement,
+  header: DEBUG_MODE ? document.getElementById('header') : null,
 });
 
 // ---- UI Updates ----
@@ -250,7 +263,7 @@ const viewport = createStageViewport({
 function updateControlLabels(labels: ControlLabels): void {
   elements.leftLabel.textContent = labels.left;
   elements.rightLabel.textContent = labels.right;
-  
+
   // For single button mode, use the left label
   elements.singleLabel.textContent = labels.left || labels.right || 'Action';
 
@@ -277,17 +290,17 @@ let gameOverLastTs: number | null = null;
 
 function showGameOver(): void {
   state.phase = 'GAME_OVER';
-  
+
   // Stop current game
   if (currentAdapter) {
     currentAdapter.dispose();
     currentAdapter = null;
   }
   elements.minigameRoot.innerHTML = '';
-  
+
   // Play game over music
   audio.playMusic('gameover_music');
-  
+
   // Create canvas for game over screen
   gameOverState = createGameOverState();
   gameOverCanvas = document.createElement('canvas');
@@ -295,20 +308,20 @@ function showGameOver(): void {
   gameOverCanvas.style.width = '100%';
   gameOverCanvas.style.height = '100%';
   elements.minigameRoot.appendChild(gameOverCanvas);
-  
+
   gameOverCtx = gameOverCanvas.getContext('2d');
   if (!gameOverCtx) {
     console.error('[Main] Failed to get game over canvas context');
     return;
   }
-  
+
   // Size the canvas
   resizeGameOverCanvas();
-  
+
   // Start render loop
   gameOverLastTs = null;
   gameOverRafId = requestAnimationFrame(gameOverFrame);
-  
+
   console.log('[Main] Game Over!');
 }
 
@@ -322,13 +335,13 @@ function resizeGameOverCanvas(): void {
 
 function gameOverFrame(ts: number): void {
   if (!gameOverState || !gameOverCtx || !gameOverCanvas) return;
-  
+
   const elapsed = gameOverLastTs === null ? 0 : ts - gameOverLastTs;
   gameOverLastTs = ts;
   gameOverState.timeMs += elapsed;
-  
+
   drawGameOver(gameOverCtx, gameOverState, gameOverCanvas.width, gameOverCanvas.height);
-  
+
   gameOverRafId = requestAnimationFrame(gameOverFrame);
 }
 
@@ -346,19 +359,19 @@ function hideGameOver(): void {
 
 function restartRun(): void {
   console.log('[Main] Restarting run...');
-  
+
   // Hide game over screen
   hideGameOver();
-  
+
   // Reset state
   state = createInitialState();
-  
+
   // Reset UI
   updateStageDisplay();
   updateLivesDisplay();
   updateDebugButtons();
   elements.debugPin.textContent = state.runPlan.pinDigits.join('');
-  
+
   // Start first game
   startCurrentStageGame();
 }
@@ -433,7 +446,7 @@ function buildDebugButtons(): void {
     });
     elements.debugGames.appendChild(btn);
   }
-  
+
   // Add BOSS button (not in registry, called directly)
   const bossBtn = document.createElement('button');
   bossBtn.type = 'button';
@@ -473,7 +486,15 @@ function showMainMenu(): void {
   // The door animation and the ending set the background inline, which would override
   // the menu's class; clear it so the menu's bunker background shows.
   elements.sceneBg.style.backgroundImage = '';
-  elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+  elements.sceneBg.classList.remove(
+    'stage-c1',
+    'stage-c2',
+    'stage-c3',
+    'stage-c4',
+    'stage-pin',
+    'stage-e1',
+    'stage-e2',
+  );
   elements.sceneBg.classList.add('scene-menu');
   currentInputCount = 2;
   elements.controls.classList.remove('single-button-mode');
@@ -554,23 +575,37 @@ function startGame(gameId: string): void {
   state.currentGameId = gameId;
   elements.minigameRoot.innerHTML = '';
   elements.minigameRoot.classList.remove('text-panel');
-  
+
   // If starting E1 or E2, switch to PIN_ENTRY phase
   if (gameId === 'E1' || gameId === 'E2') {
     state.phase = 'PIN_ENTRY';
     state.endingGame = gameId as 'E1' | 'E2';
     // Update background for the ending game
-    elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+    elements.sceneBg.classList.remove(
+      'stage-c1',
+      'stage-c2',
+      'stage-c3',
+      'stage-c4',
+      'stage-pin',
+      'stage-e1',
+      'stage-e2',
+    );
     elements.sceneBg.classList.add(gameId === 'E1' ? 'stage-e1' : 'stage-e2');
     viewport.setScene(gameId === 'E1' ? 'e1' : 'e2');
   }
-  
+
   updateDebugButtons();
 
   // [audio] Music follows the narrative stage, not the minigame; E-games use the end-stage track.
   // A game listed in MINIGAME_TRACKS (G4) overrides it with its own track while it runs.
   // Playing the same track again is a no-op, so retries and hub returns never restart it.
-  audio.playMusic(trackForMinigame(gameId, gameId.startsWith('E') ? { kind: 'end' } : { kind: 'stage', stage: state.currentStage }, MINIGAME_TRACKS));
+  audio.playMusic(
+    trackForMinigame(
+      gameId,
+      gameId.startsWith('E') ? { kind: 'end' } : { kind: 'stage', stage: state.currentStage },
+      MINIGAME_TRACKS,
+    ),
+  );
   audio.setMusicSuppressed(GAMES_WITH_OWN_AUDIO.has(gameId)); // [audio] games with audio outside the engine
 
   // Set input mode based on game's inputCount
@@ -625,10 +660,18 @@ function handleGameComplete(): void {
 
     // The minigame has signalled completion: dispose it, then the reaction for this game,
     // the story for this stage (by completion order) and the digit card.
-    const allComplete = STAGES.every(s => state.completed[s]);
-    if (allComplete) console.log('[Main] All stages complete! PIN:', state.runPlan.pinDigits.join(''));
+    const allComplete = STAGES.every((s) => state.completed[s]);
+    if (allComplete)
+      console.log('[Main] All stages complete! PIN:', state.runPlan.pinDigits.join(''));
     const completedStage = state.currentStage;
-    const items = itemsForStageCompletion(dialogueScript, gameId, completedStage, stageIndex + 1, state.digits[completedStage], collectedSlots());
+    const items = itemsForStageCompletion(
+      dialogueScript,
+      gameId,
+      completedStage,
+      stageIndex + 1,
+      state.digits[completedStage],
+      collectedSlots(),
+    );
     playDialogue(items, () => {
       if (allComplete) startPinEntryPhase();
       else advanceToNextStage();
@@ -644,27 +687,27 @@ function handleGameComplete(): void {
 function handleGameFail(): void {
   const gameId = getCurrentGameId();
   const isEGame = gameId.startsWith('E');
-  
+
   console.log(`[Main] Game ${gameId} failed for stage ${state.currentStage}`);
-  
+
   // E-games are instant death (no lives)
   if (isEGame) {
     console.log('[Main] E-game failed - Game Over!');
     showGameOver();
     return;
   }
-  
+
   // G-games use lives
   state.lives--;
   updateLivesDisplay();
   console.log(`[Main] Lives remaining: ${state.lives}`);
-  
+
   if (state.lives <= 0) {
     console.log('[Main] No lives remaining - Game Over!');
     showGameOver();
     return;
   }
-  
+
   // Still have lives - restart the current game
   console.log(`[Main] Restarting ${gameId}...`);
   startGame(gameId);
@@ -684,7 +727,7 @@ function startPinEntryPhase(): void {
   state.phase = 'PIN_ENTRY';
   state.endingGame = state.runPlan.endingGame;
   console.log(`[Main] Starting PIN entry phase with ${state.endingGame}...`);
-  
+
   updateStageDisplay(); // Update background to PIN stage
   // At the door, before the lock appears.
   const endingGame = state.endingGame;
@@ -694,22 +737,15 @@ function startPinEntryPhase(): void {
 function showDoorOpening(): void {
   // Play door opening animation then start boss
   // Use vault frames for E1, pin door frames for E2
-  const frames = state.endingGame === 'E1' 
-    ? [
-        vaultDoorFrame1,
-        vaultDoorFrame2,
-        vaultDoorFrame3,
-      ]
-    : [
-        pinDoorFrame1,
-        pinDoorFrame2,
-        pinDoorFrame3,
-      ];
-  
+  const frames =
+    state.endingGame === 'E1'
+      ? [vaultDoorFrame1, vaultDoorFrame2, vaultDoorFrame3]
+      : [pinDoorFrame1, pinDoorFrame2, pinDoorFrame3];
+
   let frameIndex = 0;
   viewport.setScene('door');
   elements.sceneBg.style.backgroundImage = `url('${frames[0]}')`;
-  
+
   const interval = setInterval(() => {
     frameIndex++;
     if (frameIndex < frames.length) {
@@ -728,22 +764,30 @@ function startBoss(): void {
   console.log('[Main] Starting boss tunnel escape...');
   state.phase = 'BOSS';
   state.currentGameId = 'BOSS';
-  
+
   // Clean up any existing adapter
   if (currentAdapter) {
     currentAdapter.dispose();
     currentAdapter = null;
   }
   elements.minigameRoot.innerHTML = '';
-  
+
   // Set dark background for tunnel
   elements.sceneBg.style.backgroundImage = 'none';
-  elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+  elements.sceneBg.classList.remove(
+    'stage-c1',
+    'stage-c2',
+    'stage-c3',
+    'stage-c4',
+    'stage-pin',
+    'stage-e1',
+    'stage-e2',
+  );
   elements.sceneBg.style.backgroundColor = '#050505';
-  
+
   // [audio] Play boss music
   audio.playMusic(trackForScene({ kind: 'boss' }));
-  
+
   // Tunnel subtitles: non-blocking, driven by the boss fight's events.
   tunnelSubtitles?.dispose();
   tunnelSubtitles = createTunnelSubtitles(document.body);
@@ -752,7 +796,7 @@ function startBoss(): void {
   const bossAdapter = createBossAdapter();
   currentAdapter = bossAdapter;
   currentInputCount = 2; // Boss uses both buttons
-  
+
   bossAdapter.startMinigame({
     gameId: 'BOSS',
     stageId: 'C4', // Not really used, but required by interface
@@ -763,7 +807,7 @@ function startBoss(): void {
     onFail: handleBossFail,
     onEvent: (name: string) => tunnelSubtitles?.fire(name),
   } as any);
-  
+
   updateDebugButtons();
 }
 
@@ -775,14 +819,14 @@ function disposeTunnelSubtitles(): void {
 function handleBossComplete(): void {
   console.log('[Main] Boss completed! Escaping...');
   disposeTunnelSubtitles();
-  
+
   // Clean up boss
   if (currentAdapter) {
     currentAdapter.dispose();
     currentAdapter = null;
   }
   elements.minigameRoot.innerHTML = '';
-  
+
   // Transition to ending with white flash
   showEscapeTransition();
 }
@@ -810,22 +854,22 @@ function showEscapeTransition(): void {
     pointer-events: none;
   `;
   document.body.appendChild(flash);
-  
+
   // Fade to white
   requestAnimationFrame(() => {
     flash.style.opacity = '1';
   });
-  
+
   // After white flash, show sunrise and fade out
   setTimeout(() => {
     // Set sunrise background
     elements.sceneBg.style.backgroundColor = '';
     elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_1.png')`;
-    
+
     // Fade from white
     flash.style.transition = 'opacity 1s ease-out';
     flash.style.opacity = '0';
-    
+
     // Cycle through sunrise frames
     setTimeout(() => {
       elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_2.png')`;
@@ -833,7 +877,7 @@ function showEscapeTransition(): void {
     setTimeout(() => {
       elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
     }, 800);
-    
+
     // Show ending after transition
     setTimeout(() => {
       flash.remove();
@@ -849,7 +893,7 @@ function showEnding(): void {
   // cancelling anything scheduled (a pending loop handoff or crossfade), then play the
   // victory sound once. Nothing starts music again until the credits return to the menu.
   enterEndingAudio(audio);
-  
+
   // The surface: the ending lines from the script over the sunrise, then the credits.
   elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
   viewport.setScene('ending');
@@ -932,7 +976,9 @@ elements.btnLeft.addEventListener('touchstart', (e) => {
 });
 elements.btnLeft.addEventListener('touchend', () => handleButtonRelease(elements.btnLeft));
 
-elements.btnRight.addEventListener('mousedown', () => handleButtonPress('RIGHT', elements.btnRight));
+elements.btnRight.addEventListener('mousedown', () =>
+  handleButtonPress('RIGHT', elements.btnRight),
+);
 elements.btnRight.addEventListener('mouseup', () => handleButtonRelease(elements.btnRight));
 elements.btnRight.addEventListener('mouseleave', () => handleButtonRelease(elements.btnRight));
 elements.btnRight.addEventListener('touchstart', (e) => {
@@ -942,7 +988,9 @@ elements.btnRight.addEventListener('touchstart', (e) => {
 elements.btnRight.addEventListener('touchend', () => handleButtonRelease(elements.btnRight));
 
 // Single button (sends LEFT for one-button games)
-elements.btnSingle.addEventListener('mousedown', () => handleButtonPress('LEFT', elements.btnSingle));
+elements.btnSingle.addEventListener('mousedown', () =>
+  handleButtonPress('LEFT', elements.btnSingle),
+);
 elements.btnSingle.addEventListener('mouseup', () => handleButtonRelease(elements.btnSingle));
 elements.btnSingle.addEventListener('mouseleave', () => handleButtonRelease(elements.btnSingle));
 elements.btnSingle.addEventListener('touchstart', (e) => {
@@ -956,7 +1004,7 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
 
   const key = e.key.toLowerCase();
-  
+
   // Handle game over screen with A/D keys (there is no run state while the menu is open)
   if (!inMainMenu && state?.phase === 'GAME_OVER') {
     if (key === 'arrowleft' || key === 'a') {
@@ -968,7 +1016,7 @@ window.addEventListener('keydown', (e) => {
     }
     return;
   }
-  
+
   if (key === 'arrowleft' || key === 'a') {
     e.preventDefault();
     if (currentInputCount === 1) {
@@ -1015,9 +1063,12 @@ function init(): void {
   const oneBtn = getOneButtonGames();
   const twoBtn = getTwoButtonGames();
 
-  console.log('[Main] Ready games:', allGames.map(g => `${g.id} (${g.inputCount}btn)`).join(', '));
-  console.log(`[Main] One-button games: ${oneBtn.map(g => g.id).join(', ') || '(none)'}`);
-  console.log(`[Main] Two-button games: ${twoBtn.map(g => g.id).join(', ') || '(none)'}`);
+  console.log(
+    '[Main] Ready games:',
+    allGames.map((g) => `${g.id} (${g.inputCount}btn)`).join(', '),
+  );
+  console.log(`[Main] One-button games: ${oneBtn.map((g) => g.id).join(', ') || '(none)'}`);
+  console.log(`[Main] Two-button games: ${twoBtn.map((g) => g.id).join(', ') || '(none)'}`);
 
   if (allGames.length === 0) {
     console.error('[Main] No ready games available!');
@@ -1034,7 +1085,7 @@ function init(): void {
     elements.minigameRoot.innerHTML = `
       <div style="color: #ff6b57; padding: 20px; text-align: center; font-family: monospace;">
         Error: Need at least one one-button game for C1.<br>
-        Available: ${allGames.map(g => `${g.id}(${g.inputCount}btn)`).join(', ')}
+        Available: ${allGames.map((g) => `${g.id}(${g.inputCount}btn)`).join(', ')}
       </div>
     `;
     return;

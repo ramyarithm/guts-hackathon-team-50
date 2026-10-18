@@ -3,15 +3,22 @@
 //
 // One-button game: LEFT locks the needle, RIGHT is inactive and ignored. No audio.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, FAILURE_HOLD_MS, createGame, hashSeed, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  FAILURE_HOLD_MS,
+  createGame,
+  hashSeed,
+  type Game,
+} from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { TARGET_BARS } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { TARGET_BARS } from './logic';
 
-export const G7_ID = "G7";
+export const G7_ID = 'G7';
 
 export function createG7Adapter(): MinigameAdapter {
   // Every piece of mutable state lives inside this closure; no module-level state.
@@ -50,9 +57,9 @@ export function createG7Adapter(): MinigameAdapter {
     game.step(elapsed);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after failure hold period
-    if (game.state.phase === "FAILED" && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
+    if (game.state.phase === 'FAILED' && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -68,7 +75,7 @@ export function createG7Adapter(): MinigameAdapter {
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
     game?.dispose();
@@ -86,23 +93,23 @@ export function createG7Adapter(): MinigameAdapter {
       teardownScene();
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G7] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G7] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = G7_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Signal lock tuning minigame");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = G7_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Signal lock tuning minigame');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[G7] 2D canvas context unavailable");
+        console.error('[G7] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -122,12 +129,12 @@ export function createG7Adapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -136,7 +143,7 @@ export function createG7Adapter(): MinigameAdapter {
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
       // One-button game: only LEFT does anything. RIGHT is inactive.
-      if (button !== "LEFT") return;
+      if (button !== 'LEFT') return;
       game.press(button);
     },
 
@@ -154,7 +161,7 @@ export function createG7Adapter(): MinigameAdapter {
 /** Registry entry for G7 Signal Lock. */
 export const g7Entry: MinigameRegistryEntry = {
   id: G7_ID,
-  name: "Signal Lock",
+  name: 'Signal Lock',
   ready: true,
   inputCount: 1, // LEFT = Lock; RIGHT is inactive
   adapter: createG7Adapter,

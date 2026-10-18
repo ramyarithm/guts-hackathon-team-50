@@ -26,7 +26,7 @@ export interface SceneLayout {
   offsetY?: number;
 }
 
-export type SceneId = "menu" | "c1" | "c2" | "c3" | "c4" | "pin" | "e1" | "e2" | "door" | "ending";
+export type SceneId = 'menu' | 'c1' | 'c2' | 'c3' | 'c4' | 'pin' | 'e1' | 'e2' | 'door' | 'ending';
 
 /**
  * Per-scene placement. Every scene uses the same size: the default caps (STAGE_MAX_VH /
@@ -112,12 +112,19 @@ export function fitStage(input: FitInput): StageFit {
   let top = centreY - height / 2 + offY;
   // Clamp inside the viewport (and under the header).
   left = Math.min(Math.max(left, 0), Math.max(0, input.viewportW - width));
-  top = Math.min(Math.max(top, input.reservedTop), Math.max(input.reservedTop, input.viewportH - height));
+  top = Math.min(
+    Math.max(top, input.reservedTop),
+    Math.max(input.reservedTop, input.viewportH - height),
+  );
   return { scale, width, height, left, top };
 }
 
 /** Canvas backing-store size for a displayed CSS size: crisp at the device pixel ratio. */
-export function backingSize(cssW: number, cssH: number, devicePixelRatio: number): { width: number; height: number } {
+export function backingSize(
+  cssW: number,
+  cssH: number,
+  devicePixelRatio: number,
+): { width: number; height: number } {
   const dpr = Math.min(Math.max(devicePixelRatio || 1, 1), MAX_DPR);
   return { width: Math.round(cssW * dpr), height: Math.round(cssH * dpr) };
 }
@@ -140,7 +147,7 @@ export interface StageViewportOptions {
 }
 
 export function createStageViewport(options: StageViewportOptions): StageViewport {
-  let scene: SceneId = "menu";
+  let scene: SceneId = 'menu';
   let disposed = false;
 
   const refit = (): void => {
@@ -152,16 +159,16 @@ export function createStageViewport(options: StageViewportOptions): StageViewpor
       ...SCENE_LAYOUT[scene],
     });
     const s = options.target.style;
-    s.setProperty("--stage-scale", fit.scale.toFixed(4));
-    s.setProperty("--stage-w", `${fit.width.toFixed(2)}px`);
-    s.setProperty("--stage-h", `${fit.height.toFixed(2)}px`);
-    s.setProperty("--stage-left", `${fit.left.toFixed(2)}px`);
-    s.setProperty("--stage-top", `${fit.top.toFixed(2)}px`);
+    s.setProperty('--stage-scale', fit.scale.toFixed(4));
+    s.setProperty('--stage-w', `${fit.width.toFixed(2)}px`);
+    s.setProperty('--stage-h', `${fit.height.toFixed(2)}px`);
+    s.setProperty('--stage-left', `${fit.left.toFixed(2)}px`);
+    s.setProperty('--stage-top', `${fit.top.toFixed(2)}px`);
   };
 
   const onResize = (): void => refit();
-  window.addEventListener("resize", onResize);
-  window.addEventListener("orientationchange", onResize);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
   refit();
 
   return {
@@ -169,13 +176,13 @@ export function createStageViewport(options: StageViewportOptions): StageViewpor
       scene = next;
       refit();
       // Minigames that only listen to window resize pick up the new screen size too.
-      window.dispatchEvent(new Event("resize"));
+      window.dispatchEvent(new Event('resize'));
     },
     refit,
     dispose(): void {
       disposed = true;
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
     },
   };
 }

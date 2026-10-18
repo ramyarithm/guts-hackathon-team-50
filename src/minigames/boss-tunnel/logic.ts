@@ -5,13 +5,19 @@
  * correctly: the chalk is always visible because you can only arrive with light.
  */
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 import {
-  HEADING_ANGLE, buildGeometry, headingAt, posAt, type Heading, type Junction, type Layout,
-} from "./world";
+  HEADING_ANGLE,
+  buildGeometry,
+  headingAt,
+  posAt,
+  type Heading,
+  type Junction,
+  type Layout,
+} from './world';
 
-export type { Button, ControlLabels } from "../types";
-export type { Heading, Junction, Layout, Tile } from "./world";
+export type { Button, ControlLabels } from '../types';
+export type { Heading, Junction, Layout, Tile } from './world';
 
 // ---- Tuning ---------------------------------------------------------------------------
 
@@ -41,8 +47,8 @@ export const DOOR_WHEEL_MS = 900;
 export const DOOR_SWING_MS = 1100;
 export const DOOR_FLOOD_MS = 700;
 export const SURFACE_HOLD_MS = DOOR_WHEEL_MS + DOOR_SWING_MS + DOOR_FLOOD_MS + 300;
-export const ONE_RULE = "Light shows the way. Light wakes the creature.";
-export const DARK_HINT_TEXT = "Too dark to move. Turn your lantern on.";
+export const ONE_RULE = 'Light shows the way. Light wakes the creature.';
+export const DARK_HINT_TEXT = 'Too dark to move. Turn your lantern on.';
 
 // ---- Layout ---------------------------------------------------------------------------
 
@@ -58,23 +64,26 @@ export function createSeededRng(seed: number): () => number {
 }
 
 export function validateLayout(l: Layout): string | null {
-  if (l.length < 14 || l.length > 18) return "length";
-  if (l.junctions.length < 4 || l.junctions.length > 5) return "junction count";
+  if (l.length < 14 || l.length > 18) return 'length';
+  if (l.junctions.length < 4 || l.junctions.length > 5) return 'junction count';
   const cells = l.junctions.map((j) => j.cell);
   for (let i = 0; i < cells.length; i++) {
     const c = cells[i]!;
-    if (c < 3 || c > l.length - 3) return "junction position";
-    if (i > 0 && c - cells[i - 1]! < 3) return "junction spacing";
+    if (c < 3 || c > l.length - 3) return 'junction position';
+    if (i > 0 && c - cells[i - 1]! < 3) return 'junction spacing';
   }
-  if (l.path.length !== l.length + 1 || l.headings.length !== l.length) return "geometry";
-  if (l.stubs.length !== l.junctions.length) return "stubs";
-  if (buildGeometry(l.length, l.junctions) === null) return "geometry crosses";
+  if (l.path.length !== l.length + 1 || l.headings.length !== l.length) return 'geometry';
+  if (l.stubs.length !== l.junctions.length) return 'stubs';
+  if (buildGeometry(l.length, l.junctions) === null) return 'geometry crosses';
   return null;
 }
 
 /** Alternating turns never cross at spacing 3; used when a seed cannot be laid out. */
 export const FALLBACK_LAYOUT: Layout = buildGeometry(16, [
-  { cell: 3, correct: "LEFT" }, { cell: 6, correct: "RIGHT" }, { cell: 9, correct: "LEFT" }, { cell: 12, correct: "RIGHT" },
+  { cell: 3, correct: 'LEFT' },
+  { cell: 6, correct: 'RIGHT' },
+  { cell: 9, correct: 'LEFT' },
+  { cell: 12, correct: 'RIGHT' },
 ])!;
 
 export function generateLayout(seed: number): Layout {
@@ -91,7 +100,10 @@ export function generateLayout(seed: number): Layout {
   }
   // Roll branch directions until the path fits the grid without crossing itself.
   for (let attempt = 0; attempt < 80; attempt++) {
-    const junctions: Junction[] = cells.map((cell) => ({ cell, correct: rng() < 0.5 ? "LEFT" : "RIGHT" }));
+    const junctions: Junction[] = cells.map((cell) => ({
+      cell,
+      correct: rng() < 0.5 ? 'LEFT' : 'RIGHT',
+    }));
     const layout = buildGeometry(length, junctions);
     if (layout && validateLayout(layout) === null) return layout;
   }
@@ -100,11 +112,15 @@ export function generateLayout(seed: number): Layout {
 
 // ---- State ----------------------------------------------------------------------------
 
-export type Phase = "TUNNEL" | "CAUGHT" | "SURFACE";
-export type TunnelEvent = "tunnel_enter" | "monster_first_detected" | "monster_reacts_to_flashlight" | "light_mechanic_revealed";
+export type Phase = 'TUNNEL' | 'CAUGHT' | 'SURFACE';
+export type TunnelEvent =
+  | 'tunnel_enter'
+  | 'monster_first_detected'
+  | 'monster_reacts_to_flashlight'
+  | 'light_mechanic_revealed';
 /** "light": danger maxed while the lantern was on. "found": any other cause. */
-export type CaughtReason = "light" | "found";
-export type Prompt = "lantern" | "step" | "light_off" | null;
+export type CaughtReason = 'light' | 'found';
+export type Prompt = 'lantern' | 'step' | 'light_off' | null;
 
 export interface TunnelState {
   layout: Layout;
@@ -140,12 +156,30 @@ export interface TunnelState {
 
 export function createState(seed: number): TunnelState {
   return {
-    layout: generateLayout(seed), phase: "TUNNEL", cell: 0, lanternOn: false, attention: 0,
-    transition: null, turn: null, bufferedPress: null, darkHintMs: 0, grace: 0, detectMs: 0,
-    eyesTurned: false, creatureSide: 1, caughtReason: null,
+    layout: generateLayout(seed),
+    phase: 'TUNNEL',
+    cell: 0,
+    lanternOn: false,
+    attention: 0,
+    transition: null,
+    turn: null,
+    bufferedPress: null,
+    darkHintMs: 0,
+    grace: 0,
+    detectMs: 0,
+    eyesTurned: false,
+    creatureSide: 1,
+    caughtReason: null,
     tutorial: { lit: false, stepped: false, lightOffAfterEyes: false },
-    phaseMs: 0, timeMs: 0, lastStepMs: -Infinity, lastClickMs: -Infinity, lastDeniedMs: -Infinity,
-    firedEvents: [], pendingEvents: [], completionFired: false, failureFired: false,
+    phaseMs: 0,
+    timeMs: 0,
+    lastStepMs: -Infinity,
+    lastClickMs: -Infinity,
+    lastDeniedMs: -Infinity,
+    firedEvents: [],
+    pendingEvents: [],
+    completionFired: false,
+    failureFired: false,
   };
 }
 
@@ -155,35 +189,37 @@ export function junctionAt(state: TunnelState, cell: number): Junction | null {
   return state.layout.junctions.find((j) => j.cell === cell) ?? null;
 }
 export function eyesVisible(state: TunnelState): boolean {
-  return state.attention >= DETECT_THRESHOLD && state.phase !== "SURFACE";
+  return state.attention >= DETECT_THRESHOLD && state.phase !== 'SURFACE';
 }
 export function darkHintVisible(state: TunnelState): boolean {
-  return state.phase === "TUNNEL" && state.darkHintMs > 0;
+  return state.phase === 'TUNNEL' && state.darkHintMs > 0;
 }
 
 export function labelsFor(state: TunnelState): ControlLabels {
   switch (state.phase) {
-    case "TUNNEL":
-      return state.lanternOn ? { left: "Lantern off", right: "Step forward" } : { left: "Lantern on", right: "Too dark" };
-    case "CAUGHT":
-    case "SURFACE":
-      return { left: "—", right: "—" };
+    case 'TUNNEL':
+      return state.lanternOn
+        ? { left: 'Lantern off', right: 'Step forward' }
+        : { left: 'Lantern on', right: 'Too dark' };
+    case 'CAUGHT':
+    case 'SURFACE':
+      return { left: '—', right: '—' };
   }
 }
 
 /** The guided prompt to show (non-blocking), or null. */
 export function tutorialPrompt(state: TunnelState): Prompt {
-  if (state.phase !== "TUNNEL") return null;
-  if (state.eyesTurned && !state.tutorial.lightOffAfterEyes) return "light_off";
-  if (!state.tutorial.lit) return "lantern";
-  if (!state.tutorial.stepped) return "step";
+  if (state.phase !== 'TUNNEL') return null;
+  if (state.eyesTurned && !state.tutorial.lightOffAfterEyes) return 'light_off';
+  if (!state.tutorial.lit) return 'lantern';
+  if (!state.tutorial.stepped) return 'step';
   return null;
 }
 
 export const PROMPT_TEXT: Record<Exclude<Prompt, null>, string> = {
-  lantern: "Turn your lantern ON (LEFT) to see.",
-  step: "Press RIGHT to step forward.",
-  light_off: "It hunts light. Turn it OFF to hide, then move again.",
+  lantern: 'Turn your lantern ON (LEFT) to see.',
+  step: 'Press RIGHT to step forward.',
+  light_off: 'It hunts light. Turn it OFF to hide, then move again.',
 };
 
 export function takeEvents(state: TunnelState): TunnelEvent[] {
@@ -202,7 +238,8 @@ const easeInOut = (p: number): number => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 
 export function cameraPose(state: TunnelState): { x: number; y: number; angle: number } {
   const l = state.layout;
   const from = posAt(l, state.cell);
-  let x = from.x, y = from.y;
+  let x = from.x,
+    y = from.y;
   if (state.transition) {
     const to = posAt(l, state.cell + 1);
     const p = easeInOut(transitionProgress(state));
@@ -223,7 +260,7 @@ export function cameraPose(state: TunnelState): { x: number; y: number; angle: n
 
 /** Door opening progress (each 0..1) once the player has reached it. */
 export function doorSequence(state: TunnelState): { wheel: number; swing: number; flood: number } {
-  if (state.phase !== "SURFACE") return { wheel: 0, swing: 0, flood: 0 };
+  if (state.phase !== 'SURFACE') return { wheel: 0, swing: 0, flood: 0 };
   const t = state.phaseMs;
   const clamp = (v: number): number => Math.max(0, Math.min(1, v));
   return {
@@ -249,13 +286,13 @@ function addAttention(state: TunnelState, amount: number, fromLight: boolean): v
   state.attention = Math.max(0, Math.min(ATTENTION_CAUGHT, state.attention + amount));
 }
 function caught(state: TunnelState): void {
-  state.caughtReason = state.lanternOn ? "light" : "found";
+  state.caughtReason = state.lanternOn ? 'light' : 'found';
   state.lanternOn = false;
   state.transition = null;
   state.turn = null;
   state.bufferedPress = null;
   state.darkHintMs = 0;
-  setPhase(state, "CAUGHT");
+  setPhase(state, 'CAUGHT');
 }
 function beginStep(state: TunnelState): void {
   state.transition = { elapsedMs: 0 };
@@ -266,47 +303,61 @@ function beginStep(state: TunnelState): void {
 function arrive(state: TunnelState): void {
   state.cell += 1;
   state.transition = null;
-  if (state.cell === SCRIPTED_DETECT_CELL && state.attention < DETECT_THRESHOLD + 2) state.attention = DETECT_THRESHOLD + 2;
+  if (state.cell === SCRIPTED_DETECT_CELL && state.attention < DETECT_THRESHOLD + 2)
+    state.attention = DETECT_THRESHOLD + 2;
   if (state.cell >= state.layout.length) {
     state.cell = state.layout.length;
     state.bufferedPress = null;
-    setPhase(state, "SURFACE");
+    setPhase(state, 'SURFACE');
     return;
   }
   const j = junctionAt(state, state.cell);
-  if (j) state.turn = { elapsedMs: 0, from: state.layout.headings[state.cell - 1]!, to: state.layout.headings[state.cell]! };
+  if (j)
+    state.turn = {
+      elapsedMs: 0,
+      from: state.layout.headings[state.cell - 1]!,
+      to: state.layout.headings[state.cell]!,
+    };
   const next = state.layout.junctions.find((x) => x.cell > state.cell);
-  if (next) state.creatureSide = next.correct === "LEFT" ? 1 : -1;
+  if (next) state.creatureSide = next.correct === 'LEFT' ? 1 : -1;
 }
 function flushBuffered(state: TunnelState): void {
   const queued = state.bufferedPress;
   state.bufferedPress = null;
-  if (queued && state.phase === "TUNNEL") applyPress(state, queued);
+  if (queued && state.phase === 'TUNNEL') applyPress(state, queued);
 }
 
 // ---- Simulation -------------------------------------------------------------------------
 
 export function step(state: TunnelState, dtMs: number): void {
   const dt = Math.min(Math.max(dtMs, 0), 250);
-  if (state.timeMs === 0) fire(state, "tunnel_enter");
+  if (state.timeMs === 0) fire(state, 'tunnel_enter');
   state.timeMs += dt;
   state.phaseMs += dt;
   if (state.grace > 0) state.grace = Math.max(0, state.grace - dt);
   if (state.darkHintMs > 0) state.darkHintMs = Math.max(0, state.darkHintMs - dt);
 
   switch (state.phase) {
-    case "TUNNEL": {
-      if (state.attention >= ATTENTION_CAUGHT) { caught(state); break; }
+    case 'TUNNEL': {
+      if (state.attention >= ATTENTION_CAUGHT) {
+        caught(state);
+        break;
+      }
       if (state.lanternOn) addAttention(state, (LANTERN_RATE_PER_S * dt) / 1000, true);
       else state.attention = Math.max(0, state.attention - (DARK_DECAY_PER_S * dt) / 1000);
       if (state.attention >= DETECT_THRESHOLD) {
-        fire(state, "monster_first_detected");
+        fire(state, 'monster_first_detected');
         state.detectMs += dt;
       }
-      if (state.lanternOn && eyesVisible(state) && state.detectMs >= REACT_DELAY_MS && !state.eyesTurned) {
+      if (
+        state.lanternOn &&
+        eyesVisible(state) &&
+        state.detectMs >= REACT_DELAY_MS &&
+        !state.eyesTurned
+      ) {
         state.eyesTurned = true;
-        fire(state, "monster_reacts_to_flashlight");
-        fire(state, "light_mechanic_revealed");
+        fire(state, 'monster_reacts_to_flashlight');
+        fire(state, 'light_mechanic_revealed');
         state.grace = GRACE_MS;
       }
       if (state.transition) {
@@ -322,20 +373,20 @@ export function step(state: TunnelState, dtMs: number): void {
           flushBuffered(state);
         }
       }
-      if (state.phase === "TUNNEL" && state.attention >= ATTENTION_CAUGHT) caught(state);
+      if (state.phase === 'TUNNEL' && state.attention >= ATTENTION_CAUGHT) caught(state);
       break;
     }
-    case "CAUGHT":
+    case 'CAUGHT':
       if (state.phaseMs >= CAUGHT_HOLD_MS && !state.failureFired) state.failureFired = true;
       break;
-    case "SURFACE":
+    case 'SURFACE':
       if (state.phaseMs >= SURFACE_HOLD_MS && !state.completionFired) state.completionFired = true;
       break;
   }
 }
 
 function applyPress(state: TunnelState, button: Button): void {
-  if (button === "LEFT") {
+  if (button === 'LEFT') {
     state.lanternOn = !state.lanternOn;
     state.lastClickMs = state.timeMs;
     if (state.lanternOn) state.tutorial.lit = true;
@@ -352,15 +403,15 @@ function applyPress(state: TunnelState, button: Button): void {
 
 export function press(state: TunnelState, button: Button): void {
   switch (state.phase) {
-    case "TUNNEL":
+    case 'TUNNEL':
       if (state.transition || state.turn) {
         if (state.bufferedPress === null) state.bufferedPress = button;
         return;
       }
       applyPress(state, button);
       return;
-    case "CAUGHT":
-    case "SURFACE":
+    case 'CAUGHT':
+    case 'SURFACE':
       return; // the run is over either way
   }
 }

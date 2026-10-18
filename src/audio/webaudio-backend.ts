@@ -1,7 +1,13 @@
 // Real Web Audio implementation of the engine's AudioBackend. Thin adapters so GainNode
 // parameters and AudioNode connections match the engine's small interfaces.
 
-import type { AudioBackend, AudioContextLike, BufferSourceLike, GainLike, NodeLike } from "./engine";
+import type {
+  AudioBackend,
+  AudioContextLike,
+  BufferSourceLike,
+  GainLike,
+  NodeLike,
+} from './engine';
 
 interface RawNode extends NodeLike {
   raw: AudioNode;
@@ -93,9 +99,14 @@ export function createWebAudioBackend(): AudioBackend {
   return {
     createContext(): AudioContextLike {
       const Ctor =
-        (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext ??
+        (
+          window as unknown as {
+            AudioContext?: typeof AudioContext;
+            webkitAudioContext?: typeof AudioContext;
+          }
+        ).AudioContext ??
         (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) throw new Error("Web Audio is not supported");
+      if (!Ctor) throw new Error('Web Audio is not supported');
       const ac = new Ctor();
       const destination: RawNode = { raw: ac.destination };
       return {
@@ -103,7 +114,7 @@ export function createWebAudioBackend(): AudioBackend {
           return ac.currentTime;
         },
         get state() {
-          return ac.state as "suspended" | "running" | "closed";
+          return ac.state as 'suspended' | 'running' | 'closed';
         },
         destination,
         resume: () => ac.resume(),

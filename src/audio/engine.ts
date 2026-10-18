@@ -33,18 +33,18 @@ const SCHEDULE_LEAD_S = 0.03;
 
 // ---- Types ------------------------------------------------------------------------
 
-export type StageId = "C1" | "C2" | "C3" | "C4";
+export type StageId = 'C1' | 'C2' | 'C3' | 'C4';
 
 export type Scene =
-  | { kind: "menu" }
-  | { kind: "stage"; stage: StageId }
-  | { kind: "hub"; completed: Record<StageId, boolean> }
-  | { kind: "end" }
-  | { kind: "boss" };
+  | { kind: 'menu' }
+  | { kind: 'stage'; stage: StageId }
+  | { kind: 'hub'; completed: Record<StageId, boolean> }
+  | { kind: 'end' }
+  | { kind: 'boss' };
 
 export interface TrackDef {
   url: string;
-  kind: "music" | "sfx";
+  kind: 'music' | 'sfx';
   loop: boolean;
   /** Plays once, then hands off to `handoffTo` on the exact end sample. */
   intro?: boolean;
@@ -91,7 +91,7 @@ export interface BufferSourceLike {
 
 export interface AudioContextLike {
   readonly currentTime: number;
-  readonly state: "suspended" | "running" | "closed";
+  readonly state: 'suspended' | 'running' | 'closed';
   readonly destination?: NodeLike;
   /** Seconds between a scheduled time on this clock and the sound leaving the speakers. */
   readonly outputLatency?: number;
@@ -130,7 +130,7 @@ export interface AudioEngine {
    */
   unlock(): void;
   /** Whether sound can be heard: "suspended" means autoplay is blocked until a gesture. */
-  outputState(): "running" | "suspended" | "unavailable";
+  outputState(): 'running' | 'suspended' | 'unavailable';
   /** Switch music; a no-op if that track is already playing. */
   playMusic(key: string): void;
   /**
@@ -170,27 +170,27 @@ export interface AudioEngine {
 
 // ---- Scene mapping --------------------------------------------------------------
 
-const STAGE_ORDER: StageId[] = ["C1", "C2", "C3", "C4"];
-const STAGE_TRACK: Record<StageId, string> = { C1: "c1", C2: "c2", C3: "c3", C4: "c4" };
+const STAGE_ORDER: StageId[] = ['C1', 'C2', 'C3', 'C4'];
+const STAGE_TRACK: Record<StageId, string> = { C1: 'c1', C2: 'c2', C3: 'c3', C4: 'c4' };
 
 /** The hub plays the next stage still to complete; c4 once all four are done. */
 export function trackForHub(completed: Record<StageId, boolean>): string {
   const next = STAGE_ORDER.find((s) => !completed[s]);
-  return next ? STAGE_TRACK[next] : "c4";
+  return next ? STAGE_TRACK[next] : 'c4';
 }
 
 export function trackForScene(scene: Scene): string {
   switch (scene.kind) {
-    case "menu":
-      return "menu";
-    case "stage":
+    case 'menu':
+      return 'menu';
+    case 'stage':
       return STAGE_TRACK[scene.stage];
-    case "hub":
+    case 'hub':
       return trackForHub(scene.completed);
-    case "end":
-      return "c4";
-    case "boss":
-      return "boss";
+    case 'end':
+      return 'c4';
+    case 'boss':
+      return 'boss';
   }
 }
 
@@ -198,7 +198,11 @@ export function trackForScene(scene: Scene): string {
  * The track to play while `gameId` runs in `scene`: a minigame listed in `overrides`
  * (today only G4) brings its own music; every other game follows the scene.
  */
-export function trackForMinigame(gameId: string, scene: Scene, overrides: Readonly<Record<string, string>> = {}): string {
+export function trackForMinigame(
+  gameId: string,
+  scene: Scene,
+  overrides: Readonly<Record<string, string>> = {},
+): string {
   return overrides[gameId] ?? trackForScene(scene);
 }
 
@@ -209,7 +213,10 @@ export function barSeconds(bpm: number): number {
 }
 
 /** Seconds of near-silence at the start and end of a decoded buffer (encoder padding). */
-export function detectEdgeSilence(buffer: AudioBufferLike, threshold = SILENCE_THRESHOLD): { leading: number; trailing: number } {
+export function detectEdgeSilence(
+  buffer: AudioBufferLike,
+  threshold = SILENCE_THRESHOLD,
+): { leading: number; trailing: number } {
   let first = buffer.length;
   let last = -1;
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
@@ -228,7 +235,10 @@ export function detectEdgeSilence(buffer: AudioBufferLike, threshold = SILENCE_T
     }
   }
   if (last < first) return { leading: 0, trailing: 0 };
-  return { leading: first / buffer.sampleRate, trailing: (buffer.length - 1 - last) / buffer.sampleRate };
+  return {
+    leading: first / buffer.sampleRate,
+    trailing: (buffer.length - 1 - last) / buffer.sampleRate,
+  };
 }
 
 /**
@@ -274,7 +284,11 @@ interface Voice {
   bpm: number | null;
 }
 
-export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest, options: AudioEngineOptions = {}): AudioEngine {
+export function createAudioEngine(
+  backend: AudioBackend,
+  manifest: TrackManifest,
+  options: AudioEngineOptions = {},
+): AudioEngine {
   let ctx: AudioContextLike | null = null;
   let master: GainLike | null = null;
   let musicBus: GainLike | null = null;
@@ -299,7 +313,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
   const warn = (what: string, detail?: unknown): void => {
     if (warned.has(what)) return;
     warned.add(what);
-    console.warn(`[audio] ${what}`, detail ?? "");
+    console.warn(`[audio] ${what}`, detail ?? '');
   };
 
   const ensureContext = (): AudioContextLike | null => {
@@ -316,7 +330,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       sfxBus.setValueAtTime(SFX_GAIN, ctx.currentTime);
       sfxBus.connect(master);
     } catch (error) {
-      warn("audio unavailable; the game continues silently", error);
+      warn('audio unavailable; the game continues silently', error);
       ctx = null;
     }
     return ctx;
@@ -363,7 +377,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       gain.setValueAtTime(gain.value, now);
       gain.linearRampToValueAtTime(to, now + ms / 1000);
     } catch (error) {
-      warn("gain ramp failed", error);
+      warn('gain ramp failed', error);
     }
   };
 
@@ -462,16 +476,16 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       const c = ensureContext();
       if (!c) return;
       unlocked = true;
-      
+
       // Resume context first if needed
-      if (c.state !== "running") {
+      if (c.state !== 'running') {
         try {
-          void c.resume().catch((error) => warn("resume failed", error));
+          void c.resume().catch((error) => warn('resume failed', error));
         } catch (error) {
-          warn("resume failed", error);
+          warn('resume failed', error);
         }
       }
-      
+
       // Ensure musicBus is at the correct level before starting any voices.
       // Do this AFTER resume attempt so currentTime is advancing.
       // Cancel any scheduled values and set directly to handle the case where
@@ -486,7 +500,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
           musicBus.setValueAtTime(musicLevel(), c.currentTime);
         }
       }
-      
+
       if (pendingKey) {
         const key = pendingKey;
         pendingKey = null;
@@ -565,7 +579,7 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       try {
         options.onMusicEnabledChange?.(enabled);
       } catch (error) {
-        warn("could not save the music setting", error);
+        warn('could not save the music setting', error);
       }
     },
 
@@ -577,9 +591,9 @@ export function createAudioEngine(backend: AudioBackend, manifest: TrackManifest
       return Boolean(loaded.get(key));
     },
 
-    outputState(): "running" | "suspended" | "unavailable" {
-      if (!ctx || disposed) return "unavailable";
-      return ctx.state === "running" ? "running" : "suspended";
+    outputState(): 'running' | 'suspended' | 'unavailable' {
+      if (!ctx || disposed) return 'unavailable';
+      return ctx.state === 'running' ? 'running' : 'suspended';
     },
 
     getBeatClock(): number | null {

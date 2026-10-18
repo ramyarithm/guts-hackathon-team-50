@@ -1,10 +1,10 @@
 // Pure game state and physics for G1. No DOM access; everything here is unit-testable.
 // Coordinates are in logical "world units"; render.ts scales them to the canvas.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export type { Button, ControlLabels } from "../types";
-export { createSeededRng, hashSeed } from "../../util/random";
+export type { Button, ControlLabels } from '../types';
+export { createSeededRng, hashSeed } from '../../util/random';
 
 // ---- Tuning -----------------------------------------------------------------
 
@@ -50,7 +50,7 @@ export const SUCCESS_HOLD_MS = 1000;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "PLAYING" | "CRASHED" | "SUCCESS";
+export type Phase = 'READY' | 'PLAYING' | 'CRASHED' | 'SUCCESS';
 
 export interface Obstacle {
   x: number;
@@ -102,13 +102,13 @@ export interface Game {
 
 export function labelsFor(phase: Phase): ControlLabels {
   switch (phase) {
-    case "READY":
-    case "PLAYING":
-      return { left: "Pulse", right: "Pulse" };
-    case "CRASHED":
-      return { left: "Retry", right: "Retry" };
-    case "SUCCESS":
-      return { left: "—", right: "—" };
+    case 'READY':
+    case 'PLAYING':
+      return { left: 'Pulse', right: 'Pulse' };
+    case 'CRASHED':
+      return { left: 'Retry', right: 'Retry' };
+    case 'SUCCESS':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -135,7 +135,7 @@ function createInitialState(rng: () => number): GameState {
     prev = gapTop;
   }
   return {
-    phase: "READY",
+    phase: 'READY',
     pulseY: START_Y,
     pulseVy: 0,
     obstacles,
@@ -192,19 +192,19 @@ export function createGame(opts: GameOptions = {}): Game {
     // Ceiling / floor.
     if (state.pulseY - HITBOX_RADIUS < 0) {
       state.pulseY = HITBOX_RADIUS;
-      setPhase("CRASHED");
+      setPhase('CRASHED');
       return;
     }
     if (state.pulseY + HITBOX_RADIUS > FLOOR_Y) {
       state.pulseY = FLOOR_Y - HITBOX_RADIUS;
-      setPhase("CRASHED");
+      setPhase('CRASHED');
       return;
     }
 
     // Pylons.
     for (const o of state.obstacles) {
       if (hitsObstacle(state.pulseY, o)) {
-        setPhase("CRASHED");
+        setPhase('CRASHED');
         return;
       }
     }
@@ -221,7 +221,7 @@ export function createGame(opts: GameOptions = {}): Game {
 
     if (state.passed >= TARGET_GAPS) {
       state.pulseVy = 0;
-      setPhase("SUCCESS");
+      setPhase('SUCCESS');
     }
   };
 
@@ -241,13 +241,13 @@ export function createGame(opts: GameOptions = {}): Game {
     state.timeMs += TICK_MS;
     state.phaseMs += TICK_MS;
     switch (state.phase) {
-      case "READY":
-      case "CRASHED":
+      case 'READY':
+      case 'CRASHED':
         break;
-      case "PLAYING":
+      case 'PLAYING':
         stepPlaying();
         break;
-      case "SUCCESS":
+      case 'SUCCESS':
         stepSuccess();
         break;
     }
@@ -273,14 +273,14 @@ export function createGame(opts: GameOptions = {}): Game {
     input(_button: Button): void {
       if (disposed || state.completionFired) return;
       switch (state.phase) {
-        case "READY":
-          setPhase("PLAYING");
+        case 'READY':
+          setPhase('PLAYING');
           pulse();
           break;
-        case "PLAYING":
+        case 'PLAYING':
           pulse();
           break;
-        case "CRASHED":
+        case 'CRASHED':
           if (state.phaseMs >= CRASH_LOCKOUT_MS) {
             const timeMs = state.timeMs;
             state = createInitialState(rng);
@@ -288,7 +288,7 @@ export function createGame(opts: GameOptions = {}): Game {
             publishLabels();
           }
           break;
-        case "SUCCESS":
+        case 'SUCCESS':
           break;
       }
     },

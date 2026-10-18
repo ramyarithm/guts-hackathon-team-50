@@ -1,34 +1,34 @@
 /* Dead Signal Theme - Immersive Bunker UI */
 
 :root {
-  --font-mono: "ui-monospace", Menlo, Consolas, "Courier New", monospace;
+  --font-mono: 'ui-monospace', Menlo, Consolas, 'Courier New', monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
-  
+
   /* Backgrounds - matches palette.ts */
   --bg-dark: #04070a;
   --bg-panel: #182420;
   --bg-panel-light: #0e1613;
   --letterbox: #04070a;
-  
+
   /* Borders */
   --border: #1a2f28;
   --border-light: #2a4a3a;
   --panel-edge: #2f453b;
-  
+
   /* Text - green-tinted (matches minigames) */
   --text: #b8f5cf;
   --text-dim: rgba(184, 245, 207, 0.6);
   --text-bright: #e0f8e8;
-  
+
   /* Accent (green) */
   --accent: #5cff9d;
   --accent-dim: rgba(92, 255, 157, 0.35);
   --accent-glow: rgba(92, 255, 157, 0.12);
-  
+
   /* Danger (red) */
   --danger: #ff6b57;
   --danger-dim: rgba(255, 107, 87, 0.3);
-  
+
   /* Warning (amber) */
   --amber: #ffb347;
 
@@ -47,7 +47,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -290,7 +291,7 @@ html, body {
   background: rgba(10, 15, 13, 0.92);
   border-radius: calc(10px * var(--stage-scale));
   padding: calc(6px * var(--stage-scale));
-  box-shadow: 
+  box-shadow:
     0 0 0 2px #1a2a24,
     0 0 0 3px rgba(92, 255, 157, 0.12),
     0 8px 30px rgba(0, 0, 0, 0.6),
@@ -457,7 +458,6 @@ html, body {
 
 /* Responsive sizing is computed by src/scenes/viewport.ts (see --stage-max-vh/vw). */
 
-
 /* ============================================
    LIVES DISPLAY
    ============================================ */
@@ -475,7 +475,9 @@ html, body {
   font-size: calc(18px * var(--stage-scale));
   color: var(--danger);
   text-shadow: 0 0 8px rgba(255, 107, 87, 0.6);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .heart.lost {
@@ -495,7 +497,12 @@ html, body {
 /* The bunker, scaled to cover the screen (aspect kept, edges cropped), under a dark gradient. */
 #scene-bg.scene-menu {
   background-image:
-    linear-gradient(180deg, rgba(4, 8, 10, 0.45) 0%, rgba(4, 8, 10, 0.7) 60%, rgba(4, 8, 10, 0.9) 100%),
+    linear-gradient(
+      180deg,
+      rgba(4, 8, 10, 0.45) 0%,
+      rgba(4, 8, 10, 0.7) 60%,
+      rgba(4, 8, 10, 0.9) 100%
+    ),
     url('/assets/scenes/bunker_after_level1.png');
 }
 
@@ -518,14 +525,13 @@ html, body {
   font-family: var(--font-mono);
   text-align: center;
   background:
-    radial-gradient(ellipse at center, rgba(10, 20, 17, 0.2) 0%, rgba(4, 8, 10, 0.92) 100%),
-    #04080a;
+    radial-gradient(ellipse at center, rgba(10, 20, 17, 0.2) 0%, rgba(4, 8, 10, 0.92) 100%), #04080a;
   animation: menu-vignette 7s ease-in-out infinite;
 }
 
 /* Faint CRT scanlines; purely decorative. */
 .main-menu::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -597,13 +603,25 @@ html, body {
 }
 
 @keyframes menu-start-pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(92, 255, 157, 0.45); }
-  50% { transform: scale(1.05); box-shadow: 0 0 28px rgba(92, 255, 157, 0.85); }
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 14px rgba(92, 255, 157, 0.45);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 28px rgba(92, 255, 157, 0.85);
+  }
 }
 
 @keyframes menu-vignette {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.06); }
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.06);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -666,12 +684,16 @@ html, body {
   overflow: hidden;
   font-family: var(--font-mono);
   text-align: center;
-  background: radial-gradient(ellipse at center, rgba(10, 20, 17, 0.15) 0%, rgba(4, 8, 10, 0.85) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(10, 20, 17, 0.15) 0%,
+    rgba(4, 8, 10, 0.85) 100%
+  );
 }
 
 /* Faint CRT scanlines, as on the menu. */
 .credits::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -742,13 +764,16 @@ html, body {
   border-radius: 4px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 /* The highlight marker: a slot on every row so names stay aligned, lit on the current one. */
 .credits__person::before,
 .credits__menu::before {
-  content: "\25B6";
+  content: '\25B6';
   flex: 0 0 auto;
   width: 1em;
   font-size: calc(9px * var(--stage-scale));
@@ -760,7 +785,9 @@ html, body {
   color: var(--text-bright);
   border-color: var(--amber);
   background: rgba(255, 179, 71, 0.1);
-  box-shadow: 0 0 10px rgba(255, 179, 71, 0.35), inset 0 0 12px rgba(255, 179, 71, 0.08);
+  box-shadow:
+    0 0 10px rgba(255, 179, 71, 0.35),
+    inset 0 0 12px rgba(255, 179, 71, 0.08);
 }
 
 .credits__row.is-highlighted .credits__person::before,
@@ -825,16 +852,32 @@ html, body {
 }
 
 @keyframes credits-row-in {
-  to { opacity: 1; transform: none; }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes credits-flicker {
-  0%, 100% { opacity: 1; }
-  91% { opacity: 1; }
-  92% { opacity: 0.72; }
-  93% { opacity: 1; }
-  96% { opacity: 0.85; }
-  97% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  91% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0.72;
+  }
+  93% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.85;
+  }
+  97% {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -898,17 +941,20 @@ html, body {
   position: relative;
   width: 100%;
   min-height: calc(54px * var(--stage-scale));
-  padding: calc(10px * var(--stage-scale)) calc(14px * var(--stage-scale)) calc(16px * var(--stage-scale));
+  padding: calc(10px * var(--stage-scale)) calc(14px * var(--stage-scale))
+    calc(16px * var(--stage-scale));
   background: rgba(4, 10, 8, 0.78);
   border: 1px solid var(--accent-dim);
   border-radius: calc(6px * var(--stage-scale));
-  box-shadow: 0 0 0 2px rgba(26, 42, 36, 0.8), 0 6px 24px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 0 2px rgba(26, 42, 36, 0.8),
+    0 6px 24px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
   overflow: hidden;
 }
 
 .vn__box::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -934,89 +980,89 @@ html, body {
 }
 
 /* ENGINEER: amber plate, normal text. */
-.vn__box[data-speaker="ENGINEER"] .vn__plate {
+.vn__box[data-speaker='ENGINEER'] .vn__plate {
   color: #04080a;
   background: #ffb347;
   box-shadow: 0 0 10px rgba(255, 179, 71, 0.45);
 }
 
 /* SUPERVISOR: green intercom plate with a radio icon and a faint static flicker. */
-.vn__box[data-speaker="SUPERVISOR"] .vn__plate {
+.vn__box[data-speaker='SUPERVISOR'] .vn__plate {
   color: #04080a;
   background: var(--accent);
   box-shadow: 0 0 10px rgba(92, 255, 157, 0.45);
 }
 
-.vn__box[data-speaker="SUPERVISOR"] .vn__plate::before {
-  content: "◉ ";
+.vn__box[data-speaker='SUPERVISOR'] .vn__plate::before {
+  content: '◉ ';
 }
 
-.vn__box[data-speaker="SUPERVISOR"] .vn__text {
+.vn__box[data-speaker='SUPERVISOR'] .vn__text {
   color: #c8e6d0;
   text-shadow: 0 0 6px rgba(92, 255, 157, 0.35);
   animation: vn-static 0.9s steps(3, end) infinite;
 }
 
 /* COLLEAGUE_RECORDING: archived tape, desaturated italic playback. */
-.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__plate {
+.vn__box[data-speaker='COLLEAGUE_RECORDING'] .vn__plate {
   color: var(--text-bright);
   background: #2a3a35;
   border: 1px solid var(--border-light);
 }
 
-.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__plate::before {
-  content: "▮▮▯ ";
+.vn__box[data-speaker='COLLEAGUE_RECORDING'] .vn__plate::before {
+  content: '▮▮▯ ';
   letter-spacing: 0;
 }
 
-.vn__box[data-speaker="COLLEAGUE_RECORDING"] .vn__text {
+.vn__box[data-speaker='COLLEAGUE_RECORDING'] .vn__text {
   font-style: italic;
   color: #a9b4ae;
 }
 
 /* SYSTEM: no plate, centred narration, larger, slow fade-in. */
-.vn__box[data-speaker="SYSTEM"] {
+.vn__box[data-speaker='SYSTEM'] {
   background: rgba(4, 10, 8, 0.6);
   border-color: transparent;
 }
 
-.vn__box[data-speaker="SYSTEM"] .vn__text {
+.vn__box[data-speaker='SYSTEM'] .vn__text {
   text-align: center;
   font-size: max(14px, calc(15px * var(--stage-scale)));
   letter-spacing: 1px;
   color: var(--text-bright);
 }
 
-.vn__box[data-speaker="SYSTEM"].vn__box--enter .vn__text {
+.vn__box[data-speaker='SYSTEM'].vn__box--enter .vn__text {
   animation: vn-fade-in 1.4s ease-out;
 }
 
 /* Chat-style sides, so the two voices read before the colours do: the engineer (and the
    archived recording) speak from the left, Control answers from the right. Each box has a
    small tail in its plate colour and slides in from its own side. SYSTEM stays centred. */
-.vn__box[data-speaker="ENGINEER"],
-.vn__box[data-speaker="COLLEAGUE_RECORDING"] {
+.vn__box[data-speaker='ENGINEER'],
+.vn__box[data-speaker='COLLEAGUE_RECORDING'] {
   align-self: flex-start;
   width: 88%;
   border-top-left-radius: 0;
 }
 
-.vn__box[data-speaker="SUPERVISOR"] {
+.vn__box[data-speaker='SUPERVISOR'] {
   align-self: flex-end;
   width: 88%;
   text-align: right;
   border-top-right-radius: 0;
 }
 
-.vn__box[data-speaker="SYSTEM"],
+.vn__box[data-speaker='SYSTEM'],
 .vn__card {
   align-self: center;
 }
 
-.vn__box[data-speaker="ENGINEER"]::before,
-.vn__box[data-speaker="COLLEAGUE_RECORDING"]::before,
-.vn__box[data-speaker="SUPERVISOR"]::before {
-  content: "";
+.vn__box[data-speaker='ENGINEER']::before,
+.vn__box[data-speaker='COLLEAGUE_RECORDING']::before,
+.vn__box[data-speaker='SUPERVISOR']::before {
+  content: '';
   position: absolute;
   top: 0;
   width: 0;
@@ -1025,36 +1071,36 @@ html, body {
   pointer-events: none;
 }
 
-.vn__box[data-speaker="ENGINEER"]::before {
+.vn__box[data-speaker='ENGINEER']::before {
   left: 0;
   border-width: calc(10px * var(--stage-scale)) calc(10px * var(--stage-scale)) 0 0;
   border-color: #ffb347 transparent transparent transparent;
 }
 
-.vn__box[data-speaker="COLLEAGUE_RECORDING"]::before {
+.vn__box[data-speaker='COLLEAGUE_RECORDING']::before {
   left: 0;
   border-width: calc(10px * var(--stage-scale)) calc(10px * var(--stage-scale)) 0 0;
   border-color: var(--border-light) transparent transparent transparent;
 }
 
-.vn__box[data-speaker="SUPERVISOR"]::before {
+.vn__box[data-speaker='SUPERVISOR']::before {
   right: 0;
   border-width: calc(10px * var(--stage-scale)) 0 0 calc(10px * var(--stage-scale));
   border-color: var(--accent) transparent transparent transparent;
 }
 
 /* The Next arrow sits on the speaker's own side. */
-.vn__box[data-speaker="SUPERVISOR"] .vn__indicator {
+.vn__box[data-speaker='SUPERVISOR'] .vn__indicator {
   right: auto;
   left: calc(12px * var(--stage-scale));
 }
 
-.vn__box[data-speaker="ENGINEER"].vn__box--enter,
-.vn__box[data-speaker="COLLEAGUE_RECORDING"].vn__box--enter {
+.vn__box[data-speaker='ENGINEER'].vn__box--enter,
+.vn__box[data-speaker='COLLEAGUE_RECORDING'].vn__box--enter {
   animation: vn-slide-from-left 0.2s ease-out;
 }
 
-.vn__box[data-speaker="SUPERVISOR"].vn__box--enter {
+.vn__box[data-speaker='SUPERVISOR'].vn__box--enter {
   animation: vn-slide-from-right 0.2s ease-out;
 }
 
@@ -1155,39 +1201,67 @@ html, body {
   color: #ffb347;
 }
 
-.vn-subtitle[data-speaker="SUPERVISOR"] .vn-subtitle__plate {
+.vn-subtitle[data-speaker='SUPERVISOR'] .vn-subtitle__plate {
   color: var(--accent);
 }
 
 @keyframes vn-pulse {
-  0%, 100% { opacity: 0.35; transform: translateX(0); }
-  50% { opacity: 1; transform: translateX(2px); }
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(2px);
+  }
 }
 
 @keyframes vn-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes vn-static {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.93; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.93;
+  }
 }
 
 @keyframes vn-slide-from-left {
-  from { transform: translateX(-12px); opacity: 0.5; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-12px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes vn-slide-from-right {
-  from { transform: translateX(12px); opacity: 0.5; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(12px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .vn__indicator,
-  .vn__box[data-speaker="SUPERVISOR"] .vn__text,
-  .vn__box[data-speaker="SYSTEM"].vn__box--enter .vn__text,
+  .vn__box[data-speaker='SUPERVISOR'] .vn__text,
+  .vn__box[data-speaker='SYSTEM'].vn__box--enter .vn__text,
   .vn__box.vn__box--enter,
   .vn-subtitle {
     animation: none;

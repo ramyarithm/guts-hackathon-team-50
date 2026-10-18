@@ -8,10 +8,10 @@
 // Clear TARGET_LINES full rows to win. Topping out fails the attempt; retry rebuilds the
 // board with the same seeded block sequence.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export type { Button, ControlLabels } from "../types";
-export { hashSeed } from "../../util/random";
+export type { Button, ControlLabels } from '../types';
+export { hashSeed } from '../../util/random';
 
 // ---- Tuning -----------------------------------------------------------------
 
@@ -51,11 +51,11 @@ export const ROTATION_KICKS: readonly number[] = [0, -1, 1, -2, 2];
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "ORIENT" | "FALLING" | "CLEARING" | "OVERFLOW" | "SUCCESS";
+export type Phase = 'READY' | 'ORIENT' | 'FALLING' | 'CLEARING' | 'OVERFLOW' | 'SUCCESS';
 
-export type PieceKind = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
+export type PieceKind = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
 
-export const PIECE_KINDS: readonly PieceKind[] = ["I", "O", "T", "S", "Z", "J", "L"];
+export const PIECE_KINDS: readonly PieceKind[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
 export interface Cell {
   x: number;
@@ -112,20 +112,20 @@ export interface GameState {
 // ---- Shapes -----------------------------------------------------------------
 
 const BASE_SHAPES: Record<PieceKind, readonly string[]> = {
-  I: ["....", "####", "....", "...."],
-  O: ["##", "##"],
-  T: [".#.", "###", "..."],
-  S: [".##", "##.", "..."],
-  Z: ["##.", ".##", "..."],
-  J: ["#..", "###", "..."],
-  L: ["..#", "###", "..."],
+  I: ['....', '####', '....', '....'],
+  O: ['##', '##'],
+  T: ['.#.', '###', '...'],
+  S: ['.##', '##.', '...'],
+  Z: ['##.', '.##', '...'],
+  J: ['#..', '###', '...'],
+  L: ['..#', '###', '...'],
 };
 
 function parseShape(rows: readonly string[]): Cell[] {
   const cells: Cell[] = [];
   rows.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
-      if (row[x] === "#") cells.push({ x, y });
+      if (row[x] === '#') cells.push({ x, y });
     }
   });
   return cells;
@@ -166,17 +166,17 @@ export function pieceCells(piece: ActivePiece): Cell[] {
 
 export function labelsFor(phase: Phase): ControlLabels {
   switch (phase) {
-    case "READY":
-      return { left: "Start", right: "Start" };
-    case "ORIENT":
-      return { left: "Rotate", right: "Drop" };
-    case "FALLING":
-    case "CLEARING":
-      return { left: "Left", right: "Right" };
-    case "OVERFLOW":
-      return { left: "Retry", right: "Retry" };
-    case "SUCCESS":
-      return { left: "—", right: "—" };
+    case 'READY':
+      return { left: 'Start', right: 'Start' };
+    case 'ORIENT':
+      return { left: 'Rotate', right: 'Drop' };
+    case 'FALLING':
+    case 'CLEARING':
+      return { left: 'Left', right: 'Right' };
+    case 'OVERFLOW':
+      return { left: 'Retry', right: 'Retry' };
+    case 'SUCCESS':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -209,7 +209,7 @@ export function createState(seed: number): GameState {
   const board: BoardCell[][] = [];
   for (let r = 0; r < ROWS; r++) board.push(emptyRow());
   return {
-    phase: "READY",
+    phase: 'READY',
     seed,
     rngState: seed >>> 0,
     board,
@@ -230,7 +230,10 @@ export function createState(seed: number): GameState {
 }
 
 /** True if any cell is outside the walls, below the floor, or on a locked block. */
-export function collides(board: readonly (readonly BoardCell[])[], cells: readonly Cell[]): boolean {
+export function collides(
+  board: readonly (readonly BoardCell[])[],
+  cells: readonly Cell[],
+): boolean {
   for (const c of cells) {
     if (c.x < 0 || c.x >= COLS || c.y >= ROWS) return true;
     if (c.y >= 0 && board[c.y][c.x] !== null) return true;
@@ -284,10 +287,10 @@ function spawnNext(state: GameState): void {
   state.lockMs = 0;
   if (!fits(state, piece)) {
     state.overflows += 1;
-    setPhase(state, "OVERFLOW");
+    setPhase(state, 'OVERFLOW');
     return;
   }
-  setPhase(state, "ORIENT");
+  setPhase(state, 'ORIENT');
 }
 
 /** Rotate the hovering block clockwise, nudging sideways if the turn needs room. */
@@ -310,7 +313,7 @@ function rotateActive(state: GameState): boolean {
 function beginFall(state: GameState): void {
   state.fallMs = 0;
   state.lockMs = 0;
-  setPhase(state, "FALLING");
+  setPhase(state, 'FALLING');
 }
 
 function moveActive(state: GameState, dx: number): boolean {
@@ -331,7 +334,7 @@ function lockActive(state: GameState): void {
   if (cells.some((c) => c.y < 0)) {
     // Locked above the top edge: the buffer has overflowed.
     state.overflows += 1;
-    setPhase(state, "OVERFLOW");
+    setPhase(state, 'OVERFLOW');
     return;
   }
   for (const c of cells) state.board[c.y][c.x] = a.kind;
@@ -344,7 +347,7 @@ function lockActive(state: GameState): void {
   }
   if (full.length > 0) {
     state.clearingRows = full;
-    setPhase(state, "CLEARING");
+    setPhase(state, 'CLEARING');
     return;
   }
   spawnNext(state);
@@ -396,7 +399,7 @@ function tickClearing(state: GameState): void {
   if (state.phaseMs < CLEAR_FLASH_MS) return;
   collapseRows(state);
   if (state.lines >= TARGET_LINES) {
-    setPhase(state, "SUCCESS");
+    setPhase(state, 'SUCCESS');
     return;
   }
   spawnNext(state);
@@ -407,22 +410,22 @@ export function tick(state: GameState): void {
   state.timeMs += TICK_MS;
   state.phaseMs += TICK_MS;
   switch (state.phase) {
-    case "ORIENT":
+    case 'ORIENT':
       tickOrient(state);
       break;
-    case "FALLING":
+    case 'FALLING':
       tickFalling(state);
       break;
-    case "CLEARING":
+    case 'CLEARING':
       tickClearing(state);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       if (state.phaseMs >= SUCCESS_HOLD_MS && !state.completionFired) {
         state.completionFired = true;
       }
       break;
-    case "READY":
-    case "OVERFLOW":
+    case 'READY':
+    case 'OVERFLOW':
       break;
   }
 }
@@ -445,21 +448,21 @@ export function step(state: GameState, dtMs: number): void {
 export function press(state: GameState, button: Button): void {
   if (state.completionFired) return;
   switch (state.phase) {
-    case "READY":
+    case 'READY':
       spawnNext(state);
       break;
-    case "ORIENT":
-      if (button === "LEFT") rotateActive(state);
+    case 'ORIENT':
+      if (button === 'LEFT') rotateActive(state);
       else beginFall(state);
       break;
-    case "FALLING":
-      moveActive(state, button === "LEFT" ? -1 : 1);
+    case 'FALLING':
+      moveActive(state, button === 'LEFT' ? -1 : 1);
       break;
-    case "OVERFLOW":
+    case 'OVERFLOW':
       if (state.phaseMs >= OVERFLOW_LOCKOUT_MS) resetAttempt(state);
       break;
-    case "CLEARING":
-    case "SUCCESS":
+    case 'CLEARING':
+    case 'SUCCESS':
       break;
   }
 }

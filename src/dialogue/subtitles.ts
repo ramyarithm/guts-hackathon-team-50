@@ -1,7 +1,7 @@
 // Tunnel subtitles: non-blocking, event-driven, shown once per trigger per tunnel attempt,
 // queued when two fire close together, auto-hidden. Pure queue; the view renders it.
 
-import type { Line } from "./script";
+import type { Line } from './script';
 
 /** How long a subtitle stays up. */
 export const SUBTITLE_HOLD_MS = 3500;

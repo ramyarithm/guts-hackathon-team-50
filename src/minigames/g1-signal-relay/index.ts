@@ -1,15 +1,15 @@
 // G1 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, CRASH_LOCKOUT_MS, createGame, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import { WORLD_HEIGHT, WORLD_WIDTH, CRASH_LOCKOUT_MS, createGame, type Game } from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { TARGET_GAPS } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { TARGET_GAPS } from './logic';
 
-export const G1_ID = "G1";
+export const G1_ID = 'G1';
 
 export function createG1Adapter(): MinigameAdapter {
   // Every piece of mutable state lives inside this closure; no module-level state.
@@ -48,9 +48,9 @@ export function createG1Adapter(): MinigameAdapter {
     game.tick(elapsed);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after crash lockout period
-    if (game.state.phase === "CRASHED" && game.state.phaseMs >= CRASH_LOCKOUT_MS && !failFired) {
+    if (game.state.phase === 'CRASHED' && game.state.phaseMs >= CRASH_LOCKOUT_MS && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -66,7 +66,7 @@ export function createG1Adapter(): MinigameAdapter {
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
     game?.dispose();
@@ -84,23 +84,23 @@ export function createG1Adapter(): MinigameAdapter {
       teardownScene();
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G1] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G1] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = G1_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Signal pulse relay minigame");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = G1_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Signal pulse relay minigame');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[G1] 2D canvas context unavailable");
+        console.error('[G1] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -118,12 +118,12 @@ export function createG1Adapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -131,7 +131,7 @@ export function createG1Adapter(): MinigameAdapter {
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       game.input(button);
     },
 
@@ -149,7 +149,7 @@ export function createG1Adapter(): MinigameAdapter {
 /** Registry entry for G1 Signal Relay. */
 export const g1Entry: MinigameRegistryEntry = {
   id: G1_ID,
-  name: "Signal Relay",
+  name: 'Signal Relay',
   ready: true,
   inputCount: 1, // One-button game
   adapter: createG1Adapter,

@@ -5,11 +5,11 @@
 // run start; this scene only reports the audio output state to the logic and calls
 // onStart exactly once.
 
-import { GAME_TITLE, createMenu, type AudioOutputState, type Menu } from "./logic";
-import type { Button, ControlLabels } from "../../minigames/types";
+import { GAME_TITLE, createMenu, type AudioOutputState, type Menu } from './logic';
+import type { Button, ControlLabels } from '../../minigames/types';
 
-export { GAME_TITLE, createMenu, labelsFor } from "./logic";
-export type { AudioOutputState, Menu, MenuState, PressResult } from "./logic";
+export { GAME_TITLE, createMenu, labelsFor } from './logic';
+export type { AudioOutputState, Menu, MenuState, PressResult } from './logic';
 
 /** How often the menu re-reads the audio output state (ms). */
 const AUDIO_POLL_MS = 100;
@@ -55,7 +55,7 @@ export function createMainMenuScene(): MainMenuScene {
   const reflect = (): void => {
     if (!menu || !root || !startButton || !musicLine) return;
     startButton.disabled = menu.state.started;
-    musicLine.textContent = `MUSIC: ${menu.state.musicEnabled ? "ON" : "OFF"}`;
+    musicLine.textContent = `MUSIC: ${menu.state.musicEnabled ? 'ON' : 'OFF'}`;
   };
 
   const poll = (): void => {
@@ -68,9 +68,9 @@ export function createMainMenuScene(): MainMenuScene {
       clearInterval(pollId);
       pollId = null;
     }
-    if (startButton && onClick) startButton.removeEventListener("click", onClick);
+    if (startButton && onClick) startButton.removeEventListener('click', onClick);
     onClick = null;
-    if (creditsLink && onCreditsClick) creditsLink.removeEventListener("click", onCreditsClick);
+    if (creditsLink && onCreditsClick) creditsLink.removeEventListener('click', onCreditsClick);
     onCreditsClick = null;
     creditsLink = null;
     menu?.dispose();
@@ -86,12 +86,12 @@ export function createMainMenuScene(): MainMenuScene {
       if (disposed) return;
       teardown();
       args = startArgs;
-      const host = startArgs.container ?? document.getElementById("minigame-root") ?? document.body;
+      const host = startArgs.container ?? document.getElementById('minigame-root') ?? document.body;
 
-      root = document.createElement("div");
-      root.className = "main-menu";
-      root.setAttribute("role", "group");
-      root.setAttribute("aria-label", "Main menu");
+      root = document.createElement('div');
+      root.className = 'main-menu';
+      root.setAttribute('role', 'group');
+      root.setAttribute('aria-label', 'Main menu');
       root.innerHTML = `
         <div class="main-menu__eyebrow">GOV. TELECOM &middot; BUNKER TERMINAL</div>
         <h2 class="main-menu__title"></h2>
@@ -100,16 +100,16 @@ export function createMainMenuScene(): MainMenuScene {
         <div class="main-menu__music"></div>
         <button class="main-menu__credits" type="button">Credits</button>
       `;
-      root.querySelector(".main-menu__title")!.textContent = GAME_TITLE.toUpperCase();
-      startButton = root.querySelector<HTMLButtonElement>(".main-menu__start");
-      musicLine = root.querySelector<HTMLElement>(".main-menu__music");
-      creditsLink = root.querySelector<HTMLButtonElement>(".main-menu__credits");
+      root.querySelector('.main-menu__title')!.textContent = GAME_TITLE.toUpperCase();
+      startButton = root.querySelector<HTMLButtonElement>('.main-menu__start');
+      musicLine = root.querySelector<HTMLElement>('.main-menu__music');
+      creditsLink = root.querySelector<HTMLButtonElement>('.main-menu__credits');
       if (startArgs.onCredits) {
         // Click or tap only: LEFT and RIGHT keep their meaning (music toggle, start).
         onCreditsClick = () => {
           if (!disposed && menu && !menu.state.started) args?.onCredits?.();
         };
-        creditsLink?.addEventListener("click", onCreditsClick);
+        creditsLink?.addEventListener('click', onCreditsClick);
       } else {
         creditsLink?.remove();
         creditsLink = null;
@@ -134,7 +134,7 @@ export function createMainMenuScene(): MainMenuScene {
       onClick = () => {
         if (!disposed && menu && !menu.state.started) args?.onPointerStart();
       };
-      startButton?.addEventListener("click", onClick);
+      startButton?.addEventListener('click', onClick);
 
       poll();
       reflect();
@@ -143,7 +143,7 @@ export function createMainMenuScene(): MainMenuScene {
 
     handleInput(button: Button): void {
       if (disposed || !menu) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       // Read the audio state right now: this press may be the gesture that unlocks it.
       poll();
       menu.press(button);

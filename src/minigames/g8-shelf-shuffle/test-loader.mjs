@@ -12,9 +12,10 @@ export function load(relative) {
 }
 function loadFile(filename) {
   if (cache.has(filename)) return cache.get(filename).exports;
-  const module = { exports: {} }; cache.set(filename, module);
+  const module = { exports: {} };
+  cache.set(filename, module);
   const nativeRequire = createRequire(filename);
-  const localRequire = spec => {
+  const localRequire = (spec) => {
     if (spec.startsWith('.')) {
       let resolved = path.resolve(path.dirname(filename), spec);
       if (!path.extname(resolved)) resolved += '.ts';
@@ -23,10 +24,13 @@ function loadFile(filename) {
     return nativeRequire(spec);
   };
   const source = fs.readFileSync(filename, 'utf8');
-  const { outputText } = ts.transpileModule(source, { compilerOptions: {
-    target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS,
-    verbatimModuleSyntax: false,
-  } });
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2023,
+      module: ts.ModuleKind.CommonJS,
+      verbatimModuleSyntax: false,
+    },
+  });
   new Function('require', 'module', 'exports', outputText)(localRequire, module, module.exports);
   return module.exports;
 }

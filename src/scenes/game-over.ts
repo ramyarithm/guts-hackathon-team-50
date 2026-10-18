@@ -13,9 +13,9 @@ const C = {
   grid: PALETTE.grid,
   panel: PALETTE.panel,
   panelEdge: PALETTE.panelEdge,
-  panelInner: "#0e1613",
+  panelInner: '#0e1613',
   danger: PALETTE.danger,
-  dangerDim: "rgba(255, 107, 87, 0.35)",
+  dangerDim: 'rgba(255, 107, 87, 0.35)',
   text: PALETTE.text,
   textDim: PALETTE.textDim,
   textBright: PALETTE.textBright,
@@ -86,7 +86,7 @@ function drawBackground(ctx: CanvasRenderingContext2D, _state: GameOverState): v
   ctx.stroke();
 
   // Red danger overlay
-  ctx.fillStyle = "rgba(255, 107, 87, 0.05)";
+  ctx.fillStyle = 'rgba(255, 107, 87, 0.05)';
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }
 
@@ -104,16 +104,16 @@ function drawContent(ctx: CanvasRenderingContext2D, state: GameOverState): void 
   ctx.shadowBlur = 20;
   ctx.fillStyle = C.danger;
   ctx.font = `bold 28px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("GAME OVER", cx, cy - 50);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GAME OVER', cx, cy - 50);
   ctx.restore();
 
   // Message
   ctx.fillStyle = C.textDim;
   ctx.font = `12px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.fillText("The signal has been lost.", cx, cy - 15);
+  ctx.textAlign = 'center';
+  ctx.fillText('The signal has been lost.', cx, cy - 15);
 
   // Options
   const optionY = cy + 30;
@@ -121,11 +121,11 @@ function drawContent(ctx: CanvasRenderingContext2D, state: GameOverState): void 
 
   // Restart option
   const restartSelected = state.selectedOption === 'restart';
-  drawOption(ctx, cx, optionY, "RESTART", "A", restartSelected, blink);
+  drawOption(ctx, cx, optionY, 'RESTART', 'A', restartSelected, blink);
 
   // Menu option
   const menuSelected = state.selectedOption === 'menu';
-  drawOption(ctx, cx, optionY + optionSpacing, "MAIN MENU", "D", menuSelected, blink);
+  drawOption(ctx, cx, optionY + optionSpacing, 'MAIN MENU', 'D', menuSelected, blink);
 }
 
 function drawOption(
@@ -142,7 +142,7 @@ function drawOption(
 
   // Background
   if (selected) {
-    ctx.fillStyle = "rgba(92, 255, 157, 0.1)";
+    ctx.fillStyle = 'rgba(92, 255, 157, 0.1)';
     ctx.fillRect(cx - width / 2, y - height / 2, width, height);
     ctx.strokeStyle = C.accent;
   } else {
@@ -154,29 +154,35 @@ function drawOption(
   // Label
   ctx.fillStyle = selected ? C.accent : C.textDim;
   ctx.font = `bold 12px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   ctx.fillText(label, cx, y);
 
   // Key hint
   if (blink || !selected) {
     ctx.fillStyle = selected ? C.textBright : C.textDim;
     ctx.font = `10px ${FONT}`;
-    ctx.textAlign = "right";
+    ctx.textAlign = 'right';
     ctx.fillText(`[${key}]`, cx + width / 2 - 10, y);
   }
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number): void {
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+): void {
   // Outer panel
   ctx.fillStyle = C.panel;
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  
+
   // Border
   ctx.strokeStyle = C.panelEdge;
   ctx.lineWidth = 2;
   ctx.strokeRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2);
-  
+
   // Inner fill
   ctx.fillStyle = C.panelInner;
   ctx.fillRect(cx - w / 2 + 5, cy - h / 2 + 5, w - 10, h - 10);
@@ -203,8 +209,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_WIDTH * 0.9,
   );
-  g.addColorStop(0, "transparent");
-  g.addColorStop(1, "rgba(0, 0, 0, 0.4)");
+  g.addColorStop(0, 'transparent');
+  g.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

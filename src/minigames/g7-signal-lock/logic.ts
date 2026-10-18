@@ -7,11 +7,11 @@
 // moves and shrinks a little, and the needle speeds up a little. Outside the zone nothing
 // is lost; the player simply tries again. Five bars wins. RIGHT does nothing.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export { hashSeed } from "../../util/random";
+export { hashSeed } from '../../util/random';
 
-export type { Button, ControlLabels } from "../types";
+export type { Button, ControlLabels } from '../types';
 
 // ---- Difficulty (tweak these by hand) -------------------------------------------------
 //
@@ -61,12 +61,12 @@ export const STUTTER_MAX_MS = 160;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "SWEEPING" | "HOLD" | "SUCCESS" | "FAILED";
+export type Phase = 'READY' | 'SWEEPING' | 'HOLD' | 'SUCCESS' | 'FAILED';
 
 /** How long the FAILED state shows before onFail is called. */
 export const FAILURE_HOLD_MS = 1000;
 
-export type Result = "HIT" | "MISS" | null;
+export type Result = 'HIT' | 'MISS' | null;
 
 export interface Zone {
   /** Left edge, 0..1. */
@@ -116,15 +116,15 @@ export interface GameState {
  */
 export function labelsFor(state: GameState): ControlLabels {
   switch (state.phase) {
-    case "READY":
-    case "SWEEPING":
-      return { left: "Lock", right: "—" };
-    case "HOLD":
-      return { left: state.lastResult === "MISS" ? "—" : "Lock", right: "—" };
-    case "SUCCESS":
-      return { left: "—", right: "—" };
-    case "FAILED":
-      return { left: "—", right: "—" };
+    case 'READY':
+    case 'SWEEPING':
+      return { left: 'Lock', right: '—' };
+    case 'HOLD':
+      return { left: state.lastResult === 'MISS' ? '—' : 'Lock', right: '—' };
+    case 'SUCCESS':
+      return { left: '—', right: '—' };
+    case 'FAILED':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -187,7 +187,7 @@ function newZone(state: GameState): Zone {
 
 export function createState(seed: number): GameState {
   const state: GameState = {
-    phase: "READY",
+    phase: 'READY',
     seed,
     rngState: seed >>> 0,
     needle: 0,
@@ -243,15 +243,15 @@ function tickNeedle(state: GameState): void {
 function tickHold(state: GameState): void {
   state.holdMs -= TICK_MS;
   if (state.holdMs > 0) return;
-  if (state.lastResult === "HIT") {
+  if (state.lastResult === 'HIT') {
     if (state.bars >= TARGET_BARS) {
-      setPhase(state, "SUCCESS");
+      setPhase(state, 'SUCCESS');
       return;
     }
     // The zone moves on and the needle picks up a little.
     state.zone = newZone(state);
   }
-  setPhase(state, "SWEEPING");
+  setPhase(state, 'SWEEPING');
 }
 
 /** Advance exactly one fixed step. */
@@ -261,21 +261,21 @@ export function tick(state: GameState): void {
   if (state.shakeMs > 0) state.shakeMs -= TICK_MS;
 
   switch (state.phase) {
-    case "SWEEPING":
+    case 'SWEEPING':
       tickNeedle(state);
       break;
-    case "HOLD":
+    case 'HOLD':
       tickHold(state);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       if (state.phaseMs >= SUCCESS_HOLD_MS && !state.completionFired) {
         state.completionFired = true;
       }
       break;
-    case "FAILED":
+    case 'FAILED':
       // Wait for adapter to call onFail after FAILURE_HOLD_MS
       break;
-    case "READY":
+    case 'READY':
       break;
   }
 }
@@ -295,14 +295,14 @@ function lock(state: GameState): void {
   state.attempts += 1;
   if (needleInZone(state)) {
     state.bars = Math.min(TARGET_BARS, state.bars + 1);
-    state.lastResult = "HIT";
+    state.lastResult = 'HIT';
     state.holdMs = HOLD_MS;
-    setPhase(state, "HOLD");
+    setPhase(state, 'HOLD');
   } else {
     state.misses += 1;
-    state.lastResult = "MISS";
+    state.lastResult = 'MISS';
     state.shakeMs = SHAKE_MS;
-    setPhase(state, "FAILED");
+    setPhase(state, 'FAILED');
   }
 }
 
@@ -312,17 +312,17 @@ function lock(state: GameState): void {
  * SUCCESS are ignored.
  */
 export function press(state: GameState, button: Button): void {
-  if (button !== "LEFT") return;
+  if (button !== 'LEFT') return;
   if (state.completionFired) return;
   switch (state.phase) {
-    case "READY":
-      setPhase(state, "SWEEPING");
+    case 'READY':
+      setPhase(state, 'SWEEPING');
       break;
-    case "SWEEPING":
+    case 'SWEEPING':
       lock(state);
       break;
-    case "HOLD":
-    case "SUCCESS":
+    case 'HOLD':
+    case 'SUCCESS':
       break;
   }
 }

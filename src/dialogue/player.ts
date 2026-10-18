@@ -1,14 +1,14 @@
 // Pure visual-novel player: a sequence of items (lines and the digit card), a typewriter
 // with delivery pauses, and the two-button rules. No DOM.
 
-import type { Button, ControlLabels } from "../minigames/types";
-import type { Speaker } from "./script";
+import type { Button, ControlLabels } from '../minigames/types';
+import type { Speaker } from './script';
 
-export type { Button, ControlLabels } from "../minigames/types";
+export type { Button, ControlLabels } from '../minigames/types';
 
 export type DialogueItem =
-  | { kind: "line"; id: string; speaker: Speaker; text: string }
-  | { kind: "digit"; position: number; digit: string; slots: string[] };
+  | { kind: 'line'; id: string; speaker: Speaker; text: string }
+  | { kind: 'digit'; position: number; digit: string; slots: string[] };
 
 // ---- Tuning (meta.delivery: "Pause briefly at ellipses") -------------------------------
 
@@ -56,29 +56,42 @@ export interface Player {
 /** The pause that follows the character at `index` of `text`. */
 export function pauseAfter(text: string, index: number): number {
   const ch = text[index];
-  if (ch === "…") return ELLIPSIS_PAUSE_MS;
-  if (ch === ".") {
-    if (text[index - 1] === "." && text[index - 2] === "." ) return ELLIPSIS_PAUSE_MS; // third dot of "..."
-    if (text[index + 1] === ".") return 0; // inside "..."
+  if (ch === '…') return ELLIPSIS_PAUSE_MS;
+  if (ch === '.') {
+    if (text[index - 1] === '.' && text[index - 2] === '.') return ELLIPSIS_PAUSE_MS; // third dot of "..."
+    if (text[index + 1] === '.') return 0; // inside "..."
     return FULL_STOP_PAUSE_MS;
   }
-  if (ch === "?" || ch === "!") return FULL_STOP_PAUSE_MS;
+  if (ch === '?' || ch === '!') return FULL_STOP_PAUSE_MS;
   return 0;
 }
 
-export function createPlayer(items: readonly DialogueItem[], callbacks: PlayerCallbacks = {}): Player {
-  const state: PlayerState = { index: 0, shown: 0, typing: false, pauseMs: 0, budgetMs: 0, timeMs: 0, lastRightMs: -Infinity, done: false };
+export function createPlayer(
+  items: readonly DialogueItem[],
+  callbacks: PlayerCallbacks = {},
+): Player {
+  const state: PlayerState = {
+    index: 0,
+    shown: 0,
+    typing: false,
+    pauseMs: 0,
+    budgetMs: 0,
+    timeMs: 0,
+    lastRightMs: -Infinity,
+    done: false,
+  };
   let disposed = false;
   let doneNotified = false;
-  let lastLabels = "";
+  let lastLabels = '';
 
   const current = (): DialogueItem | null => items[state.index] ?? null;
-  const textOf = (item: DialogueItem | null): string => (item && item.kind === "line" ? item.text : "");
+  const textOf = (item: DialogueItem | null): string =>
+    item && item.kind === 'line' ? item.text : '';
 
   const labels = (): ControlLabels => {
-    if (state.done) return { left: "—", right: "—" };
-    if (state.typing) return { left: "Back", right: "Skip" };
-    return { left: "Back", right: state.index >= items.length - 1 ? "Continue" : "Next" };
+    if (state.done) return { left: '—', right: '—' };
+    if (state.typing) return { left: 'Back', right: 'Skip' };
+    return { left: 'Back', right: state.index >= items.length - 1 ? 'Continue' : 'Next' };
   };
 
   const publish = (): void => {
@@ -165,12 +178,12 @@ export function createPlayer(items: readonly DialogueItem[], callbacks: PlayerCa
     },
     press(button: Button): void {
       if (disposed || state.done) return;
-      if (button === "LEFT") {
+      if (button === 'LEFT') {
         if (state.index > 0) beginItem(state.index - 1, true);
         publish();
         return;
       }
-      if (button !== "RIGHT") return;
+      if (button !== 'RIGHT') return;
       if (state.timeMs - state.lastRightMs < DOUBLE_PRESS_GUARD_MS) return;
       state.lastRightMs = state.timeMs;
       if (state.typing) {

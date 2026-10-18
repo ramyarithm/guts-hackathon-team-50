@@ -9,20 +9,20 @@
 //   audio.setMusicEnabled(bool) / isMusicEnabled()   global music toggle, saved in localStorage
 //   audio.duckMusic(factor) / setMusicSuppressed(bool) / stopMusic() / resetRun()
 
-import { createAudioEngine, type AudioEngine } from "./engine";
-import { TRACKS } from "./tracks";
-import { createWebAudioBackend } from "./webaudio-backend";
+import { createAudioEngine, type AudioEngine } from './engine';
+import { TRACKS } from './tracks';
+import { createWebAudioBackend } from './webaudio-backend';
 
-export type { AudioEngine, Scene, StageId } from "./engine";
-export { trackForHub, trackForMinigame, trackForScene, MUSIC_DUCK_FOR_VICTORY } from "./engine";
-export { GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, TRACKS } from "./tracks";
+export type { AudioEngine, Scene, StageId } from './engine';
+export { trackForHub, trackForMinigame, trackForScene, MUSIC_DUCK_FOR_VICTORY } from './engine';
+export { GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS, TRACKS } from './tracks';
 
 /** localStorage key for the music on/off setting ("on" / "off"). */
-export const MUSIC_SETTING_KEY = "pleasehold.music";
+export const MUSIC_SETTING_KEY = 'pleasehold.music';
 
 function loadMusicSetting(): boolean {
   try {
-    return localStorage.getItem(MUSIC_SETTING_KEY) !== "off";
+    return localStorage.getItem(MUSIC_SETTING_KEY) !== 'off';
   } catch {
     return true; // no storage (private mode, sandbox): music on
   }
@@ -30,7 +30,7 @@ function loadMusicSetting(): boolean {
 
 function saveMusicSetting(enabled: boolean): void {
   try {
-    localStorage.setItem(MUSIC_SETTING_KEY, enabled ? "on" : "off");
+    localStorage.setItem(MUSIC_SETTING_KEY, enabled ? 'on' : 'off');
   } catch {
     // no storage: the setting just lasts for this session
   }

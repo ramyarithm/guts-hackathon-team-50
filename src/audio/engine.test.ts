@@ -1,7 +1,7 @@
 // Tests for the audio engine with a mocked backend (no real Web Audio). Run from the repo
 // root with the Vitest installed in chicken-cross/ (the root project has no test runner):
 //   ./chicken-cross/node_modules/.bin/vitest run src/audio
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 import {
   C1_BARS,
   C1_BPM,
@@ -21,7 +21,7 @@ import {
   type BufferSourceLike,
   type GainLike,
   type TrackManifest,
-} from "./engine";
+} from './engine';
 
 // ---- Fake backend ---------------------------------------------------------------
 
@@ -37,7 +37,12 @@ interface FakeGain extends GainLike {
   setValues: Array<{ value: number; time: number }>;
 }
 
-function makeBuffer(seconds: number, leadingSilence = 0, trailingSilence = 0, sampleRate = 48000): AudioBufferLike {
+function makeBuffer(
+  seconds: number,
+  leadingSilence = 0,
+  trailingSilence = 0,
+  sampleRate = 48000,
+): AudioBufferLike {
   const length = Math.round(seconds * sampleRate);
   const data = new Float32Array(length);
   const lead = Math.round(leadingSilence * sampleRate);
@@ -64,7 +69,7 @@ function createFakeBackend(
   const sources: FakeSource[] = [];
   const gains: FakeGain[] = [];
   let now = 10; // the AudioContext clock
-  let state: "suspended" | "running" | "closed" = "suspended";
+  let state: 'suspended' | 'running' | 'closed' = 'suspended';
   let resumes = 0;
   let blocked = options.blockResume ?? false;
   const bufferByUrl = options.buffers ?? {};
@@ -81,10 +86,10 @@ function createFakeBackend(
         outputLatency: options.outputLatency,
         async resume() {
           resumes++;
-          if (!blocked) state = "running";
+          if (!blocked) state = 'running';
         },
         async close() {
-          state = "closed";
+          state = 'closed';
         },
         async decodeAudioData(data: ArrayBuffer) {
           const url = new TextDecoder().decode(data);
@@ -112,7 +117,7 @@ function createFakeBackend(
         },
         createBufferSource(): BufferSourceLike {
           const s: FakeSource = {
-            key: "",
+            key: '',
             buffer: null,
             loop: false,
             loopStart: 0,
@@ -169,17 +174,25 @@ function createFakeBackend(
 }
 
 const MANIFEST: TrackManifest = {
-  menu: { url: "menu.mp3", kind: "music", loop: true },
+  menu: { url: 'menu.mp3', kind: 'music', loop: true },
   // Stage C1: the drums track, just looped on whole bars.
-  c1: { url: "c1.mp3", kind: "music", loop: true, bpm: C1_BPM, bars: C1_BARS },
+  c1: { url: 'c1.mp3', kind: 'music', loop: true, bpm: C1_BPM, bars: C1_BARS },
   // G4: the drums track once as an intro, then the no-drums loop.
-  g4: { url: "c1.mp3", kind: "music", loop: false, intro: true, bpm: C1_BPM, bars: C1_BARS, handoffTo: "c1_loop" },
-  c1_loop: { url: "c1nd.mp3", kind: "music", loop: true, bpm: C1_BPM, bars: C1_BARS },
-  c2: { url: "c2.mp3", kind: "music", loop: true },
-  c3: { url: "c3.mp3", kind: "music", loop: true },
-  c4: { url: "c4.mp3", kind: "music", loop: true },
-  boss: { url: "creepy.mp3", kind: "music", loop: true },
-  victory: { url: "victory.mp3", kind: "sfx", loop: false },
+  g4: {
+    url: 'c1.mp3',
+    kind: 'music',
+    loop: false,
+    intro: true,
+    bpm: C1_BPM,
+    bars: C1_BARS,
+    handoffTo: 'c1_loop',
+  },
+  c1_loop: { url: 'c1nd.mp3', kind: 'music', loop: true, bpm: C1_BPM, bars: C1_BARS },
+  c2: { url: 'c2.mp3', kind: 'music', loop: true },
+  c3: { url: 'c3.mp3', kind: 'music', loop: true },
+  c4: { url: 'c4.mp3', kind: 'music', loop: true },
+  boss: { url: 'creepy.mp3', kind: 'music', loop: true },
+  victory: { url: 'victory.mp3', kind: 'sfx', loop: false },
 };
 
 async function flush(): Promise<void> {
@@ -195,49 +208,49 @@ async function readyEngine(options: Parameters<typeof createFakeBackend>[0] = {}
 
 // ---- Scene mapping --------------------------------------------------------------
 
-describe("scene to track mapping", () => {
-  it("maps menu, stages, end stage and boss", () => {
-    expect(trackForScene({ kind: "menu" })).toBe("menu");
-    expect(trackForScene({ kind: "stage", stage: "C1" })).toBe("c1");
-    expect(trackForScene({ kind: "stage", stage: "C2" })).toBe("c2");
-    expect(trackForScene({ kind: "stage", stage: "C3" })).toBe("c3");
-    expect(trackForScene({ kind: "stage", stage: "C4" })).toBe("c4");
-    expect(trackForScene({ kind: "end" })).toBe("c4");
-    expect(trackForScene({ kind: "boss" })).toBe("boss");
+describe('scene to track mapping', () => {
+  it('maps menu, stages, end stage and boss', () => {
+    expect(trackForScene({ kind: 'menu' })).toBe('menu');
+    expect(trackForScene({ kind: 'stage', stage: 'C1' })).toBe('c1');
+    expect(trackForScene({ kind: 'stage', stage: 'C2' })).toBe('c2');
+    expect(trackForScene({ kind: 'stage', stage: 'C3' })).toBe('c3');
+    expect(trackForScene({ kind: 'stage', stage: 'C4' })).toBe('c4');
+    expect(trackForScene({ kind: 'end' })).toBe('c4');
+    expect(trackForScene({ kind: 'boss' })).toBe('boss');
   });
 
-  it("the hub plays the next stage to complete, and c4 once all are done", () => {
+  it('the hub plays the next stage to complete, and c4 once all are done', () => {
     const none = { C1: false, C2: false, C3: false, C4: false };
-    expect(trackForHub(none)).toBe("c1");
-    expect(trackForHub({ ...none, C1: true })).toBe("c2");
-    expect(trackForHub({ ...none, C1: true, C2: true })).toBe("c3");
-    expect(trackForHub({ ...none, C1: true, C2: true, C3: true })).toBe("c4");
-    expect(trackForHub({ C1: true, C2: true, C3: true, C4: true })).toBe("c4");
-    expect(trackForScene({ kind: "hub", completed: { ...none, C1: true } })).toBe("c2");
+    expect(trackForHub(none)).toBe('c1');
+    expect(trackForHub({ ...none, C1: true })).toBe('c2');
+    expect(trackForHub({ ...none, C1: true, C2: true })).toBe('c3');
+    expect(trackForHub({ ...none, C1: true, C2: true, C3: true })).toBe('c4');
+    expect(trackForHub({ C1: true, C2: true, C3: true, C4: true })).toBe('c4');
+    expect(trackForScene({ kind: 'hub', completed: { ...none, C1: true } })).toBe('c2');
   });
 
-  it("a minigame with its own track overrides the stage track; every other game follows the stage", () => {
-    const overrides = { G4: "g4" };
-    expect(trackForMinigame("G4", { kind: "stage", stage: "C1" }, overrides)).toBe("g4");
-    expect(trackForMinigame("G4", { kind: "stage", stage: "C3" }, overrides)).toBe("g4");
-    expect(trackForMinigame("G2", { kind: "stage", stage: "C1" }, overrides)).toBe("c1");
-    expect(trackForMinigame("G1", { kind: "stage", stage: "C2" }, overrides)).toBe("c2");
-    expect(trackForMinigame("E2", { kind: "end" }, overrides)).toBe("c4");
-    expect(trackForMinigame("G4", { kind: "stage", stage: "C1" })).toBe("c1");
+  it('a minigame with its own track overrides the stage track; every other game follows the stage', () => {
+    const overrides = { G4: 'g4' };
+    expect(trackForMinigame('G4', { kind: 'stage', stage: 'C1' }, overrides)).toBe('g4');
+    expect(trackForMinigame('G4', { kind: 'stage', stage: 'C3' }, overrides)).toBe('g4');
+    expect(trackForMinigame('G2', { kind: 'stage', stage: 'C1' }, overrides)).toBe('c1');
+    expect(trackForMinigame('G1', { kind: 'stage', stage: 'C2' }, overrides)).toBe('c2');
+    expect(trackForMinigame('E2', { kind: 'end' }, overrides)).toBe('c4');
+    expect(trackForMinigame('G4', { kind: 'stage', stage: 'C1' })).toBe('c1');
   });
 });
 
 // ---- Loop points -----------------------------------------------------------------
 
-describe("silence detection and loop points", () => {
-  it("detects leading and trailing near-silence", () => {
+describe('silence detection and loop points', () => {
+  it('detects leading and trailing near-silence', () => {
     const buffer = makeBuffer(7.44, 0.022, 0.031);
     const edges = detectEdgeSilence(buffer);
     expect(edges.leading).toBeCloseTo(0.022, 2);
     expect(edges.trailing).toBeCloseTo(0.031, 2);
   });
 
-  it("snaps the loop to whole bars at 130 BPM", () => {
+  it('snaps the loop to whole bars at 130 BPM', () => {
     expect(barSeconds(C1_BPM)).toBeCloseTo((60 / 130) * 4, 6);
     const buffer = makeBuffer(7.44, 0.0, 0.031);
     const points = computeLoopPoints(buffer, { bpm: C1_BPM, bars: C1_BARS });
@@ -246,7 +259,7 @@ describe("silence detection and loop points", () => {
     expect(points.loopEnd).toBeLessThanOrEqual(buffer.duration);
   });
 
-  it("without a BPM the loop spans the audible part", () => {
+  it('without a BPM the loop spans the audible part', () => {
     const buffer = makeBuffer(10.728, 0.0, 0.039);
     const points = computeLoopPoints(buffer, {});
     expect(points.loopStart).toBeCloseTo(0, 2);
@@ -256,10 +269,10 @@ describe("silence detection and loop points", () => {
 
 // ---- Engine behaviour ------------------------------------------------------------------
 
-describe("engine: unlock, stage C1 and the G4 handoff", () => {
-  it("does not start anything before the first input, then starts the pending track", async () => {
+describe('engine: unlock, stage C1 and the G4 handoff', () => {
+  it('does not start anything before the first input, then starts the pending track', async () => {
     const { fake, engine } = await readyEngine();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(0);
     engine.unlock();
@@ -268,29 +281,32 @@ describe("engine: unlock, stage C1 and the G4 handoff", () => {
     const started = fake.sources.filter((s) => s.startedAt !== null);
     expect(started).toHaveLength(1);
     expect(started[0]!.loop).toBe(true);
-    expect(engine.currentTrack()).toBe("c2");
+    expect(engine.currentTrack()).toBe('c2');
   });
 
-  it("stage C1 with any non-G4 game just loops c1 and never schedules the no-drums track", async () => {
+  it('stage C1 with any non-G4 game just loops c1 and never schedules the no-drums track', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic(trackForMinigame("G2", { kind: "stage", stage: "C1" }, { G4: "g4" }));
+    engine.playMusic(trackForMinigame('G2', { kind: 'stage', stage: 'C1' }, { G4: 'g4' }));
     await flush();
     const started = fake.sources.filter((s) => s.startedAt !== null);
     expect(started).toHaveLength(1);
     expect(started[0]!.loop).toBe(true);
     expect(started[0]!.stoppedAt).toBeNull();
-    expect(started[0]!.loopEnd - started[0]!.loopStart).toBeCloseTo(C1_BARS * barSeconds(C1_BPM), 6);
-    expect(engine.currentTrack()).toBe("c1");
+    expect(started[0]!.loopEnd - started[0]!.loopStart).toBeCloseTo(
+      C1_BARS * barSeconds(C1_BPM),
+      6,
+    );
+    expect(engine.currentTrack()).toBe('c1');
     fake.advance(60);
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
   });
 
   it("G4 in any stage plays the intro once and schedules the no-drums loop at the intro's exact end", async () => {
-    for (const stage of ["C1", "C3"] as const) {
+    for (const stage of ['C1', 'C3'] as const) {
       const { fake, engine } = await readyEngine();
       engine.unlock();
-      engine.playMusic(trackForMinigame("G4", { kind: "stage", stage }, { G4: "g4" }));
+      engine.playMusic(trackForMinigame('G4', { kind: 'stage', stage }, { G4: 'g4' }));
       await flush();
       const started = fake.sources.filter((s) => s.startedAt !== null);
       expect(started).toHaveLength(2);
@@ -301,120 +317,120 @@ describe("engine: unlock, stage C1 and the G4 handoff", () => {
       expect(intro!.stoppedAt).toBeCloseTo(handoff, 9);
       expect(loop!.startedAt).toBeCloseTo(handoff, 9);
       expect(loop!.loopEnd - loop!.loopStart).toBeCloseTo(C1_BARS * barSeconds(C1_BPM), 6);
-      expect(engine.currentTrack()).toBe("g4");
+      expect(engine.currentTrack()).toBe('g4');
     }
   });
 
-  it("a G4 retry never restarts the music or replays the intro", async () => {
+  it('a G4 retry never restarts the music or replays the intro', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     fake.advance(20); // well past the intro: the no-drums loop is playing
-    engine.playMusic("g4"); // the controller restarts the minigame, not the music
-    engine.playMusic("g4");
+    engine.playMusic('g4'); // the controller restarts the minigame, not the music
+    engine.playMusic('g4');
     await flush();
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(2);
-    expect(engine.currentTrack()).toBe("g4");
-    expect(engine.activeTracks()).toEqual(["g4"]);
+    expect(engine.currentTrack()).toBe('g4');
+    expect(engine.activeTracks()).toEqual(['g4']);
   });
 
   it("leaving G4 crossfades back to the stage's own track", async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     fake.advance(20);
     const t = fake.now();
-    engine.playMusic(trackForScene({ kind: "stage", stage: "C1" }));
+    engine.playMusic(trackForScene({ kind: 'stage', stage: 'C1' }));
     await flush();
-    expect(engine.activeTracks().sort()).toEqual(["c1", "g4"]);
+    expect(engine.activeTracks().sort()).toEqual(['c1', 'g4']);
     const fade = CROSSFADE_MS / 1000;
     const g4Loop = fake.sources.filter((s) => s.startedAt !== null)[1]!;
     expect(g4Loop.stoppedAt).toBeGreaterThanOrEqual(t + fade);
     fake.advance(fade + 0.1);
-    expect(engine.activeTracks()).toEqual(["c1"]);
-    expect(engine.currentTrack()).toBe("c1");
+    expect(engine.activeTracks()).toEqual(['c1']);
+    expect(engine.currentTrack()).toBe('c1');
     const c1 = fake.sources.filter((s) => s.startedAt !== null)[2]!;
     expect(c1.loop).toBe(true);
   });
 });
 
-describe("engine: main menu and autoplay", () => {
-  it("the menu track loops from the moment the menu opens and reports the output state", async () => {
+describe('engine: main menu and autoplay', () => {
+  it('the menu track loops from the moment the menu opens and reports the output state', async () => {
     const { fake, engine } = await readyEngine();
-    expect(engine.outputState()).toBe("suspended");
-    engine.playMusic("menu");
+    expect(engine.outputState()).toBe('suspended');
+    engine.playMusic('menu');
     engine.unlock(); // the menu tries to start without a gesture
     await flush();
-    expect(engine.outputState()).toBe("running");
+    expect(engine.outputState()).toBe('running');
     const started = fake.sources.filter((s) => s.startedAt !== null);
     expect(started).toHaveLength(1);
     expect(started[0]!.loop).toBe(true);
-    expect(engine.currentTrack()).toBe("menu");
+    expect(engine.currentTrack()).toBe('menu');
   });
 
   it("when autoplay is blocked, the first press's unlock resumes the context without restarting the track", async () => {
     const { fake, engine } = await readyEngine({ blockResume: true });
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     engine.unlock(); // no gesture yet: the browser ignores resume()
     await flush();
     expect(fake.resumes).toBe(1);
-    expect(engine.outputState()).toBe("suspended");
+    expect(engine.outputState()).toBe('suspended');
     fake.allowResume();
     engine.unlock(); // the first press
     await flush();
     expect(fake.resumes).toBe(2);
-    expect(engine.outputState()).toBe("running");
-    expect(engine.currentTrack()).toBe("menu");
+    expect(engine.outputState()).toBe('running');
+    expect(engine.currentTrack()).toBe('menu');
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
     engine.unlock(); // once running, further presses do nothing
     await flush();
     expect(fake.resumes).toBe(2);
   });
 
-  it("without Web Audio the output state is unavailable", async () => {
+  it('without Web Audio the output state is unavailable', async () => {
     const broken: AudioBackend = {
       createContext() {
-        throw new Error("no audio");
+        throw new Error('no audio');
       },
       async fetchArrayBuffer() {
-        throw new Error("offline");
+        throw new Error('offline');
       },
     };
     const engine = createAudioEngine(broken, MANIFEST);
     await engine.preload();
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     engine.unlock();
     engine.setMusicEnabled(false);
-    expect(engine.outputState()).toBe("unavailable");
+    expect(engine.outputState()).toBe('unavailable');
     expect(engine.isMusicEnabled()).toBe(false);
   });
 
-  it("starting a run crossfades from the menu to the first stage track with no overlap afterwards", async () => {
+  it('starting a run crossfades from the menu to the first stage track with no overlap afterwards', async () => {
     const { fake, engine } = await readyEngine();
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     engine.unlock();
     await flush();
     fake.advance(5);
-    engine.playMusic(trackForMinigame("G2", { kind: "stage", stage: "C1" }, { G4: "g4" }));
+    engine.playMusic(trackForMinigame('G2', { kind: 'stage', stage: 'C1' }, { G4: 'g4' }));
     await flush();
-    expect(engine.activeTracks().sort()).toEqual(["c1", "menu"]);
+    expect(engine.activeTracks().sort()).toEqual(['c1', 'menu']);
     fake.advance(CROSSFADE_MS / 1000 + 0.1);
-    expect(engine.activeTracks()).toEqual(["c1"]);
-    expect(engine.currentTrack()).toBe("c1");
+    expect(engine.activeTracks()).toEqual(['c1']);
+    expect(engine.currentTrack()).toBe('c1');
   });
 });
 
-describe("engine: music toggle", () => {
+describe('engine: music toggle', () => {
   // The engine creates its gains in a fixed order: master, music bus, sfx bus.
   const musicBus = (fake: ReturnType<typeof createFakeBackend>) => fake.gains[1]!;
   const sfxBus = (fake: ReturnType<typeof createFakeBackend>) => fake.gains[2]!;
 
-  it("is on by default and mutes only the music bus with a short fade, without stopping the track", async () => {
+  it('is on by default and mutes only the music bus with a short fade, without stopping the track', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
     expect(engine.isMusicEnabled()).toBe(true);
     const sfxRampsBefore = sfxBus(fake).ramps.length;
@@ -427,7 +443,7 @@ describe("engine: music toggle", () => {
     expect(sfxBus(fake).ramps.length).toBe(sfxRampsBefore);
     // Still playing underneath, so turning it back on resumes where the track is.
     fake.advance(3);
-    expect(engine.activeTracks()).toEqual(["c2"]);
+    expect(engine.activeTracks()).toEqual(['c2']);
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
     engine.setMusicEnabled(true);
     const on = musicBus(fake).ramps.at(-1)!;
@@ -435,29 +451,29 @@ describe("engine: music toggle", () => {
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
   });
 
-  it("stays muted across scene changes and leaves sound effects audible", async () => {
+  it('stays muted across scene changes and leaves sound effects audible', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     await flush();
     engine.setMusicEnabled(false);
-    engine.playMusic("c1"); // starting a run
+    engine.playMusic('c1'); // starting a run
     await flush();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
     expect(engine.isMusicEnabled()).toBe(false);
     expect(musicBus(fake).value).toBe(0);
-    engine.playSfx("victory");
+    engine.playSfx('victory');
     await flush();
     const sfx = fake.sources.filter((s) => s.startedAt !== null && !s.loop);
     expect(sfx).toHaveLength(1);
     expect(sfxBus(fake).value).toBe(SFX_GAIN);
   });
 
-  it("ducking and suppression respect the toggle, and the toggle respects ducking", async () => {
+  it('ducking and suppression respect the toggle, and the toggle respects ducking', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c3");
+    engine.playMusic('c3');
     await flush();
     engine.setMusicEnabled(false);
     engine.duckMusic(0.5);
@@ -466,7 +482,7 @@ describe("engine: music toggle", () => {
     expect(musicBus(fake).ramps.at(-1)!.value).toBeCloseTo(MUSIC_GAIN * 0.5, 9);
   });
 
-  it("starts from the saved setting and reports changes for saving", async () => {
+  it('starts from the saved setting and reports changes for saving', async () => {
     const fake = createFakeBackend();
     const saved: boolean[] = [];
     const engine = createAudioEngine(fake.backend, MANIFEST, {
@@ -475,7 +491,7 @@ describe("engine: music toggle", () => {
     });
     await engine.preload();
     engine.unlock();
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     await flush();
     expect(engine.isMusicEnabled()).toBe(false);
     expect(musicBus(fake).value).toBe(0);
@@ -486,23 +502,23 @@ describe("engine: music toggle", () => {
   });
 });
 
-describe("engine: the ending is silent after the victory sound", () => {
-  it("stops music and ambience, plays the sting once, and schedules nothing afterwards", async () => {
+describe('engine: the ending is silent after the victory sound', () => {
+  it('stops music and ambience, plays the sting once, and schedules nothing afterwards', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4"); // an intro with a loop scheduled for later
+    engine.playMusic('g4'); // an intro with a loop scheduled for later
     await flush();
     fake.advance(1);
-    engine.playMusic("c4"); // the end stage track
+    engine.playMusic('c4'); // the end stage track
     await flush();
     fake.advance(2);
-    engine.playMusic("boss"); // looping ambience
+    engine.playMusic('boss'); // looping ambience
     await flush();
     fake.advance(2);
 
     const t = fake.now();
     engine.stopMusic();
-    engine.playSfx("victory");
+    engine.playSfx('victory');
     await flush();
     const sources = fake.sources.filter((s) => s.startedAt !== null);
     const sting = sources.at(-1)!;
@@ -531,40 +547,42 @@ describe("engine: the ending is silent after the victory sound", () => {
     expect(engine.currentTrack()).toBeNull();
   });
 
-  it("replay returns to the menu, whose music starts again", async () => {
+  it('replay returns to the menu, whose music starts again', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c4");
+    engine.playMusic('c4');
     await flush();
     engine.stopMusic();
-    engine.playSfx("victory");
+    engine.playSfx('victory');
     await flush();
     fake.advance(10);
-    engine.playMusic("menu");
+    engine.playMusic('menu');
     await flush();
-    const menuSources = fake.sources.filter((s) => s.startedAt !== null && s.loop && s.stoppedAt === null);
+    const menuSources = fake.sources.filter(
+      (s) => s.startedAt !== null && s.loop && s.stoppedAt === null,
+    );
     expect(menuSources).toHaveLength(1);
-    expect(engine.activeTracks()).toEqual(["menu"]);
-    expect(engine.currentTrack()).toBe("menu");
+    expect(engine.activeTracks()).toEqual(['menu']);
+    expect(engine.currentTrack()).toBe('menu');
   });
 });
 
-describe("engine: beat clock", () => {
+describe('engine: beat clock', () => {
   const beat = barSeconds(C1_BPM) / 4;
 
-  it("is null before any music plays and for tracks without a known BPM", async () => {
+  it('is null before any music plays and for tracks without a known BPM', async () => {
     const { engine } = await readyEngine();
     expect(engine.getBeatClock()).toBeNull();
     engine.unlock();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
     expect(engine.getBeatClock()).toBeNull();
   });
 
-  it("counts beats from the first downbeat of the G4 intro, continuously across the no-drums handoff", async () => {
+  it('counts beats from the first downbeat of the G4 intro, continuously across the no-drums handoff', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     const intro = fake.sources.filter((s) => s.startedAt !== null)[0]!;
     const t0 = intro.startedAt!;
@@ -576,7 +594,7 @@ describe("engine: beat clock", () => {
     expect(engine.getBeatClock()).toBeCloseTo((fake.now() - t0) / beat, 9);
     expect(engine.getBeatClock()!).toBeGreaterThan(C1_BARS * 4);
     // A retry (same track again) does not move the clock's origin.
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     expect(engine.getBeatClock()).toBeCloseTo((fake.now() - t0) / beat, 9);
   });
@@ -584,20 +602,20 @@ describe("engine: beat clock", () => {
   it("compensates for the context's output latency when it is reported", async () => {
     const { fake, engine } = await readyEngine({ outputLatency: 0.1 });
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     fake.advance(2);
     const t0 = fake.sources.filter((s) => s.startedAt !== null)[0]!.startedAt!;
     expect(engine.getBeatClock()).toBeCloseTo((fake.now() - 0.1 - t0) / beat, 9);
   });
 
-  it("follows the incoming track during a crossfade and is null once music stops", async () => {
+  it('follows the incoming track during a crossfade and is null once music stops', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     fake.advance(5);
-    engine.playMusic("c1");
+    engine.playMusic('c1');
     await flush();
     const c1 = fake.sources.filter((s) => s.startedAt !== null)[2]!;
     expect(engine.getBeatClock()).toBeCloseTo((fake.now() - c1.startedAt!) / beat, 9);
@@ -606,123 +624,129 @@ describe("engine: beat clock", () => {
   });
 });
 
-describe("engine: switching tracks", () => {
-  it("never restarts the track that is already playing", async () => {
+describe('engine: switching tracks', () => {
+  it('never restarts the track that is already playing', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
-    engine.playMusic("c2");
-    engine.playMusic("c2");
+    engine.playMusic('c2');
+    engine.playMusic('c2');
     await flush();
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
   });
 
-  it("end stage shares c4 with stage C4, so C4 -> E-game does not restart", async () => {
+  it('end stage shares c4 with stage C4, so C4 -> E-game does not restart', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic(trackForScene({ kind: "stage", stage: "C4" }));
+    engine.playMusic(trackForScene({ kind: 'stage', stage: 'C4' }));
     await flush();
-    engine.playMusic(trackForScene({ kind: "end" }));
+    engine.playMusic(trackForScene({ kind: 'end' }));
     await flush();
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(1);
   });
 
-  it("crossfades with a short ramp and leaves exactly one active track", async () => {
+  it('crossfades with a short ramp and leaves exactly one active track', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c2");
+    engine.playMusic('c2');
     await flush();
     const t = fake.now();
-    engine.playMusic("c3");
+    engine.playMusic('c3');
     await flush();
-    expect(engine.activeTracks().sort()).toEqual(["c2", "c3"]);
+    expect(engine.activeTracks().sort()).toEqual(['c2', 'c3']);
     const fade = CROSSFADE_MS / 1000;
     const old = fake.sources.filter((s) => s.startedAt !== null)[0]!;
     expect(old.stoppedAt).toBeGreaterThanOrEqual(t + fade);
     // The outgoing voice ramps to 0 and the incoming voice ramps to full by t + fade.
-    const rampDown = fake.gains.find((g) => g.ramps.some((r) => r.value === 0 && Math.abs(r.endTime - (t + fade)) < 1e-6));
-    const rampUp = fake.gains.find((g) => g.ramps.some((r) => r.value === 1 && Math.abs(r.endTime - (t + fade)) < 1e-6));
+    const rampDown = fake.gains.find((g) =>
+      g.ramps.some((r) => r.value === 0 && Math.abs(r.endTime - (t + fade)) < 1e-6),
+    );
+    const rampUp = fake.gains.find((g) =>
+      g.ramps.some((r) => r.value === 1 && Math.abs(r.endTime - (t + fade)) < 1e-6),
+    );
     expect(rampDown).toBeTruthy();
     expect(rampUp).toBeTruthy();
     fake.advance(fade + 0.1);
-    expect(engine.activeTracks()).toEqual(["c3"]);
-    expect(engine.currentTrack()).toBe("c3");
+    expect(engine.activeTracks()).toEqual(['c3']);
+    expect(engine.currentTrack()).toBe('c3');
   });
 
-  it("stopMusic fades out and leaves no active track; a new run plays the G4 intro again", async () => {
+  it('stopMusic fades out and leaves no active track; a new run plays the G4 intro again', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     fake.advance(30);
     engine.resetRun();
     await flush();
     fake.advance(CROSSFADE_MS / 1000 + 0.1);
     expect(engine.activeTracks()).toEqual([]);
-    engine.playMusic("g4");
+    engine.playMusic('g4');
     await flush();
     const intros = fake.sources.filter((s) => s.startedAt !== null && !s.loop);
     expect(intros).toHaveLength(2);
   });
 
-  it("ducking lowers the music bus without stopping the track", async () => {
+  it('ducking lowers the music bus without stopping the track', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c3");
+    engine.playMusic('c3');
     await flush();
     engine.duckMusic(0.25);
-    const bus = fake.gains.find((g) => g.ramps.some((r) => Math.abs(r.value - MUSIC_GAIN * 0.25) < 1e-9));
+    const bus = fake.gains.find((g) =>
+      g.ramps.some((r) => Math.abs(r.value - MUSIC_GAIN * 0.25) < 1e-9),
+    );
     expect(bus).toBeTruthy();
-    expect(engine.activeTracks()).toEqual(["c3"]);
+    expect(engine.activeTracks()).toEqual(['c3']);
   });
 });
 
-describe("engine: sound effects", () => {
-  it("plays a one-shot without affecting the music track", async () => {
+describe('engine: sound effects', () => {
+  it('plays a one-shot without affecting the music track', async () => {
     const { fake, engine } = await readyEngine();
     engine.unlock();
-    engine.playMusic("c4");
+    engine.playMusic('c4');
     await flush();
-    engine.playSfx("victory");
+    engine.playSfx('victory');
     await flush();
     const started = fake.sources.filter((s) => s.startedAt !== null);
     expect(started).toHaveLength(2);
     expect(started[1]!.loop).toBe(false);
-    expect(engine.currentTrack()).toBe("c4");
+    expect(engine.currentTrack()).toBe('c4');
   });
 });
 
-describe("engine: failures never crash the game", () => {
-  it("a failed load leaves the track unavailable and play calls are silent no-ops", async () => {
-    const { fake, engine } = await readyEngine({ failUrls: ["c2.mp3", "victory.mp3"] });
+describe('engine: failures never crash the game', () => {
+  it('a failed load leaves the track unavailable and play calls are silent no-ops', async () => {
+    const { fake, engine } = await readyEngine({ failUrls: ['c2.mp3', 'victory.mp3'] });
     engine.unlock();
-    engine.playMusic("c2");
-    engine.playSfx("victory");
+    engine.playMusic('c2');
+    engine.playSfx('victory');
     await flush();
-    expect(engine.isAvailable("c2")).toBe(false);
-    expect(engine.isAvailable("c3")).toBe(true);
+    expect(engine.isAvailable('c2')).toBe(false);
+    expect(engine.isAvailable('c3')).toBe(true);
     expect(fake.sources.filter((s) => s.startedAt !== null)).toHaveLength(0);
-    engine.playMusic("c3");
+    engine.playMusic('c3');
     await flush();
-    expect(engine.currentTrack()).toBe("c3");
+    expect(engine.currentTrack()).toBe('c3');
   });
 
-  it("an unknown key and a backend without audio are tolerated", async () => {
+  it('an unknown key and a backend without audio are tolerated', async () => {
     const broken: AudioBackend = {
       createContext() {
-        throw new Error("no audio");
+        throw new Error('no audio');
       },
       async fetchArrayBuffer() {
-        throw new Error("offline");
+        throw new Error('offline');
       },
     };
     const engine = createAudioEngine(broken, MANIFEST);
     await engine.preload();
     engine.unlock();
-    engine.playMusic("c1");
-    engine.playMusic("nope");
-    engine.playSfx("nope");
+    engine.playMusic('c1');
+    engine.playMusic('nope');
+    engine.playSfx('nope');
     engine.duckMusic(0.5);
     engine.dispose();
     expect(engine.currentTrack()).toBeNull();

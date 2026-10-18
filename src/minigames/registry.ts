@@ -12,7 +12,7 @@
  * @see docs/TECH_SPEC.md §3 for configuration requirements
  */
 
-import type { MinigameAdapter, MinigameInfo, MinigameRegistryEntry } from "./types";
+import type { MinigameAdapter, MinigameInfo, MinigameRegistryEntry } from './types';
 
 /** Internal storage for all registered minigames. */
 const registry: Map<string, MinigameRegistryEntry> = new Map();
@@ -80,11 +80,11 @@ export function getTwoButtonGames(): MinigameInfo[] {
 export function validateReadiness(minGames = 4): string | null {
   const ready = getReadyGames();
   if (ready.length < minGames) {
-    return `Need at least ${minGames} ready games, but only ${ready.length} are ready: ${ready.map((g) => g.id).join(", ") || "(none)"}`;
+    return `Need at least ${minGames} ready games, but only ${ready.length} are ready: ${ready.map((g) => g.id).join(', ') || '(none)'}`;
   }
   const oneButton = getOneButtonGames();
   if (oneButton.length === 0) {
-    return `Need at least one ready one-button game for C1, but none are ready. Ready games: ${ready.map((g) => `${g.id}(${g.inputCount}btn)`).join(", ")}`;
+    return `Need at least one ready one-button game for C1, but none are ready. Ready games: ${ready.map((g) => `${g.id}(${g.inputCount}btn)`).join(', ')}`;
   }
   return null;
 }

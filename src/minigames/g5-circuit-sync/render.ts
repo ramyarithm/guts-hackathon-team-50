@@ -1,14 +1,8 @@
 // Canvas drawing for G5 (Circuit Sync). Reads GameState only.
 // Bunker terminal style with spinning wheel and colored contacts.
 
-import {
-  CONTACT_COUNT,
-  HITS_TO_WIN,
-  WORLD_HEIGHT,
-  WORLD_WIDTH,
-  type GameState,
-} from "./logic";
-import { PALETTE } from "../../util/palette";
+import { CONTACT_COUNT, HITS_TO_WIN, WORLD_HEIGHT, WORLD_WIDTH, type GameState } from './logic';
+import { PALETTE } from '../../util/palette';
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 const TWO_PI = Math.PI * 2;
@@ -22,28 +16,28 @@ const C = {
   textBright: PALETTE.textBright,
   textDim: PALETTE.textDim,
   // Wheel - teal-tinted to match bunker
-  wheelOuter: "#0a1411",
+  wheelOuter: '#0a1411',
   wheelOuterStroke: PALETTE.panelEdge,
-  wheelRim: "#4a6a5a",
-  wheelGrad0: "#2a4a3a",
-  wheelGrad1: "#1a3028",
-  wheelGrad2: "#0e1a16",
-  wheelLine: "#1a2f28",
-  wheelLineAlt: "rgba(92, 255, 157, 0.25)",
-  wheelInnerRing: "rgba(92, 255, 157, 0.2)",
-  contactBg: "#0a1411",
-  contactStroke: "#3a5a4a",
+  wheelRim: '#4a6a5a',
+  wheelGrad0: '#2a4a3a',
+  wheelGrad1: '#1a3028',
+  wheelGrad2: '#0e1a16',
+  wheelLine: '#1a2f28',
+  wheelLineAlt: 'rgba(92, 255, 157, 0.25)',
+  wheelInnerRing: 'rgba(92, 255, 157, 0.2)',
+  contactBg: '#0a1411',
+  contactStroke: '#3a5a4a',
   red: PALETTE.danger,
   blue: PALETTE.cyan,
-  centerOuter: "#0a1411",
+  centerOuter: '#0a1411',
   centerOuterStroke: PALETTE.panelEdge,
-  centerInner: "#1a3028",
-  connectorBody: "#8ab4a4",
-  connectorLine: "#ffffff",
+  centerInner: '#1a3028',
+  connectorBody: '#8ab4a4',
+  connectorLine: '#ffffff',
   connectorGrip: PALETTE.panel,
-  connectorBase: "#1a2f28",
-  flashGood: "rgba(92, 255, 157, 0.08)",
-  flashBad: "rgba(255, 107, 87, 0.24)",
+  connectorBase: '#1a2f28',
+  flashGood: 'rgba(92, 255, 157, 0.08)',
+  flashBad: 'rgba(255, 107, 87, 0.24)',
   success: PALETTE.green,
   danger: PALETTE.danger,
   scanline: PALETTE.scanline,
@@ -58,7 +52,7 @@ export function drawFrame(
   ctx: CanvasRenderingContext2D,
   state: GameState,
   canvasW: number,
-  canvasH: number
+  canvasH: number,
 ): void {
   const scale = Math.min(canvasW / WORLD_WIDTH, canvasH / WORLD_HEIGHT);
   const offX = (canvasW - WORLD_WIDTH * scale) / 2;
@@ -78,7 +72,7 @@ export function drawFrame(
   if (state.shake > 0) {
     ctx.translate(
       Math.sin(state.timeMs / 20) * state.shake * 0.15,
-      Math.cos(state.timeMs / 30) * state.shake * 0.08
+      Math.cos(state.timeMs / 30) * state.shake * 0.08,
     );
   }
 
@@ -139,7 +133,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   // Bolts on outer ring
   for (let i = 0; i < 12; i++) {
-    const a = i * TWO_PI / 12;
+    const a = (i * TWO_PI) / 12;
     ctx.beginPath();
     ctx.arc(x + Math.cos(a) * (radius + 15), y + Math.sin(a) * (radius + 15), 2.5, 0, TWO_PI);
     ctx.fillStyle = C.wheelOuter;
@@ -169,7 +163,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   // Radial lines
   for (let i = 0; i < 18; i++) {
-    const a = i * TWO_PI / 18;
+    const a = (i * TWO_PI) / 18;
     ctx.beginPath();
     ctx.moveTo(Math.cos(a) * 20, Math.sin(a) * 20);
     ctx.lineTo(Math.cos(a) * (radius - 10), Math.sin(a) * (radius - 10));
@@ -187,7 +181,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   // Contact points
   for (let i = 0; i < CONTACT_COUNT; i++) {
-    const a = i * TWO_PI / CONTACT_COUNT;
+    const a = (i * TWO_PI) / CONTACT_COUNT;
     const cx = Math.cos(a) * radius;
     const cy = Math.sin(a) * radius;
     const color = COLORS[state.contactColors[i]];
@@ -214,7 +208,7 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
     // Highlight
     ctx.beginPath();
     ctx.arc(cx - 2, cy - 2, 2, 0, TWO_PI);
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fill();
   }
 
@@ -234,9 +228,9 @@ function drawWheel(ctx: CanvasRenderingContext2D, state: GameState): void {
 
   ctx.fillStyle = C.textBright;
   ctx.font = `bold 16px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("04", 0, 1);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('04', 0, 1);
 
   ctx.restore();
 }
@@ -270,8 +264,8 @@ function drawMarker(ctx: CanvasRenderingContext2D): void {
   // Label
   ctx.fillStyle = C.textDim;
   ctx.font = `10px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.fillText("MATCH COLOR", x, markerY + 28);
+  ctx.textAlign = 'center';
+  ctx.fillText('MATCH COLOR', x, markerY + 28);
 }
 
 function drawFlyingConnectors(ctx: CanvasRenderingContext2D, state: GameState): void {
@@ -294,7 +288,7 @@ function drawConnector(
   rotation: number,
   color: string,
   scale: number,
-  opacity: number = 1
+  opacity: number = 1,
 ): void {
   ctx.save();
   ctx.translate(x, y);
@@ -338,8 +332,8 @@ function drawConnector(
 
 function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   // Title at top
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
   ctx.font = `bold 12px ${FONT}`;
   ctx.fillStyle = C.text;
   ctx.fillText(`SYNC  ${state.hits}/${HITS_TO_WIN}`, 12, 16);
@@ -352,17 +346,17 @@ function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   const segW = (barW - segGap * (HITS_TO_WIN - 1)) / HITS_TO_WIN;
   for (let i = 0; i < HITS_TO_WIN; i++) {
     const filled = i < state.hits;
-    ctx.fillStyle = filled ? C.success : "rgba(92,255,157,0.12)";
+    ctx.fillStyle = filled ? C.success : 'rgba(92,255,157,0.12)';
     ctx.fillRect(barX + i * (segW + segGap), barY, segW, 6);
   }
-  ctx.strokeStyle = "rgba(92,255,157,0.25)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.25)';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX - 2.5, barY - 2.5, barW + 5, 11);
 
   // Stats panel at bottom with proper styling
   const panelY = 340;
   const panelH = 36;
-  
+
   // Panel background with edge
   ctx.fillStyle = PALETTE.panelEdge;
   ctx.fillRect(10, panelY, WORLD_WIDTH - 20, panelH);
@@ -370,33 +364,33 @@ function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.fillRect(12, panelY + 2, WORLD_WIDTH - 24, panelH - 4);
 
   ctx.font = `9px ${FONT}`;
-  ctx.textBaseline = "top";
+  ctx.textBaseline = 'top';
 
   // Errors left
-  ctx.textAlign = "left";
+  ctx.textAlign = 'left';
   ctx.fillStyle = C.textDim;
-  ctx.fillText("ERRORS LEFT", 18, panelY + 6);
+  ctx.fillText('ERRORS LEFT', 18, panelY + 6);
   ctx.fillStyle = state.missesLeft <= 1 ? C.danger : C.textBright;
   ctx.font = `bold 14px ${FONT}`;
   ctx.fillText(`${state.missesLeft}`, 18, panelY + 18);
 
   // Speed
-  ctx.textAlign = "right";
+  ctx.textAlign = 'right';
   ctx.font = `9px ${FONT}`;
   ctx.fillStyle = C.textDim;
-  ctx.fillText("SPEED", WORLD_WIDTH - 18, panelY + 6);
+  ctx.fillText('SPEED', WORLD_WIDTH - 18, panelY + 6);
   ctx.fillStyle = C.textBright;
   ctx.font = `bold 14px ${FONT}`;
-  const speedMult = state.phase === "READY" ? "—" : `${(state.speed / 1.3).toFixed(1)}×`;
+  const speedMult = state.phase === 'READY' ? '—' : `${(state.speed / 1.3).toFixed(1)}×`;
   ctx.fillText(speedMult, WORLD_WIDTH - 18, panelY + 18);
 
   // Message
   const msgY = 390;
-  ctx.textAlign = "center";
+  ctx.textAlign = 'center';
   ctx.font = `11px ${FONT}`;
-  if (state.messageType === "success") {
+  if (state.messageType === 'success') {
     ctx.fillStyle = C.success;
-  } else if (state.messageType === "danger") {
+  } else if (state.messageType === 'danger') {
     ctx.fillStyle = C.danger;
   } else {
     ctx.fillStyle = C.textDim;
@@ -404,16 +398,21 @@ function drawHUD(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.fillText(state.message, WORLD_WIDTH / 2, msgY);
 
   // Phase-specific overlays
-  if (state.phase === "SUCCESS") {
-    drawOverlay(ctx, "CIRCUIT RESTORED", "ACCESS GRANTED", C.success);
-  } else if (state.phase === "FAILED") {
-    drawOverlay(ctx, "CIRCUIT OVERLOAD", "REPAIR FAILED", C.danger);
+  if (state.phase === 'SUCCESS') {
+    drawOverlay(ctx, 'CIRCUIT RESTORED', 'ACCESS GRANTED', C.success);
+  } else if (state.phase === 'FAILED') {
+    drawOverlay(ctx, 'CIRCUIT OVERLOAD', 'REPAIR FAILED', C.danger);
   }
 }
 
-function drawOverlay(ctx: CanvasRenderingContext2D, subtitle: string, title: string, color: string): void {
+function drawOverlay(
+  ctx: CanvasRenderingContext2D,
+  subtitle: string,
+  title: string,
+  color: string,
+): void {
   // Dim background
-  ctx.fillStyle = "rgba(4, 8, 10, 0.85)";
+  ctx.fillStyle = 'rgba(4, 8, 10, 0.85)';
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
   // Panel with bunker styling
@@ -421,7 +420,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, subtitle: string, title: str
   const cy = WORLD_HEIGHT / 2;
   const w = 240;
   const h = 90;
-  
+
   ctx.fillStyle = C.panel;
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
   ctx.strokeStyle = PALETTE.panelEdge;
@@ -431,8 +430,8 @@ function drawOverlay(ctx: CanvasRenderingContext2D, subtitle: string, title: str
   ctx.fillRect(cx - w / 2 + 5, cy - h / 2 + 5, w - 10, h - 10);
 
   // Text
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   ctx.font = `10px ${FONT}`;
   ctx.fillStyle = C.textDim;
@@ -445,7 +444,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, subtitle: string, title: str
 
 function drawFlash(ctx: CanvasRenderingContext2D, state: GameState): void {
   if (state.flashUntilMs > state.timeMs && state.flashType) {
-    ctx.fillStyle = state.flashType === "good" ? C.flashGood : C.flashBad;
+    ctx.fillStyle = state.flashType === 'good' ? C.flashGood : C.flashBad;
     ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   }
 }
@@ -466,8 +465,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_HEIGHT * 0.75,
   );
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

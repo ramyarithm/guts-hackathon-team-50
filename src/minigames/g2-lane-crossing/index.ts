@@ -1,15 +1,22 @@
 // G2 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, HIT_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
-import { createRenderer } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  HIT_LOCKOUT_MS,
+  createGame,
+  hashSeed,
+  type Game,
+} from './logic';
+import { createRenderer } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { LANE_COUNT } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { LANE_COUNT } from './logic';
 
-export const G2_ID = "G2";
+export const G2_ID = 'G2';
 
 export function createG2Adapter(): MinigameAdapter {
   // Every piece of mutable state lives inside this closure; no module-level state.
@@ -50,9 +57,9 @@ export function createG2Adapter(): MinigameAdapter {
     game.step(elapsed);
     if (disposed || !game || !ctx || !canvas) return;
     renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after hit lockout period
-    if (game.state.phase === "HIT" && game.state.phaseMs >= HIT_LOCKOUT_MS && !failFired) {
+    if (game.state.phase === 'HIT' && game.state.phaseMs >= HIT_LOCKOUT_MS && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -68,7 +75,7 @@ export function createG2Adapter(): MinigameAdapter {
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
     game?.dispose();
@@ -86,23 +93,23 @@ export function createG2Adapter(): MinigameAdapter {
       teardownScene();
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G2] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G2] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = G2_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Lane crossing minigame");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = G2_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Lane crossing minigame');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[G2] 2D canvas context unavailable");
+        console.error('[G2] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -122,12 +129,12 @@ export function createG2Adapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -135,7 +142,7 @@ export function createG2Adapter(): MinigameAdapter {
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       game.press(button);
     },
 
@@ -153,7 +160,7 @@ export function createG2Adapter(): MinigameAdapter {
 /** Registry entry for G2 Lane Crossing. */
 export const g2Entry: MinigameRegistryEntry = {
   id: G2_ID,
-  name: "Lane Crossing",
+  name: 'Lane Crossing',
   ready: true,
   inputCount: 2, // LEFT=Back, RIGHT=Forward
   adapter: createG2Adapter,

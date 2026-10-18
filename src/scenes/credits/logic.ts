@@ -3,15 +3,15 @@
 // LinkedIn profile (through the injected opener, guarded against double presses) or
 // leaves to the main menu exactly once.
 
-import type { Button, ControlLabels } from "../../minigames/types";
-import { isAllowedUrl, type Person } from "./credits";
+import type { Button, ControlLabels } from '../../minigames/types';
+import { isAllowedUrl, type Person } from './credits';
 
-export type { Button, ControlLabels } from "../../minigames/types";
+export type { Button, ControlLabels } from '../../minigames/types';
 
 /** A second RIGHT on the same person within this window opens nothing (double press). */
 export const OPEN_GUARD_MS = 1000;
 
-export type PressResult = "next" | "opened" | "menu" | "ignored";
+export type PressResult = 'next' | 'opened' | 'menu' | 'ignored';
 
 export interface CreditsState {
   /** Highlighted row: 0..people.length-1 are people, menuIndex is "Main menu". */
@@ -41,8 +41,8 @@ export interface Credits {
 }
 
 export function labelsFor(state: CreditsState): ControlLabels {
-  if (state.done) return { left: "—", right: "—" };
-  return { left: "Next", right: state.index === state.menuIndex ? "Main menu" : "Open LinkedIn" };
+  if (state.done) return { left: '—', right: '—' };
+  return { left: 'Next', right: state.index === state.menuIndex ? 'Main menu' : 'Open LinkedIn' };
 }
 
 export function createCredits(callbacks: CreditsCallbacks): Credits {
@@ -70,25 +70,26 @@ export function createCredits(callbacks: CreditsCallbacks): Credits {
       publishLabels();
     },
     press(button: Button): PressResult {
-      if (disposed || state.done) return "ignored";
-      if (button === "LEFT") {
+      if (disposed || state.done) return 'ignored';
+      if (button === 'LEFT') {
         state.index = (state.index + 1) % (state.menuIndex + 1);
         publishLabels();
-        return "next";
+        return 'next';
       }
-      if (button !== "RIGHT") return "ignored";
+      if (button !== 'RIGHT') return 'ignored';
       if (state.index === state.menuIndex) {
         state.done = true;
         publishLabels();
         callbacks.onMainMenu();
-        return "menu";
+        return 'menu';
       }
       const person = people[state.index];
-      if (!person || !isAllowedUrl(person.url)) return "ignored";
+      if (!person || !isAllowedUrl(person.url)) return 'ignored';
       const t = now();
-      if (lastOpen && lastOpen.url === person.url && t - lastOpen.at < OPEN_GUARD_MS) return "ignored";
+      if (lastOpen && lastOpen.url === person.url && t - lastOpen.at < OPEN_GUARD_MS)
+        return 'ignored';
       lastOpen = { url: person.url, at: t };
-      return callbacks.openUrl(person.url) ? "opened" : "ignored";
+      return callbacks.openUrl(person.url) ? 'opened' : 'ignored';
     },
     dispose(): void {
       disposed = true;

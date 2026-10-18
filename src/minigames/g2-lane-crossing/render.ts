@@ -21,48 +21,53 @@ import {
   rowTop,
   type GameState,
   type LaneLayout,
-} from "./logic";
+} from './logic';
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
 const C = {
-  letterbox: "#04070a",
-  wall0: "#0c1512",
-  wall1: "#070c0a",
-  laneA: "#151d1a",
-  laneB: "#1a2420",
-  rail: "#2f453b",
-  sleeper: "#22322b",
-  rivet: "#3a5245",
-  hazardAmber: "rgba(201, 138, 26, 0.55)",
-  hazardDark: "rgba(0, 0, 0, 0.45)",
-  grating: "#1b2724",
-  gratingLine: "#2c3f37",
-  gratingEdge: "#c98a1a",
-  amber: "#ffb347",
-  amberDim: "rgba(255, 179, 71, 0.35)",
-  green: "#5cff9d",
-  greenDim: "rgba(92, 255, 157, 0.35)",
-  text: "#b8f5cf",
-  textDim: "rgba(184, 245, 207, 0.65)",
-  danger: "#ff6b57",
-  scanline: "rgba(0, 0, 0, 0.18)",
-  cartBody: "#3b4a44",
-  cartTop: "#4c5f57",
-  drumWood: "#5a4632",
-  drumFlange: "#7a6245",
-  unitBody: "#27383f",
-  unitVent: "#182428",
-  overalls: "#2f5f45",
-  overallsDark: "#234634",
-  skin: "#d9b58f",
-  hiVis: "#ffd166",
+  letterbox: '#04070a',
+  wall0: '#0c1512',
+  wall1: '#070c0a',
+  laneA: '#151d1a',
+  laneB: '#1a2420',
+  rail: '#2f453b',
+  sleeper: '#22322b',
+  rivet: '#3a5245',
+  hazardAmber: 'rgba(201, 138, 26, 0.55)',
+  hazardDark: 'rgba(0, 0, 0, 0.45)',
+  grating: '#1b2724',
+  gratingLine: '#2c3f37',
+  gratingEdge: '#c98a1a',
+  amber: '#ffb347',
+  amberDim: 'rgba(255, 179, 71, 0.35)',
+  green: '#5cff9d',
+  greenDim: 'rgba(92, 255, 157, 0.35)',
+  text: '#b8f5cf',
+  textDim: 'rgba(184, 245, 207, 0.65)',
+  danger: '#ff6b57',
+  scanline: 'rgba(0, 0, 0, 0.18)',
+  cartBody: '#3b4a44',
+  cartTop: '#4c5f57',
+  drumWood: '#5a4632',
+  drumFlange: '#7a6245',
+  unitBody: '#27383f',
+  unitVent: '#182428',
+  overalls: '#2f5f45',
+  overallsDark: '#234634',
+  skin: '#d9b58f',
+  hiVis: '#ffd166',
 } as const;
 
 const OBSTACLE_PAD = 7; // vertical inset of an obstacle body inside its lane
 
 export interface Renderer {
-  drawFrame(ctx: CanvasRenderingContext2D, state: GameState, canvasW: number, canvasH: number): void;
+  drawFrame(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    canvasW: number,
+    canvasH: number,
+  ): void;
 }
 
 /**
@@ -70,22 +75,28 @@ export interface Renderer {
  * CRT overlay), rebuilt only when the canvas size changes. One renderer per adapter.
  */
 export function createRenderer(): Renderer {
-  let cacheKey = "";
+  let cacheKey = '';
   let back: HTMLCanvasElement | null = null;
   let front: HTMLCanvasElement | null = null;
 
-  const ensureLayers = (canvasW: number, canvasH: number, scale: number, offX: number, offY: number): void => {
+  const ensureLayers = (
+    canvasW: number,
+    canvasH: number,
+    scale: number,
+    offX: number,
+    offY: number,
+  ): void => {
     const key = `${canvasW}x${canvasH}`;
     if (key === cacheKey && back && front) return;
     cacheKey = key;
-    back = document.createElement("canvas");
+    back = document.createElement('canvas');
     back.width = canvasW;
     back.height = canvasH;
-    front = document.createElement("canvas");
+    front = document.createElement('canvas');
     front.width = canvasW;
     front.height = canvasH;
-    const bctx = back.getContext("2d");
-    const fctx = front.getContext("2d");
+    const bctx = back.getContext('2d');
+    const fctx = front.getContext('2d');
     if (!bctx || !fctx) return;
 
     bctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -209,7 +220,7 @@ function drawGrating(ctx: CanvasRenderingContext2D, row: number, goal: boolean):
     const h = 36;
     const x = (WORLD_WIDTH - w) / 2;
     const ty = y + (ROW_HEIGHT - h) / 2 - 2;
-    ctx.fillStyle = "rgba(4, 10, 8, 0.9)";
+    ctx.fillStyle = 'rgba(4, 10, 8, 0.9)';
     ctx.fillRect(x, ty, w, h);
     ctx.strokeStyle = C.greenDim;
     ctx.lineWidth = 2;
@@ -219,9 +230,9 @@ function drawGrating(ctx: CanvasRenderingContext2D, row: number, goal: boolean):
     ctx.shadowBlur = 10;
     ctx.fillStyle = C.green;
     ctx.font = `bold 12px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("LINE RESTORED", WORLD_WIDTH / 2, ty + h / 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LINE RESTORED', WORLD_WIDTH / 2, ty + h / 2);
     ctx.restore();
     // Small lamps either side of the doorway.
     ctx.fillStyle = C.green;
@@ -230,9 +241,9 @@ function drawGrating(ctx: CanvasRenderingContext2D, row: number, goal: boolean):
   } else {
     ctx.fillStyle = C.textDim;
     ctx.font = `10px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("MAINTENANCE ACCESS", WORLD_WIDTH / 2, y + ROW_HEIGHT - 10);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('MAINTENANCE ACCESS', WORLD_WIDTH / 2, y + ROW_HEIGHT - 10);
   }
 }
 
@@ -269,7 +280,7 @@ function drawObstacle(
       ctx.fillRect(left, y, w, h);
       ctx.fillStyle = C.cartTop;
       ctx.fillRect(left + 3, y + 3, w - 6, h * 0.4);
-      ctx.fillStyle = "#101816";
+      ctx.fillStyle = '#101816';
       const wheelY = y + h - 6;
       ctx.beginPath();
       ctx.arc(left + 9, wheelY, 5, 0, Math.PI * 2);
@@ -288,7 +299,7 @@ function drawObstacle(
       ctx.fillStyle = C.drumFlange;
       ctx.fillRect(left, y, 7, h);
       ctx.fillRect(right - 7, y, 7, h);
-      ctx.strokeStyle = "rgba(0,0,0,0.35)";
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
       ctx.lineWidth = 1;
       const roll = (tick * lane.speed * lane.direction * (TICK_MS / 1000)) % 8;
       for (let x = left + 9 + roll; x < right - 8; x += 8) {
@@ -321,13 +332,13 @@ function drawObstacle(
     }
   }
   // Outline so the body reads as one object against the rails.
-  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
   ctx.lineWidth = 1;
   ctx.strokeRect(left + 0.5, y + 0.5, w - 1, h - 1);
 
   // Warning light on the leading edge, blinking.
   const lx = lane.direction > 0 ? right - 6 : left + 6;
-  ctx.fillStyle = blinkOn ? C.amber : "rgba(255,179,71,0.25)";
+  ctx.fillStyle = blinkOn ? C.amber : 'rgba(255,179,71,0.25)';
   ctx.beginPath();
   ctx.arc(lx, y + 7, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -341,21 +352,21 @@ function drawPlayer(ctx: CanvasRenderingContext2D, state: GameState, alpha: numb
   const bob = state.glide ? -Math.sin(progress * Math.PI) * 3 : 0;
   const cx = PLAYER_COLUMN_X;
   const cy = rowTop(row) + ROW_HEIGHT / 2 + bob;
-  const hit = state.phase === "HIT";
+  const hit = state.phase === 'HIT';
   const half = PLAYER_WIDTH / 2;
 
   // Shadow.
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(cx, cy + 10, half - 2, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Shoulders / overalls (top-down), exactly the drawn width.
-  ctx.fillStyle = hit ? "#7a2d25" : C.overalls;
+  ctx.fillStyle = hit ? '#7a2d25' : C.overalls;
   ctx.beginPath();
   ctx.ellipse(cx, cy + 2, half, 11, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = hit ? "#5a1f19" : C.overallsDark;
+  ctx.fillStyle = hit ? '#5a1f19' : C.overallsDark;
   ctx.fillRect(cx - half + 4, cy + 6, PLAYER_WIDTH - 8, 4);
   // Hi-vis stripes.
   ctx.fillStyle = C.hiVis;
@@ -365,7 +376,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, state: GameState, alpha: numb
   // Toolbox on the right hand, inside the drawn width.
   ctx.fillStyle = C.gratingEdge;
   ctx.fillRect(cx + 4, cy + 5, 8, 6);
-  ctx.fillStyle = "#3a2a10";
+  ctx.fillStyle = '#3a2a10';
   ctx.fillRect(cx + 6, cy + 4, 4, 2);
 
   // Hard hat.
@@ -373,7 +384,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, state: GameState, alpha: numb
   ctx.beginPath();
   ctx.arc(cx, cy - 1, 8, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
   ctx.beginPath();
   ctx.arc(cx - 2.5, cy - 3.5, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -396,19 +407,19 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
   const laneNo = Math.min(LANE_COUNT, Math.max(0, row));
   const label = `Lane ${laneNo}/${LANE_COUNT}`;
   ctx.font = `bold 12px ${FONT}`;
-  ctx.textBaseline = "top";
-  ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(4, 10, 8, 0.75)";
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(4, 10, 8, 0.75)';
   ctx.fillRect(6, 6, ctx.measureText(label).width + 12, 18);
   ctx.fillStyle = C.text;
   ctx.fillText(label, 12, 9);
   if (state.hits > 0) {
     const hits = `Hits ${state.hits}`;
     const w = ctx.measureText(hits).width + 12;
-    ctx.fillStyle = "rgba(4, 10, 8, 0.75)";
+    ctx.fillStyle = 'rgba(4, 10, 8, 0.75)';
     ctx.fillRect(WORLD_WIDTH - 6 - w, 6, w, 18);
     ctx.fillStyle = C.textDim;
-    ctx.textAlign = "right";
+    ctx.textAlign = 'right';
     ctx.fillText(hits, WORLD_WIDTH - 12, 9);
   }
 }
@@ -417,42 +428,42 @@ function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const cy = WORLD_HEIGHT / 2;
   const blink = Math.sin(state.timeMs / 300) > 0;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   switch (state.phase) {
-    case "READY": {
+    case 'READY': {
       drawCard(ctx, cx, cy, 250, 84);
       ctx.fillStyle = C.text;
       ctx.font = `bold 15px ${FONT}`;
-      ctx.fillText("CROSS THE CORRIDOR", cx, cy - 22);
+      ctx.fillText('CROSS THE CORRIDOR', cx, cy - 22);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Reach the far terminal.", cx, cy - 3);
-      ctx.fillText("Forward and Back, one lane at a time.", cx, cy + 11);
+      ctx.fillText('Reach the far terminal.', cx, cy - 3);
+      ctx.fillText('Forward and Back, one lane at a time.', cx, cy + 11);
       if (blink) {
         ctx.fillStyle = C.green;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO START", cx, cy + 29);
+        ctx.fillText('PRESS TO START', cx, cy + 29);
       }
       break;
     }
-    case "HIT": {
-      ctx.fillStyle = "rgba(255, 107, 87, 0.08)";
+    case 'HIT': {
+      ctx.fillStyle = 'rgba(255, 107, 87, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, cy, 200, 72);
       ctx.fillStyle = C.danger;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("Hit!", cx, cy - 12);
+      ctx.fillText('Hit!', cx, cy - 12);
       if (state.phaseMs >= HIT_LOCKOUT_MS && blink) {
         ctx.fillStyle = C.text;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO RETRY", cx, cy + 16);
+        ctx.fillText('PRESS TO RETRY', cx, cy + 16);
       }
       break;
     }
-    case "SUCCESS": {
-      ctx.fillStyle = "rgba(92, 255, 157, 0.08)";
+    case 'SUCCESS': {
+      ctx.fillStyle = 'rgba(92, 255, 157, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, cy, 220, 72);
       ctx.save();
@@ -460,22 +471,28 @@ function drawMessage(ctx: CanvasRenderingContext2D, state: GameState): void {
       ctx.shadowBlur = 16;
       ctx.fillStyle = C.green;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("Crossed!", cx, cy - 10);
+      ctx.fillText('Crossed!', cx, cy - 10);
       ctx.restore();
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Terminal reached. Line restored.", cx, cy + 16);
+      ctx.fillText('Terminal reached. Line restored.', cx, cy + 16);
       break;
     }
-    case "PLAYING":
+    case 'PLAYING':
       break;
   }
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number): void {
-  ctx.fillStyle = "rgba(4, 10, 8, 0.86)";
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+): void {
+  ctx.fillStyle = 'rgba(4, 10, 8, 0.86)';
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = "rgba(92,255,157,0.35)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.35)';
   ctx.lineWidth = 1;
   ctx.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 }
@@ -494,8 +511,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_HEIGHT * 0.75,
   );
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.5)");
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.5)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

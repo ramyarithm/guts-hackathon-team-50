@@ -1,15 +1,22 @@
 // G3 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, OVERFLOW_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  OVERFLOW_LOCKOUT_MS,
+  createGame,
+  hashSeed,
+  type Game,
+} from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { TARGET_LINES } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { TARGET_LINES } from './logic';
 
-export const G3_ID = "G3";
+export const G3_ID = 'G3';
 
 export function createG3Adapter(): MinigameAdapter {
   // Every piece of mutable state lives inside this closure; no module-level state.
@@ -48,9 +55,13 @@ export function createG3Adapter(): MinigameAdapter {
     game.step(elapsed);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after overflow lockout period
-    if (game.state.phase === "OVERFLOW" && game.state.phaseMs >= OVERFLOW_LOCKOUT_MS && !failFired) {
+    if (
+      game.state.phase === 'OVERFLOW' &&
+      game.state.phaseMs >= OVERFLOW_LOCKOUT_MS &&
+      !failFired
+    ) {
       failFired = true;
       args?.onFail();
     }
@@ -66,7 +77,7 @@ export function createG3Adapter(): MinigameAdapter {
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
     game?.dispose();
@@ -85,23 +96,23 @@ export function createG3Adapter(): MinigameAdapter {
       completed = false; // Reset completion flag for new game
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G3] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G3] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = G3_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Memory block stacking minigame");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = G3_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Memory block stacking minigame');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[G3] 2D canvas context unavailable");
+        console.error('[G3] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -121,12 +132,12 @@ export function createG3Adapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -134,7 +145,7 @@ export function createG3Adapter(): MinigameAdapter {
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       game.press(button);
     },
 
@@ -152,7 +163,7 @@ export function createG3Adapter(): MinigameAdapter {
 /** Registry entry for G3 Core Defrag (two-button Tetris). */
 export const g3Entry: MinigameRegistryEntry = {
   id: G3_ID,
-  name: "Core Defrag",
+  name: 'Core Defrag',
   ready: true,
   inputCount: 2, // Hovering: LEFT=Rotate, RIGHT=Drop. Falling: LEFT=Left, RIGHT=Right.
   adapter: createG3Adapter,

@@ -12,29 +12,29 @@ import {
   WORLD_WIDTH,
   type GameState,
   type Obstacle,
-} from "./logic";
+} from './logic';
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
 const C = {
-  letterbox: "#04070a",
-  bg0: "#0a1411",
-  bg1: "#060b0a",
-  grid: "rgba(72, 214, 128, 0.07)",
-  floor: "#101a16",
-  floorEdge: "#2a4a3a",
-  hazard: "#c98a1a",
-  pylon: "#182420",
-  pylonEdge: "#2f453b",
-  pylonInner: "#0e1613",
-  amber: "#ffb347",
-  amberDim: "rgba(255, 179, 71, 0.35)",
-  green: "#5cff9d",
-  greenDim: "rgba(92, 255, 157, 0.35)",
-  text: "#b8f5cf",
-  textDim: "rgba(184, 245, 207, 0.6)",
-  danger: "#ff6b57",
-  scanline: "rgba(0, 0, 0, 0.18)",
+  letterbox: '#04070a',
+  bg0: '#0a1411',
+  bg1: '#060b0a',
+  grid: 'rgba(72, 214, 128, 0.07)',
+  floor: '#101a16',
+  floorEdge: '#2a4a3a',
+  hazard: '#c98a1a',
+  pylon: '#182420',
+  pylonEdge: '#2f453b',
+  pylonInner: '#0e1613',
+  amber: '#ffb347',
+  amberDim: 'rgba(255, 179, 71, 0.35)',
+  green: '#5cff9d',
+  greenDim: 'rgba(92, 255, 157, 0.35)',
+  text: '#b8f5cf',
+  textDim: 'rgba(184, 245, 207, 0.6)',
+  danger: '#ff6b57',
+  scanline: 'rgba(0, 0, 0, 0.18)',
 } as const;
 
 /** Draw one frame. `canvasW`/`canvasH` are device pixels of the backing store. */
@@ -105,7 +105,7 @@ function drawCeiling(ctx: CanvasRenderingContext2D, state: GameState): void {
   const shift = state.distance % spacing;
   for (let x = -shift; x <= WORLD_WIDTH + spacing; x += spacing) {
     const on = Math.sin(state.timeMs / 500 + x) > -0.6;
-    ctx.fillStyle = on ? C.amberDim : "rgba(255,179,71,0.08)";
+    ctx.fillStyle = on ? C.amberDim : 'rgba(255,179,71,0.08)';
     ctx.fillRect(x - 3, 2, 6, 3);
   }
 }
@@ -123,7 +123,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.fillRect(x, FLOOR_Y + 8, dash, 3);
   }
   // Cable tray lines.
-  ctx.fillStyle = "rgba(255,255,255,0.05)";
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.fillRect(0, FLOOR_Y + 16, WORLD_WIDTH, 1);
   ctx.fillRect(0, FLOOR_Y + 22, WORLD_WIDTH, 1);
 }
@@ -169,7 +169,13 @@ function drawPylon(ctx: CanvasRenderingContext2D, state: GameState, o: Obstacle)
   }
 }
 
-function drawPylonBody(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+function drawPylonBody(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
   if (h <= 0) return;
   ctx.fillStyle = C.pylon;
   ctx.fillRect(x, y, w, h);
@@ -179,7 +185,7 @@ function drawPylonBody(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   // Inner panel lines.
   ctx.fillStyle = C.pylonInner;
   ctx.fillRect(x + 8, y + 6, w - 16, Math.max(0, h - 12));
-  ctx.fillStyle = "rgba(255,255,255,0.04)";
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
   for (let yy = y + 14; yy < y + h - 8; yy += 18) ctx.fillRect(x + 10, yy, w - 20, 1);
 }
 
@@ -187,8 +193,8 @@ function drawSignalPath(ctx: CanvasRenderingContext2D, state: GameState): void {
   // The line already restored behind the pulse.
   const y = pulseDrawY(state);
   const g = ctx.createLinearGradient(0, 0, PULSE_X, 0);
-  g.addColorStop(0, "rgba(92,255,157,0)");
-  g.addColorStop(1, "rgba(92,255,157,0.45)");
+  g.addColorStop(0, 'rgba(92,255,157,0)');
+  g.addColorStop(1, 'rgba(92,255,157,0.45)');
   ctx.strokeStyle = g;
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -198,7 +204,7 @@ function drawSignalPath(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function pulseDrawY(state: GameState): number {
-  if (state.phase === "READY") return state.pulseY + Math.sin(state.timeMs / 350) * 6;
+  if (state.phase === 'READY') return state.pulseY + Math.sin(state.timeMs / 350) * 6;
   return state.pulseY;
 }
 
@@ -206,7 +212,7 @@ function drawPulse(ctx: CanvasRenderingContext2D, state: GameState): void {
   const y = pulseDrawY(state);
   const sincePulse = state.timeMs - state.lastPulseMs;
   const flash = sincePulse < 160 ? 1 - sincePulse / 160 : 0;
-  const crashed = state.phase === "CRASHED";
+  const crashed = state.phase === 'CRASHED';
   const core = crashed ? C.danger : C.green;
 
   // Trail.
@@ -230,7 +236,7 @@ function drawPulse(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.restore();
 
   // Bright core.
-  ctx.fillStyle = "#eafff2";
+  ctx.fillStyle = '#eafff2';
   ctx.beginPath();
   ctx.arc(PULSE_X, y, PULSE_RADIUS * 0.45, 0, Math.PI * 2);
   ctx.fill();
@@ -248,8 +254,8 @@ function drawPulse(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
-  ctx.textBaseline = "top";
-  ctx.textAlign = "left";
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
   ctx.font = `bold 12px ${FONT}`;
   ctx.fillStyle = C.text;
   ctx.fillText(`LINE RESTORED  ${state.passed}/${TARGET_GAPS}`, 12, 16);
@@ -262,10 +268,10 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
   const segW = (barW - segGap * (TARGET_GAPS - 1)) / TARGET_GAPS;
   for (let i = 0; i < TARGET_GAPS; i++) {
     const filled = i < state.passed;
-    ctx.fillStyle = filled ? C.green : "rgba(92,255,157,0.12)";
+    ctx.fillStyle = filled ? C.green : 'rgba(92,255,157,0.12)';
     ctx.fillRect(barX + i * (segW + segGap), barY, segW, 6);
   }
-  ctx.strokeStyle = "rgba(92,255,157,0.25)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.25)';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX - 2.5, barY - 2.5, barW + 5, 11);
 }
@@ -273,42 +279,42 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const blink = Math.sin(state.timeMs / 300) > 0;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   switch (state.phase) {
-    case "READY": {
+    case 'READY': {
       drawCard(ctx, cx, 340, 260, 92);
       ctx.fillStyle = C.text;
       ctx.font = `bold 15px ${FONT}`;
-      ctx.fillText("RE-ESTABLISH THE LINE", cx, 318);
+      ctx.fillText('RE-ESTABLISH THE LINE', cx, 318);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Guide the pulse through the relay gaps.", cx, 340);
+      ctx.fillText('Guide the pulse through the relay gaps.', cx, 340);
       ctx.fillText(`Bridge ${TARGET_GAPS} junction boxes.`, cx, 355);
       if (blink) {
         ctx.fillStyle = C.green;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO PULSE", cx, 374);
+        ctx.fillText('PRESS TO PULSE', cx, 374);
       }
       break;
     }
-    case "CRASHED": {
-      ctx.fillStyle = "rgba(255, 107, 87, 0.08)";
+    case 'CRASHED': {
+      ctx.fillStyle = 'rgba(255, 107, 87, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, WORLD_HEIGHT / 2, 220, 80);
       ctx.fillStyle = C.danger;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("SIGNAL LOST", cx, WORLD_HEIGHT / 2 - 14);
+      ctx.fillText('SIGNAL LOST', cx, WORLD_HEIGHT / 2 - 14);
       if (state.phaseMs >= CRASH_LOCKOUT_MS && blink) {
         ctx.fillStyle = C.text;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO RETRY", cx, WORLD_HEIGHT / 2 + 16);
+        ctx.fillText('PRESS TO RETRY', cx, WORLD_HEIGHT / 2 + 16);
       }
       break;
     }
-    case "SUCCESS": {
-      ctx.fillStyle = "rgba(92, 255, 157, 0.08)";
+    case 'SUCCESS': {
+      ctx.fillStyle = 'rgba(92, 255, 157, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, WORLD_HEIGHT / 2, 240, 80);
       ctx.save();
@@ -316,22 +322,28 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
       ctx.shadowBlur = 16;
       ctx.fillStyle = C.green;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("LINE RESTORED", cx, WORLD_HEIGHT / 2 - 12);
+      ctx.fillText('LINE RESTORED', cx, WORLD_HEIGHT / 2 - 12);
       ctx.restore();
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Carrier tone detected.", cx, WORLD_HEIGHT / 2 + 16);
+      ctx.fillText('Carrier tone detected.', cx, WORLD_HEIGHT / 2 + 16);
       break;
     }
-    case "PLAYING":
+    case 'PLAYING':
       break;
   }
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number): void {
-  ctx.fillStyle = "rgba(4, 10, 8, 0.86)";
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+): void {
+  ctx.fillStyle = 'rgba(4, 10, 8, 0.86)';
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = "rgba(92,255,157,0.35)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.35)';
   ctx.lineWidth = 1;
   ctx.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 }
@@ -352,8 +364,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_HEIGHT * 0.75,
   );
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

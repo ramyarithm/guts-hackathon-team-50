@@ -9,7 +9,7 @@
  */
 
 /** The only two hardware buttons available. No third input is ever allowed. */
-export type Button = "LEFT" | "RIGHT";
+export type Button = 'LEFT' | 'RIGHT';
 
 /** Labels describing what each button currently does. */
 export interface ControlLabels {
@@ -122,4 +122,4 @@ export interface MinigameRegistryEntry {
  * Metadata for a game without the adapter factory.
  * Used by the controller for display and selection logic.
  */
-export type MinigameInfo = Omit<MinigameRegistryEntry, "adapter">;
+export type MinigameInfo = Omit<MinigameRegistryEntry, 'adapter'>;

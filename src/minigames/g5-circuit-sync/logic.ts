@@ -4,11 +4,11 @@
 // The player throws matching colored connectors when a contact aligns
 // with the bottom marker. Hit all contacts to restore the circuit.
 
-import type { Button, ControlLabels } from "../types";
-import { createSeededRng } from "../../util/random";
+import type { Button, ControlLabels } from '../types';
+import { createSeededRng } from '../../util/random';
 
-export type { Button, ControlLabels } from "../types";
-export { hashSeed } from "../../util/random";
+export type { Button, ControlLabels } from '../types';
+export { hashSeed } from '../../util/random';
 
 // ---- Tuning ----
 
@@ -25,7 +25,7 @@ export const ALLOWED_MISSES = 3;
 export const CONTACT_COUNT = 6; // Number of contacts on wheel
 export const HIT_WINDOW = 0.28; // Radians tolerance for a valid hit
 export const START_SPEED = 1.3; // Initial rotation speed (radians/sec)
-export const SPEED_PER_HIT = 0.10; // Speed increase per successful hit
+export const SPEED_PER_HIT = 0.1; // Speed increase per successful hit
 export const MISTAKE_MULTIPLIER = 1.65; // Speed multiplier on mistake
 export const MISTAKE_BONUS = 0.22; // Additional speed on mistake
 export const MAX_SPEED = 4.8; // Maximum rotation speed
@@ -53,7 +53,7 @@ function generateContactColors(seed: number): ConnectorType[] {
 
 // ---- Types ----
 
-export type Phase = "READY" | "PLAYING" | "SUCCESS" | "FAILED";
+export type Phase = 'READY' | 'PLAYING' | 'SUCCESS' | 'FAILED';
 export type ConnectorType = 0 | 1; // 0 = red (LEFT), 1 = blue (RIGHT)
 
 export interface SyncedConnector {
@@ -86,12 +86,12 @@ export interface GameState {
   lastThrowMs: number;
   /** Screen flash effect */
   flashUntilMs: number;
-  flashType: "good" | "bad" | null;
+  flashType: 'good' | 'bad' | null;
   /** Screen shake */
   shake: number;
   /** Status message */
   message: string;
-  messageType: "success" | "danger" | "";
+  messageType: 'success' | 'danger' | '';
   /** Timing */
   timeMs: number;
   phaseMs: number;
@@ -125,7 +125,7 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
   const { seed = 1, onComplete, onLabels } = callbacks;
 
   const state: GameState = {
-    phase: "READY",
+    phase: 'READY',
     contactColors: generateContactColors(seed),
     angle: -0.38,
     speed: START_SPEED,
@@ -137,8 +137,8 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     flashUntilMs: 0,
     flashType: null,
     shake: 0,
-    message: "ALIGN COLOR TO BOTTOM MARKER",
-    messageType: "",
+    message: 'ALIGN COLOR TO BOTTOM MARKER',
+    messageType: '',
     timeMs: 0,
     phaseMs: 0,
     accumulatorMs: 0,
@@ -153,16 +153,16 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
   }
 
   function updateLabels(): void {
-    if (state.phase === "PLAYING" || state.phase === "READY") {
-      onLabels?.({ left: "RED", right: "BLUE" });
+    if (state.phase === 'PLAYING' || state.phase === 'READY') {
+      onLabels?.({ left: 'RED', right: 'BLUE' });
     } else {
-      onLabels?.({ left: "—", right: "—" });
+      onLabels?.({ left: '—', right: '—' });
     }
   }
 
   function throwConnector(type: ConnectorType): void {
-    if (state.phase !== "PLAYING") return;
-    
+    if (state.phase !== 'PLAYING') return;
+
     // Check cooldown
     if (state.timeMs - state.lastThrowMs < SHOT_COOLDOWN_MS) return;
     state.lastThrowMs = state.timeMs;
@@ -170,9 +170,9 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     // Find closest contact point to bottom
     let closestIndex = 0;
     let closestDistance = Infinity;
-    
+
     for (let i = 0; i < CONTACT_COUNT; i++) {
-      const contactAngle = state.angle + i * TWO_PI / CONTACT_COUNT;
+      const contactAngle = state.angle + (i * TWO_PI) / CONTACT_COUNT;
       const gap = Math.abs(angleDifference(contactAngle, BOTTOM));
       if (gap < closestDistance) {
         closestDistance = gap;
@@ -182,13 +182,13 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
 
     const goodTiming = closestDistance <= HIT_WINDOW;
     const correctColor = state.contactColors[closestIndex] === type;
-    
+
     // Check if this contact is already repaired
-    const contactLocalAngle = closestIndex * TWO_PI / CONTACT_COUNT;
+    const contactLocalAngle = (closestIndex * TWO_PI) / CONTACT_COUNT;
     const alreadyHit = state.syncedConnectors.some(
-      c => Math.abs(c.localAngle - contactLocalAngle) < 0.01
+      (c) => Math.abs(c.localAngle - contactLocalAngle) < 0.01,
     );
-    
+
     const success = goodTiming && correctColor && !alreadyHit;
 
     // Add flying connector animation
@@ -196,42 +196,42 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
 
     // Flash effect
     state.flashUntilMs = state.timeMs + 160;
-    state.flashType = success ? "good" : "bad";
+    state.flashType = success ? 'good' : 'bad';
 
     if (success) {
       state.hits++;
       state.syncedConnectors.push({ localAngle: contactLocalAngle, type });
       state.speed = Math.min(MAX_SPEED, state.speed + SPEED_PER_HIT);
-      state.message = "CONTACT RESTORED";
-      state.messageType = "success";
+      state.message = 'CONTACT RESTORED';
+      state.messageType = 'success';
     } else if (alreadyHit && goodTiming && correctColor) {
       // Good timing and color but contact already repaired
-      state.message = "ALREADY REPAIRED";
-      state.messageType = "danger";
+      state.message = 'ALREADY REPAIRED';
+      state.messageType = 'danger';
     } else {
       state.missesLeft--;
       state.shake = 17;
       state.speed = Math.min(MAX_SPEED, state.speed * MISTAKE_MULTIPLIER + MISTAKE_BONUS);
-      state.message = goodTiming ? "WRONG COLOR — SPEED UP" : "MISALIGNED — SPEED UP";
-      state.messageType = "danger";
+      state.message = goodTiming ? 'WRONG COLOR — SPEED UP' : 'MISALIGNED — SPEED UP';
+      state.messageType = 'danger';
     }
 
     // Check win/lose
     if (state.hits >= HITS_TO_WIN) {
-      setPhase("SUCCESS");
-      state.message = "CIRCUIT RESTORED";
-      state.messageType = "success";
+      setPhase('SUCCESS');
+      state.message = 'CIRCUIT RESTORED';
+      state.messageType = 'success';
       updateLabels();
     } else if (state.missesLeft <= 0) {
-      setPhase("FAILED");
-      state.message = "CIRCUIT OVERLOAD — FAILED";
-      state.messageType = "danger";
+      setPhase('FAILED');
+      state.message = 'CIRCUIT OVERLOAD — FAILED';
+      state.messageType = 'danger';
       updateLabels();
     }
   }
 
   function tick(): void {
-    if (state.phase === "PLAYING") {
+    if (state.phase === 'PLAYING') {
       // Rotate wheel
       state.angle = (state.angle + state.speed * DT) % TWO_PI;
     }
@@ -240,20 +240,22 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
     state.shake = Math.max(0, state.shake - DT * 40);
 
     // Remove old flying connectors
-    state.flyingConnectors = state.flyingConnectors.filter(
-      c => state.timeMs - c.startMs < 240
-    );
+    state.flyingConnectors = state.flyingConnectors.filter((c) => state.timeMs - c.startMs < 240);
 
     // Check for completion callback
-    if (state.phase === "SUCCESS" && state.phaseMs >= SUCCESS_HOLD_MS && !completeFired) {
+    if (state.phase === 'SUCCESS' && state.phaseMs >= SUCCESS_HOLD_MS && !completeFired) {
       completeFired = true;
       onComplete?.();
     }
   }
 
   const game: Game = {
-    get state() { return state; },
-    get disposed() { return disposed; },
+    get state() {
+      return state;
+    },
+    get disposed() {
+      return disposed;
+    },
 
     step(deltaMs: number): void {
       if (disposed) return;
@@ -271,19 +273,19 @@ export function createGame(callbacks: GameCallbacks = {}): Game {
       if (disposed) return;
 
       // Start game on first press
-      if (state.phase === "READY") {
-        setPhase("PLAYING");
+      if (state.phase === 'READY') {
+        setPhase('PLAYING');
         state.lastThrowMs = state.timeMs; // Prevent immediate throw
-        state.message = "ALIGN COLOR TO BOTTOM MARKER";
-        state.messageType = "";
+        state.message = 'ALIGN COLOR TO BOTTOM MARKER';
+        state.messageType = '';
         updateLabels();
         return; // This press only starts the game
       }
 
-      if (state.phase !== "PLAYING") return;
+      if (state.phase !== 'PLAYING') return;
 
       // LEFT = red (0), RIGHT = blue (1)
-      const type: ConnectorType = button === "LEFT" ? 0 : 1;
+      const type: ConnectorType = button === 'LEFT' ? 0 : 1;
       throwConnector(type);
     },
 

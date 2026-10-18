@@ -1,17 +1,17 @@
 // Which lines play at which moment (meta.dialogue_flow). Pure: builds item lists from the
 // script and values handed in by the controller. Digits always come from the controller.
 
-import type { DialogueItem } from "./player";
-import { getSection, type DialogueScript, type Line } from "./script";
+import type { DialogueItem } from './player';
+import { getSection, type DialogueScript, type Line } from './script';
 
-export type StageId = "C1" | "C2" | "C3" | "C4";
+export type StageId = 'C1' | 'C2' | 'C3' | 'C4';
 
 const lineItems = (lines: readonly Line[]): DialogueItem[] =>
-  lines.map((l) => ({ kind: "line", id: l.id, speaker: l.speaker, text: l.text }));
+  lines.map((l) => ({ kind: 'line', id: l.id, speaker: l.speaker, text: l.text }));
 
 /** After pressing Start on the menu, before the first station. */
 export function itemsForIntro(script: DialogueScript): DialogueItem[] {
-  return lineItems(getSection(script, "intro"));
+  return lineItems(getSection(script, 'intro'));
 }
 
 /** pin_entry (before the dial), pin_success (after the vault opens), ending (the surface). */
@@ -45,5 +45,5 @@ export function itemsForStageStory(
   slots: readonly string[],
 ): DialogueItem[] {
   const story = getSection(script, `${stage.toLowerCase()}_complete`);
-  return [...lineItems(story), { kind: "digit", position, digit, slots: [...slots] }];
+  return [...lineItems(story), { kind: 'digit', position, digit, slots: [...slots] }];
 }

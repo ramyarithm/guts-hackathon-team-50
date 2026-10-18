@@ -1,9 +1,9 @@
 /**
  * G4 Rhythm Game - Adapter
- * 
+ *
  * One-button rhythm game where the player taps in time to music.
  * Uses LEFT button (or spacebar) only - RIGHT is inactive.
- * 
+ *
  * Music: the controller plays G4's track through the shared audio engine (c1.mp3 with
  * drums once, then the no-drums loop) when G4 starts, and crossfades back to the stage
  * track when G4 completes. This adapter plays no audio itself; it only reads the engine's
@@ -12,16 +12,23 @@
  * clock takes over and the game plays identically.
  */
 
-import { AUDIO_LATENCY_OFFSET_MS, MS_PER_BEAT, WORLD_HEIGHT, WORLD_WIDTH, createGame, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { audio } from "../../audio";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import {
+  AUDIO_LATENCY_OFFSET_MS,
+  MS_PER_BEAT,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  createGame,
+  type Game,
+} from './logic';
+import { drawFrame } from './render';
+import { audio } from '../../audio';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { AUDIO_LATENCY_OFFSET_MS, BPM, MS_PER_BEAT } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { AUDIO_LATENCY_OFFSET_MS, BPM, MS_PER_BEAT } from './logic';
 
-export const G4_ID = "G4";
+export const G4_ID = 'G4';
 
 /** The music's current beat as the player hears it, or null when there is no music. */
 function musicBeat(): number | null {
@@ -42,7 +49,7 @@ export function createG4Adapter(): MinigameAdapter {
   let completed = false;
   let failFired = false;
   let disposed = false;
-  
+
   // Press flash for visual feedback
   let pressFlash = 0;
   let lastPressTime = 0;
@@ -63,21 +70,21 @@ export function createG4Adapter(): MinigameAdapter {
 
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
-    
+
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
-    
+
     game.tick(elapsed, musicBeat());
     if (disposed || !game || !ctx || !canvas) return;
-    
+
     // Update press flash
     const timeSincePress = ts - lastPressTime;
     pressFlash = Math.max(0, 1 - timeSincePress / 150);
-    
+
     drawFrame(ctx, game.state, canvas.width, canvas.height, pressFlash);
-    
+
     // Call onFail after 1 second in FAILED state
-    if (game.state.phase === "FAILED" && game.state.phaseMs >= 1000 && !failFired) {
+    if (game.state.phase === 'FAILED' && game.state.phaseMs >= 1000 && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -93,10 +100,10 @@ export function createG4Adapter(): MinigameAdapter {
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
-    
+
     game?.dispose();
     game = null;
     canvas?.remove();
@@ -111,23 +118,23 @@ export function createG4Adapter(): MinigameAdapter {
       teardownScene();
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G4] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G4] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = G4_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Rhythm game - tap to the beat");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = G4_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Rhythm game - tap to the beat');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[G4] 2D canvas context unavailable");
+        console.error('[G4] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -145,12 +152,12 @@ export function createG4Adapter(): MinigameAdapter {
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -158,10 +165,10 @@ export function createG4Adapter(): MinigameAdapter {
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      
+
       // Only LEFT button works (one-button game)
       // RIGHT is ignored
-      if (button === "LEFT") {
+      if (button === 'LEFT') {
         lastPressTime = performance.now();
         game.press(musicBeat());
       }
@@ -182,7 +189,7 @@ export function createG4Adapter(): MinigameAdapter {
 /** Registry entry for G4 Rhythm Game */
 export const g4Entry: MinigameRegistryEntry = {
   id: G4_ID,
-  name: "Rhythm Game",
+  name: 'Rhythm Game',
   ready: true,
   inputCount: 1, // One-button game - only LEFT works
   adapter: createG4Adapter,

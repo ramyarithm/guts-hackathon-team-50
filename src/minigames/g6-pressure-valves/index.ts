@@ -1,17 +1,25 @@
 // G6 adapter: wires the pure game logic to a canvas and the shared minigame contract.
 // Auto-registers when imported. CORE imports this module for the side effect.
 
-import { WORLD_HEIGHT, WORLD_WIDTH, BURST_LOCKOUT_MS, createGame, hashSeed, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  BURST_LOCKOUT_MS,
+  createGame,
+  hashSeed,
+  type Game,
+} from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
-export { ROUND_MS } from "./logic";
+export type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
+export { ROUND_MS } from './logic';
 
-export const G6_ID = "G6"; // this game's ID
+export const G6_ID = 'G6'; // this game's ID
 
-export function createG6Adapter(): MinigameAdapter { // builds an independent copy of the game
+export function createG6Adapter(): MinigameAdapter {
+  // builds an independent copy of the game
   let args: MinigameStartArgs | null = null;
   let game: Game | null = null; // the running game logic
   let host: HTMLElement | null = null;
@@ -25,7 +33,8 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
   let failFired = false; // true once a burst failure has been reported
   let disposed = false; // true once the game is permanently shut down
 
-  const resize = (): void => { // fits the canvas to its container
+  const resize = (): void => {
+    // fits the canvas to its container
     if (!host || !canvas) return;
     const cssW = host.clientWidth || WORLD_WIDTH;
     // A host with no explicit height gets the game's natural aspect ratio.
@@ -47,16 +56,17 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
     game.step(elapsed);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after burst lockout period
-    if (game.state.phase === "BURST" && game.state.phaseMs >= BURST_LOCKOUT_MS && !failFired) {
+    if (game.state.phase === 'BURST' && game.state.phaseMs >= BURST_LOCKOUT_MS && !failFired) {
       failFired = true;
       args?.onFail();
     }
     rafId = requestAnimationFrame(frame);
   };
 
-  const teardownScene = (): void => { // removes everything the game set up
+  const teardownScene = (): void => {
+    // removes everything the game set up
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
       rafId = null;
@@ -65,7 +75,7 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
     resizeObserver?.disconnect();
     resizeObserver = null;
     if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
+      window.removeEventListener('resize', windowResizeHandler);
       windowResizeHandler = null;
     }
     game?.dispose();
@@ -83,23 +93,23 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
       teardownScene();
       args = startArgs;
 
-      host = startArgs.container ?? document.getElementById("minigame-root");
+      host = startArgs.container ?? document.getElementById('minigame-root');
       if (!host) {
-        console.warn("[G6] no container and no #minigame-root found; mounting on document.body");
+        console.warn('[G6] no container and no #minigame-root found; mounting on document.body');
         host = document.body;
       }
 
-      canvas = document.createElement("canvas"); // create the canvas
-      canvas.dataset["minigame"] = G6_ID;
-      canvas.style.display = "block";
-      canvas.style.margin = "0 auto";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Pressure valves minigame");
+      canvas = document.createElement('canvas'); // create the canvas
+      canvas.dataset['minigame'] = G6_ID;
+      canvas.style.display = 'block';
+      canvas.style.margin = '0 auto';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Pressure valves minigame');
       host.appendChild(canvas);
 
-      const context = canvas.getContext("2d"); // get the 2D drawing tool
+      const context = canvas.getContext('2d'); // get the 2D drawing tool
       if (!context) {
-        console.error("[G6] 2D canvas context unavailable");
+        console.error('[G6] 2D canvas context unavailable');
         teardownScene();
         return;
       }
@@ -119,12 +129,12 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
       });
 
       resize();
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => resize());
         resizeObserver.observe(host);
       } else {
         windowResizeHandler = () => resize();
-        window.addEventListener("resize", windowResizeHandler);
+        window.addEventListener('resize', windowResizeHandler);
       }
 
       rafId = requestAnimationFrame(frame);
@@ -132,7 +142,7 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
 
     handleInput(button: Button): void {
       if (disposed || completed || !game) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       game.press(button);
     },
 
@@ -150,7 +160,7 @@ export function createG6Adapter(): MinigameAdapter { // builds an independent co
 /** Registry entry for G6 Pressure Valves. */
 export const g6Entry: MinigameRegistryEntry = {
   id: G6_ID,
-  name: "Pressure Valves",
+  name: 'Pressure Valves',
   ready: true,
   inputCount: 2, // LEFT vents the left tank, RIGHT vents the right tank
   adapter: createG6Adapter,

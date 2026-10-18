@@ -1,11 +1,11 @@
 // Adapter for G5 (Circuit Sync) - timing game with spinning wheel and colored contacts.
 
-import { createGame, hashSeed, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import { createGame, hashSeed, type Game } from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export const G5_ID = "G5";
+export const G5_ID = 'G5';
 
 export function createG5Adapter(): MinigameAdapter {
   let args: MinigameStartArgs | null = null;
@@ -28,9 +28,9 @@ export function createG5Adapter(): MinigameAdapter {
     game.step(delta);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after 1 second in FAILED state
-    if (game.state.phase === "FAILED" && game.state.phaseMs >= 1000 && !failFired) {
+    if (game.state.phase === 'FAILED' && game.state.phaseMs >= 1000 && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -55,25 +55,25 @@ export function createG5Adapter(): MinigameAdapter {
       host = startArgs.container ?? null;
 
       if (!host) {
-        console.error("[G5] No container provided");
+        console.error('[G5] No container provided');
         return;
       }
 
       // Create canvas
-      canvas = document.createElement("canvas");
-      canvas.style.display = "block";
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
+      canvas = document.createElement('canvas');
+      canvas.style.display = 'block';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
       host.appendChild(canvas);
 
-      ctx = canvas.getContext("2d");
+      ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error("[G5] Could not get canvas context");
+        console.error('[G5] Could not get canvas context');
         return;
       }
 
       resize();
-      window.addEventListener("resize", resize);
+      window.addEventListener('resize', resize);
 
       // Create game
       game = createGame({
@@ -90,7 +90,7 @@ export function createG5Adapter(): MinigameAdapter {
       });
 
       // Set initial labels
-      args?.setControlLabels?.({ left: "RED", right: "BLUE" });
+      args?.setControlLabels?.({ left: 'RED', right: 'BLUE' });
 
       // Start render loop
       rafId = requestAnimationFrame(frame);
@@ -110,7 +110,7 @@ export function createG5Adapter(): MinigameAdapter {
         rafId = null;
       }
 
-      window.removeEventListener("resize", resize);
+      window.removeEventListener('resize', resize);
 
       if (game) {
         game.dispose();
@@ -133,7 +133,7 @@ export function createG5Adapter(): MinigameAdapter {
 
 export const g5Entry: MinigameRegistryEntry = {
   id: G5_ID,
-  name: "Circuit Sync",
+  name: 'Circuit Sync',
   ready: true,
   inputCount: 2,
   adapter: createG5Adapter,

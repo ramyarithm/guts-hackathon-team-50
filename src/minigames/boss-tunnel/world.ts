@@ -8,15 +8,26 @@
 
 /** 0: +y, 1: +x, 2: -y, 3: -x. */
 export type Heading = 0 | 1 | 2 | 3;
-export const DIRS: ReadonlyArray<readonly [number, number]> = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+export const DIRS: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+];
 /** World angle (radians, y up) for each heading. */
 export const HEADING_ANGLE: ReadonlyArray<number> = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
-export const turnLeft = (h: Heading): Heading => (((h + 3) % 4) as Heading);
-export const turnRight = (h: Heading): Heading => (((h + 1) % 4) as Heading);
-export const opposite = (h: Heading): Heading => (((h + 2) % 4) as Heading);
+export const turnLeft = (h: Heading): Heading => ((h + 3) % 4) as Heading;
+export const turnRight = (h: Heading): Heading => ((h + 1) % 4) as Heading;
+export const opposite = (h: Heading): Heading => ((h + 2) % 4) as Heading;
 
-export interface Tile { x: number; y: number }
-export interface Junction { cell: number; correct: "LEFT" | "RIGHT" }
+export interface Tile {
+  x: number;
+  y: number;
+}
+export interface Junction {
+  cell: number;
+  correct: 'LEFT' | 'RIGHT';
+}
 
 export interface Layout {
   length: number;
@@ -35,7 +46,10 @@ export const STUB_DEPTH = 3;
 export const DOOR_STAND = 0.05;
 
 export const tileKey = (t: Tile): string => `${t.x},${t.y}`;
-const add = (t: Tile, h: Heading, k = 1): Tile => ({ x: t.x + DIRS[h]![0] * k, y: t.y + DIRS[h]![1] * k });
+const add = (t: Tile, h: Heading, k = 1): Tile => ({
+  x: t.x + DIRS[h]![0] * k,
+  y: t.y + DIRS[h]![1] * k,
+});
 
 /** Every walkable tile: the path cells and the stubs. */
 export function carvedTiles(l: Layout): Tile[] {
@@ -53,13 +67,16 @@ export function buildGeometry(length: number, junctions: Junction[]): Layout | n
   const headings: Heading[] = [];
   const stubs: Tile[][] = [];
   const links = new Set<string>();
-  const link = (a: Tile, b: Tile): void => { links.add(`${tileKey(a)}|${tileKey(b)}`); links.add(`${tileKey(b)}|${tileKey(a)}`); };
+  const link = (a: Tile, b: Tile): void => {
+    links.add(`${tileKey(a)}|${tileKey(b)}`);
+    links.add(`${tileKey(b)}|${tileKey(a)}`);
+  };
   for (let i = 0; i < length; i++) {
     const j = junctions.find((x) => x.cell === i);
     if (j && i > 0) {
       const hin: Heading = h;
-      h = j.correct === "LEFT" ? turnLeft(hin) : turnRight(hin);
-      const wrong = j.correct === "LEFT" ? turnRight(hin) : turnLeft(hin);
+      h = j.correct === 'LEFT' ? turnLeft(hin) : turnRight(hin);
+      const wrong = j.correct === 'LEFT' ? turnRight(hin) : turnLeft(hin);
       const stub: Tile[] = [];
       for (let k = 1; k <= STUB_DEPTH; k++) stub.push(add(p, wrong, k));
       link(p, stub[0]!);
@@ -104,7 +121,10 @@ export function posAt(l: Layout, cell: number): { x: number; y: number } {
   if (cell >= l.length) {
     const last = l.path[l.length - 1]!;
     const h = l.headings[l.length - 1]!;
-    return { x: last.x + 0.5 + DIRS[h]![0] * DOOR_STAND, y: last.y + 0.5 + DIRS[h]![1] * DOOR_STAND };
+    return {
+      x: last.x + 0.5 + DIRS[h]![0] * DOOR_STAND,
+      y: last.y + 0.5 + DIRS[h]![1] * DOOR_STAND,
+    };
   }
   const t = l.path[Math.max(0, cell)]!;
   return { x: t.x + 0.5, y: t.y + 0.5 };
@@ -122,13 +142,13 @@ export const AXIS_X = 1;
 export const AXIS_CROSS = 2;
 
 export type Deco =
-  | { kind: "panel"; variant: number }
-  | { kind: "box"; variant: number }
-  | { kind: "cabinet" }
-  | { kind: "sign"; text: number; arrow: -1 | 0 | 1 }
-  | { kind: "lamp"; alive: boolean }
-  | { kind: "chalk"; arrow: -1 | 1 }
-  | { kind: "door" };
+  | { kind: 'panel'; variant: number }
+  | { kind: 'box'; variant: number }
+  | { kind: 'cabinet' }
+  | { kind: 'sign'; text: number; arrow: -1 | 0 | 1 }
+  | { kind: 'lamp'; alive: boolean }
+  | { kind: 'chalk'; arrow: -1 | 1 }
+  | { kind: 'door' };
 
 export interface Grid {
   x0: number;
@@ -150,12 +170,14 @@ export function faceKey(x: number, y: number, normal: Heading): number {
 }
 
 export function cellAt(g: Grid, x: number, y: number): number {
-  const gx = x - g.x0, gy = y - g.y0;
+  const gx = x - g.x0,
+    gy = y - g.y0;
   if (gx < 0 || gy < 0 || gx >= g.w || gy >= g.h) return SOLID;
   return g.cells[gy * g.w + gx]!;
 }
 export function axisAt(g: Grid, x: number, y: number): number {
-  const gx = x - g.x0, gy = y - g.y0;
+  const gx = x - g.x0,
+    gy = y - g.y0;
   if (gx < 0 || gy < 0 || gx >= g.w || gy >= g.h) return AXIS_Y;
   return g.axis[gy * g.w + gx]!;
 }
@@ -188,13 +210,16 @@ export function buildGrid(l: Layout): Grid {
   for (let i = 0; i < l.length; i++) {
     const t = l.path[i]!;
     cells[idx(t)] = CORRIDOR;
-    axis[idx(t)] = junctionCells.has(i) ? AXIS_CROSS : (l.headings[i]! % 2 === 0 ? AXIS_Y : AXIS_X);
+    axis[idx(t)] = junctionCells.has(i) ? AXIS_CROSS : l.headings[i]! % 2 === 0 ? AXIS_Y : AXIS_X;
   }
   l.stubs.forEach((stub, si) => {
     const j = l.junctions[si]!;
     const hin = l.headings[j.cell - 1]!;
-    const wrong = j.correct === "LEFT" ? turnRight(hin) : turnLeft(hin);
-    for (const t of stub) { cells[idx(t)] = STUB; axis[idx(t)] = wrong % 2 === 0 ? AXIS_Y : AXIS_X; }
+    const wrong = j.correct === 'LEFT' ? turnRight(hin) : turnLeft(hin);
+    for (const t of stub) {
+      cells[idx(t)] = STUB;
+      axis[idx(t)] = wrong % 2 === 0 ? AXIS_Y : AXIS_X;
+    }
   });
 
   const deco = new Map<number, Deco>();
@@ -202,11 +227,17 @@ export function buildGrid(l: Layout): Grid {
   // Lamps: every few cells on alternating sides; two of them are still alive, far down the run.
   const lampCells: number[] = [];
   for (let i = 1; i < l.length; i++) if (i % 4 === 1 && !junctionCells.has(i)) lampCells.push(i);
-  const alive = new Set<number>([lampCells[lampCells.length - 1] ?? -1, lampCells[Math.floor(lampCells.length / 2)] ?? -1]);
+  const alive = new Set<number>([
+    lampCells[lampCells.length - 1] ?? -1,
+    lampCells[Math.floor(lampCells.length / 2)] ?? -1,
+  ]);
   for (let i = 0; i < l.length; i++) {
     const t = l.path[i]!;
     const hd = l.headings[i]!;
-    const sides: Array<[Heading, number]> = [[turnLeft(hd), 0], [turnRight(hd), 1]];
+    const sides: Array<[Heading, number]> = [
+      [turnLeft(hd), 0],
+      [turnRight(hd), 1],
+    ];
     for (const [side, sideIdx] of sides) {
       const wall = add(t, side);
       if (!solid(wall)) continue;
@@ -219,12 +250,14 @@ export function buildGrid(l: Layout): Grid {
       const along = DIRS[hd]![0] * sr[0]! + DIRS[hd]![1] * sr[1]!;
       const arrow: -1 | 0 | 1 = along > 0 ? 1 : along < 0 ? -1 : 0;
       let d: Deco;
-      if (lampCells.includes(i) && sideIdx === (i >> 2) % 2) d = { kind: "lamp", alive: alive.has(i) };
-      else if (i % 5 === 3 && sideIdx === 1) d = { kind: "sign", text: (r >>> 3) % SIGN_COUNT, arrow };
-      else if (i % 7 === 2 && sideIdx === 0) d = { kind: "cabinet" };
-      else if ((r & 7) < 2) d = { kind: "box", variant: (r >>> 4) & 3 };
-      else if ((r & 15) === 2) d = { kind: "sign", text: (r >>> 3) % SIGN_COUNT, arrow };
-      else d = { kind: "panel", variant: (r >>> 5) & 3 };
+      if (lampCells.includes(i) && sideIdx === (i >> 2) % 2)
+        d = { kind: 'lamp', alive: alive.has(i) };
+      else if (i % 5 === 3 && sideIdx === 1)
+        d = { kind: 'sign', text: (r >>> 3) % SIGN_COUNT, arrow };
+      else if (i % 7 === 2 && sideIdx === 0) d = { kind: 'cabinet' };
+      else if ((r & 7) < 2) d = { kind: 'box', variant: (r >>> 4) & 3 };
+      else if ((r & 15) === 2) d = { kind: 'sign', text: (r >>> 3) % SIGN_COUNT, arrow };
+      else d = { kind: 'panel', variant: (r >>> 5) & 3 };
       deco.set(key, d);
     }
   }
@@ -233,11 +266,14 @@ export function buildGrid(l: Layout): Grid {
     const p = l.path[j.cell]!;
     const hin = l.headings[j.cell - 1]!;
     const wall = add(p, hin);
-    deco.set(faceKey(wall.x, wall.y, opposite(hin)), { kind: "chalk", arrow: j.correct === "LEFT" ? -1 : 1 });
+    deco.set(faceKey(wall.x, wall.y, opposite(hin)), {
+      kind: 'chalk',
+      arrow: j.correct === 'LEFT' ? -1 : 1,
+    });
   }
   // The door at the end of the last segment.
   const doorTile = l.path[l.length]!;
   const doorNormal = opposite(l.headings[l.length - 1]!);
-  deco.set(faceKey(doorTile.x, doorTile.y, doorNormal), { kind: "door" });
+  deco.set(faceKey(doorTile.x, doorTile.y, doorNormal), { kind: 'door' });
   return { x0, y0, w, h, cells, axis, deco, door: { tile: doorTile, normal: doorNormal } };
 }

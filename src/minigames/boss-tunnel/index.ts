@@ -8,7 +8,7 @@
  * controller starts it after the vault opens.
  */
 
-import { createBossAudio, type BossAudio } from "./audio";
+import { createBossAudio, type BossAudio } from './audio';
 import {
   ATTENTION_CAUGHT,
   DETECT_THRESHOLD,
@@ -21,14 +21,14 @@ import {
   takeEvents,
   type TunnelEvent,
   type TunnelState,
-} from "./logic";
-import { createRenderer, type Renderer } from "./render";
-import type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
+} from './logic';
+import { createRenderer, type Renderer } from './render';
+import type { Button, MinigameAdapter, MinigameStartArgs } from '../types';
 
-export type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
-export type { TunnelEvent } from "./logic";
+export type { Button, MinigameAdapter, MinigameStartArgs } from '../types';
+export type { TunnelEvent } from './logic';
 
-export const BOSS_ID = "BOSS";
+export const BOSS_ID = 'BOSS';
 /** Backing resolution cap. */
 const MAX_DPR = 2;
 /** Heartbeat interval at the panic threshold; it speeds up toward CAUGHT. */
@@ -51,7 +51,11 @@ export function hashSeed(text: string): number {
 }
 
 /** True when a rect covers the whole viewport (used by the fullscreen check). */
-export function fillsViewport(rect: { left: number; top: number; width: number; height: number }, vw: number, vh: number): boolean {
+export function fillsViewport(
+  rect: { left: number; top: number; width: number; height: number },
+  vw: number,
+  vh: number,
+): boolean {
   return rect.left <= 0 && rect.top <= 0 && rect.width >= vw && rect.height >= vh;
 }
 
@@ -68,8 +72,17 @@ export function createBossAdapter(): MinigameAdapter {
   let completed = false;
   let failed = false;
   let disposed = false;
-  let lastLabels = "";
-  let seen = { step: -Infinity, click: -Infinity, denied: -Infinity, caught: false, sighting: false, heartbeat: 0, wheel: false, clank: false };
+  let lastLabels = '';
+  let seen = {
+    step: -Infinity,
+    click: -Infinity,
+    denied: -Infinity,
+    caught: false,
+    sighting: false,
+    heartbeat: 0,
+    wheel: false,
+    clank: false,
+  };
 
   const publishLabels = (): void => {
     if (!state || disposed) return;
@@ -101,28 +114,55 @@ export function createBossAdapter(): MinigameAdapter {
       try {
         args?.onEvent?.(name);
       } catch (error) {
-        console.warn("[BOSS] onEvent failed", error);
+        console.warn('[BOSS] onEvent failed', error);
       }
     }
     // Sound cues from state changes.
     if (audio) {
       const s = state;
-      if (s.lastStepMs !== seen.step) { seen.step = s.lastStepMs; if (Number.isFinite(s.lastStepMs)) audio.footstep(); }
-      if (s.lastClickMs !== seen.click) { seen.click = s.lastClickMs; if (Number.isFinite(s.lastClickMs)) audio.click(); }
-      if (s.lastDeniedMs !== seen.denied) { seen.denied = s.lastDeniedMs; if (Number.isFinite(s.lastDeniedMs)) audio.blocked(); }
-      if (s.attention >= DETECT_THRESHOLD && !seen.sighting) { seen.sighting = true; audio.sightingSting(); }
-      if (s.phase === "CAUGHT" && !seen.caught) { seen.caught = true; audio.caughtSting(); audio.setPresence(0, 0); }
-      if (s.phase === "TUNNEL") {
+      if (s.lastStepMs !== seen.step) {
+        seen.step = s.lastStepMs;
+        if (Number.isFinite(s.lastStepMs)) audio.footstep();
+      }
+      if (s.lastClickMs !== seen.click) {
+        seen.click = s.lastClickMs;
+        if (Number.isFinite(s.lastClickMs)) audio.click();
+      }
+      if (s.lastDeniedMs !== seen.denied) {
+        seen.denied = s.lastDeniedMs;
+        if (Number.isFinite(s.lastDeniedMs)) audio.blocked();
+      }
+      if (s.attention >= DETECT_THRESHOLD && !seen.sighting) {
+        seen.sighting = true;
+        audio.sightingSting();
+      }
+      if (s.phase === 'CAUGHT' && !seen.caught) {
+        seen.caught = true;
+        audio.caughtSting();
+        audio.setPresence(0, 0);
+      }
+      if (s.phase === 'TUNNEL') {
         seen.caught = false;
         const level = s.attention / ATTENTION_CAUGHT;
         audio.setPresence(level, s.creatureSide);
         const panic = (s.attention - PANIC_THRESHOLD) / (ATTENTION_CAUGHT - PANIC_THRESHOLD);
-        if (panic >= 0 && ts - seen.heartbeat >= HEARTBEAT_MS * (1 - 0.55 * panic)) { seen.heartbeat = ts; audio.heartbeat(); }
+        if (panic >= 0 && ts - seen.heartbeat >= HEARTBEAT_MS * (1 - 0.55 * panic)) {
+          seen.heartbeat = ts;
+          audio.heartbeat();
+        }
       }
-      if (s.phase === "SURFACE") {
+      if (s.phase === 'SURFACE') {
         // The door: the wheel ratchets round, the leaf unseats with a clank, then everything fades under the daylight.
-        if (!seen.wheel) { seen.wheel = true; audio.setPresence(0, 0); audio.wheelSpin(DOOR_WHEEL_MS); }
-        if (!seen.clank && s.phaseMs >= DOOR_WHEEL_MS) { seen.clank = true; audio.doorClank(); audio.fadeOut(2200); }
+        if (!seen.wheel) {
+          seen.wheel = true;
+          audio.setPresence(0, 0);
+          audio.wheelSpin(DOOR_WHEEL_MS);
+        }
+        if (!seen.clank && s.phaseMs >= DOOR_WHEEL_MS) {
+          seen.clank = true;
+          audio.doorClank();
+          audio.fadeOut(2200);
+        }
       }
     }
     renderer?.draw(ctx, state, canvas.width, canvas.height, ts);
@@ -142,8 +182,8 @@ export function createBossAdapter(): MinigameAdapter {
     rafId = null;
     lastTs = null;
     if (onResize) {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
       onResize = null;
     }
     audio?.dispose();
@@ -163,18 +203,28 @@ export function createBossAdapter(): MinigameAdapter {
       args = startArgs as BossStartArgs;
       completed = false;
       failed = false;
-      lastLabels = "";
-      seen = { step: -Infinity, click: -Infinity, denied: -Infinity, caught: false, sighting: false, heartbeat: 0, wheel: false, clank: false };
+      lastLabels = '';
+      seen = {
+        step: -Infinity,
+        click: -Infinity,
+        denied: -Infinity,
+        caught: false,
+        sighting: false,
+        heartbeat: 0,
+        wheel: false,
+        clank: false,
+      };
 
-      canvas = document.createElement("canvas");
-      canvas.dataset["minigame"] = BOSS_ID;
-      canvas.style.cssText = "position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:100;display:block;background:#000;";
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Dead Line: first-person tunnel escape");
+      canvas = document.createElement('canvas');
+      canvas.dataset['minigame'] = BOSS_ID;
+      canvas.style.cssText =
+        'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:100;display:block;background:#000;';
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', 'Dead Line: first-person tunnel escape');
       document.body.appendChild(canvas);
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) {
-        console.error("[BOSS] 2D canvas context unavailable");
+        console.error('[BOSS] 2D canvas context unavailable');
         teardown();
         return;
       }
@@ -185,15 +235,15 @@ export function createBossAdapter(): MinigameAdapter {
       audio.unlock();
       resize();
       onResize = () => resize();
-      window.addEventListener("resize", onResize);
-      window.addEventListener("orientationchange", onResize);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
       publishLabels();
       rafId = requestAnimationFrame(frame);
     },
 
     handleInput(button: Button): void {
       if (disposed || completed || failed || !state) return;
-      if (button !== "LEFT" && button !== "RIGHT") return;
+      if (button !== 'LEFT' && button !== 'RIGHT') return;
       audio?.unlock();
       press(state, button);
       publishLabels();

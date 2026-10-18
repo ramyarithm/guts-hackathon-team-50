@@ -20,40 +20,40 @@ import {
   type ActivePiece,
   type GameState,
   type PieceKind,
-} from "./logic";
+} from './logic';
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
 const C = {
-  letterbox: "#04070a",
-  bg0: "#0a1411",
-  bg1: "#060b0a",
-  grid: "rgba(72, 214, 128, 0.07)",
-  panel: "#182420",
-  panelEdge: "#2f453b",
-  panelInner: "#0e1613",
-  well: "#070d0b",
-  wellGrid: "rgba(92, 255, 157, 0.06)",
-  amber: "#ffb347",
-  amberDim: "rgba(255, 179, 71, 0.35)",
-  green: "#5cff9d",
-  greenDim: "rgba(92, 255, 157, 0.35)",
-  text: "#b8f5cf",
-  textDim: "rgba(184, 245, 207, 0.6)",
-  danger: "#ff6b57",
-  flash: "#eafff2",
-  scanline: "rgba(0, 0, 0, 0.18)",
+  letterbox: '#04070a',
+  bg0: '#0a1411',
+  bg1: '#060b0a',
+  grid: 'rgba(72, 214, 128, 0.07)',
+  panel: '#182420',
+  panelEdge: '#2f453b',
+  panelInner: '#0e1613',
+  well: '#070d0b',
+  wellGrid: 'rgba(92, 255, 157, 0.06)',
+  amber: '#ffb347',
+  amberDim: 'rgba(255, 179, 71, 0.35)',
+  green: '#5cff9d',
+  greenDim: 'rgba(92, 255, 157, 0.35)',
+  text: '#b8f5cf',
+  textDim: 'rgba(184, 245, 207, 0.6)',
+  danger: '#ff6b57',
+  flash: '#eafff2',
+  scanline: 'rgba(0, 0, 0, 0.18)',
 } as const;
 
 /** One colour per block kind, all drawn from the shared green/amber palette. */
 const PIECE_COLORS: Record<PieceKind, string> = {
-  I: "#5cff9d",
-  O: "#ffb347",
-  T: "#4fd1c5",
-  S: "#b4ff5c",
-  Z: "#ff6b57",
-  J: "#ffe08a",
-  L: "#c98a1a",
+  I: '#5cff9d',
+  O: '#ffb347',
+  T: '#4fd1c5',
+  S: '#b4ff5c',
+  Z: '#ff6b57',
+  J: '#ffe08a',
+  L: '#c98a1a',
 };
 
 /** Draw one frame. `canvasW`/`canvasH` are device pixels of the backing store. */
@@ -80,7 +80,7 @@ export function drawFrame(
   drawBackground(ctx);
   drawWell(ctx);
   drawLockedCells(ctx, state);
-  if (state.active && (state.phase === "ORIENT" || state.phase === "FALLING")) {
+  if (state.active && (state.phase === 'ORIENT' || state.phase === 'FALLING')) {
     drawGhost(ctx, state, state.active);
     drawActive(ctx, state, state.active);
   }
@@ -176,10 +176,15 @@ function drawBlockCell(
   ctx.fillStyle = color;
   ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
   // Bevel: light top edge, dark bottom edge.
-  ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
   ctx.fillRect(px + 1, py + 1, size - 2, Math.max(1, size * 0.12));
-  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-  ctx.fillRect(px + 1, py + size - 1 - Math.max(1, size * 0.12), size - 2, Math.max(1, size * 0.12));
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillRect(
+    px + 1,
+    py + size - 1 - Math.max(1, size * 0.12),
+    size - 2,
+    Math.max(1, size * 0.12),
+  );
   ctx.globalAlpha = 1;
 }
 
@@ -214,7 +219,7 @@ function drawGhost(ctx: CanvasRenderingContext2D, state: GameState, piece: Activ
 
 function drawActive(ctx: CanvasRenderingContext2D, state: GameState, piece: ActivePiece): void {
   const color = PIECE_COLORS[piece.kind];
-  const hovering = state.phase === "ORIENT";
+  const hovering = state.phase === 'ORIENT';
   // A hovering block pulses so it reads as "waiting for you"; a falling block glows steadily.
   const pulse = hovering ? 0.5 + 0.5 * Math.sin(state.timeMs / 180) : 0;
   ctx.save();
@@ -229,7 +234,7 @@ function drawActive(ctx: CanvasRenderingContext2D, state: GameState, piece: Acti
 }
 
 function drawClearingRows(ctx: CanvasRenderingContext2D, state: GameState): void {
-  if (state.phase !== "CLEARING") return;
+  if (state.phase !== 'CLEARING') return;
   const on = Math.floor(state.phaseMs / 80) % 2 === 0;
   ctx.fillStyle = on ? C.flash : C.greenDim;
   for (const r of state.clearingRows) {
@@ -240,7 +245,13 @@ function drawClearingRows(ctx: CanvasRenderingContext2D, state: GameState): void
 
 // ---- Side panels ----------------------------------------------------------------
 
-function drawPanelBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+function drawPanelBox(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
   ctx.fillStyle = C.panel;
   ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = C.panelEdge;
@@ -257,14 +268,14 @@ function drawNextPanel(ctx: CanvasRenderingContext2D, state: GameState): void {
   const y = BOARD_Y;
   drawPanelBox(ctx, x, y, w, h);
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
   ctx.font = `bold 9px ${FONT}`;
   ctx.fillStyle = C.textDim;
-  ctx.fillText("NEXT", x + w / 2, y + 8);
+  ctx.fillText('NEXT', x + w / 2, y + 8);
 
   const kind = state.queue[0];
-  if (!kind || state.phase === "READY") return;
+  if (!kind || state.phase === 'READY') return;
   const mini = 9;
   const cells = PIECE_ROTATIONS[kind][0];
   const minX = Math.min(...cells.map((c) => c.x));
@@ -287,25 +298,25 @@ function drawReleasePanel(ctx: CanvasRenderingContext2D, state: GameState): void
   const y = BOARD_Y;
   drawPanelBox(ctx, x, y, w, h);
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
   ctx.font = `bold 9px ${FONT}`;
   ctx.fillStyle = C.textDim;
-  ctx.fillText("DROP", x + w / 2, y + 8);
+  ctx.fillText('DROP', x + w / 2, y + 8);
 
   // Countdown bar: the hovering block is released when it drains.
   const barX = x + 12;
   const barY = y + 22;
   const barW = w - 24;
   const barH = h - 30;
-  ctx.fillStyle = "rgba(92,255,157,0.1)";
+  ctx.fillStyle = 'rgba(92,255,157,0.1)';
   ctx.fillRect(barX, barY, barW, barH);
-  if (state.phase === "ORIENT") {
+  if (state.phase === 'ORIENT') {
     const remaining = Math.max(0, 1 - state.hoverMs / HOVER_TIMEOUT_MS);
     const fillH = barH * remaining;
     ctx.fillStyle = remaining < 0.25 ? C.amber : C.green;
     ctx.fillRect(barX, barY + barH - fillH, barW, fillH);
-  } else if (state.phase === "FALLING") {
+  } else if (state.phase === 'FALLING') {
     ctx.fillStyle = C.amberDim;
     ctx.fillRect(barX, barY, barW, barH);
   }
@@ -317,8 +328,8 @@ function drawReleasePanel(ctx: CanvasRenderingContext2D, state: GameState): void
 // ---- Text ---------------------------------------------------------------------
 
 function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
-  ctx.textBaseline = "top";
-  ctx.textAlign = "left";
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
   ctx.font = `bold 12px ${FONT}`;
   ctx.fillStyle = C.text;
   ctx.fillText(`ROWS FLUSHED  ${Math.min(state.lines, TARGET_LINES)}/${TARGET_LINES}`, 12, 16);
@@ -331,10 +342,10 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
   const segW = (barW - segGap * (TARGET_LINES - 1)) / TARGET_LINES;
   for (let i = 0; i < TARGET_LINES; i++) {
     const filled = i < state.lines;
-    ctx.fillStyle = filled ? C.green : "rgba(92,255,157,0.12)";
+    ctx.fillStyle = filled ? C.green : 'rgba(92,255,157,0.12)';
     ctx.fillRect(barX + i * (segW + segGap), barY, segW, 6);
   }
-  ctx.strokeStyle = "rgba(92,255,157,0.25)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.25)';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX - 2.5, barY - 2.5, barW + 5, 11);
 }
@@ -342,40 +353,40 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawHint(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const y = BOARD_Y + BOARD_HEIGHT + 22;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
   ctx.font = `11px ${FONT}`;
 
   switch (state.phase) {
-    case "ORIENT":
+    case 'ORIENT':
       ctx.fillStyle = C.text;
-      ctx.fillText("LEFT rotates the block", cx, y);
+      ctx.fillText('LEFT rotates the block', cx, y);
       ctx.fillStyle = C.textDim;
-      ctx.fillText("RIGHT releases it into the rack", cx, y + 16);
+      ctx.fillText('RIGHT releases it into the rack', cx, y + 16);
       break;
-    case "FALLING":
+    case 'FALLING':
       ctx.fillStyle = C.text;
-      ctx.fillText("Steer the block into place", cx, y);
+      ctx.fillText('Steer the block into place', cx, y);
       ctx.fillStyle = C.textDim;
-      ctx.fillText("Fill a full row to flush it", cx, y + 16);
+      ctx.fillText('Fill a full row to flush it', cx, y + 16);
       break;
-    case "CLEARING": {
+    case 'CLEARING': {
       const n = state.clearingRows.length;
       ctx.fillStyle = C.green;
       ctx.font = `bold 12px ${FONT}`;
-      ctx.fillText(n > 1 ? `${n} ROWS FLUSHED` : "ROW FLUSHED", cx, y + 6);
+      ctx.fillText(n > 1 ? `${n} ROWS FLUSHED` : 'ROW FLUSHED', cx, y + 6);
       break;
     }
-    case "READY":
-    case "OVERFLOW":
-    case "SUCCESS":
+    case 'READY':
+    case 'OVERFLOW':
+    case 'SUCCESS':
       break;
   }
 
-  if (state.placed > 0 && state.phase !== "READY") {
+  if (state.placed > 0 && state.phase !== 'READY') {
     ctx.font = `10px ${FONT}`;
     ctx.fillStyle = C.textDim;
-    ctx.textAlign = "right";
+    ctx.textAlign = 'right';
     ctx.fillText(`BLOCKS ${state.placed}`, WORLD_WIDTH - 12, 16);
   }
 }
@@ -384,42 +395,42 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const cy = BOARD_Y + BOARD_HEIGHT / 2;
   const blink = Math.sin(state.timeMs / 300) > 0;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   switch (state.phase) {
-    case "READY": {
+    case 'READY': {
       drawCard(ctx, cx, cy, 260, 104);
       ctx.fillStyle = C.text;
       ctx.font = `bold 15px ${FONT}`;
-      ctx.fillText("DEFRAGMENT THE CORE", cx, cy - 30);
+      ctx.fillText('DEFRAGMENT THE CORE', cx, cy - 30);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Pack the memory blocks into full rows.", cx, cy - 8);
+      ctx.fillText('Pack the memory blocks into full rows.', cx, cy - 8);
       ctx.fillText(`Flush ${TARGET_LINES} rows to clear the buffer.`, cx, cy + 7);
       if (blink) {
         ctx.fillStyle = C.green;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO START", cx, cy + 30);
+        ctx.fillText('PRESS TO START', cx, cy + 30);
       }
       break;
     }
-    case "OVERFLOW": {
-      ctx.fillStyle = "rgba(255, 107, 87, 0.08)";
+    case 'OVERFLOW': {
+      ctx.fillStyle = 'rgba(255, 107, 87, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, cy, 230, 80);
       ctx.fillStyle = C.danger;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("BUFFER OVERFLOW", cx, cy - 14);
+      ctx.fillText('BUFFER OVERFLOW', cx, cy - 14);
       if (state.phaseMs >= OVERFLOW_LOCKOUT_MS && blink) {
         ctx.fillStyle = C.text;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS TO RETRY", cx, cy + 16);
+        ctx.fillText('PRESS TO RETRY', cx, cy + 16);
       }
       break;
     }
-    case "SUCCESS": {
-      ctx.fillStyle = "rgba(92, 255, 157, 0.08)";
+    case 'SUCCESS': {
+      ctx.fillStyle = 'rgba(92, 255, 157, 0.08)';
       ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       drawCard(ctx, cx, cy, 250, 80);
       ctx.save();
@@ -427,24 +438,30 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
       ctx.shadowBlur = 16;
       ctx.fillStyle = C.green;
       ctx.font = `bold 22px ${FONT}`;
-      ctx.fillText("CORE DEFRAGGED", cx, cy - 12);
+      ctx.fillText('CORE DEFRAGGED', cx, cy - 12);
       ctx.restore();
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Buffer flushed. Carrier stable.", cx, cy + 16);
+      ctx.fillText('Buffer flushed. Carrier stable.', cx, cy + 16);
       break;
     }
-    case "ORIENT":
-    case "FALLING":
-    case "CLEARING":
+    case 'ORIENT':
+    case 'FALLING':
+    case 'CLEARING':
       break;
   }
 }
 
-function drawCard(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number): void {
-  ctx.fillStyle = "rgba(4, 10, 8, 0.86)";
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+): void {
+  ctx.fillStyle = 'rgba(4, 10, 8, 0.86)';
   ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = "rgba(92,255,157,0.35)";
+  ctx.strokeStyle = 'rgba(92,255,157,0.35)';
   ctx.lineWidth = 1;
   ctx.strokeRect(cx - w / 2 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 }
@@ -465,8 +482,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_HEIGHT * 0.75,
   );
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

@@ -6,11 +6,11 @@
 // briefly. A tank that sits in the red zone for too long ruptures and the round restarts.
 // Keep both tanks safe until the round timer runs out to win.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export { hashSeed } from "../../util/random";
+export { hashSeed } from '../../util/random';
 
-export type { Button, ControlLabels } from "../types";
+export type { Button, ControlLabels } from '../types';
 
 // ---- Tuning -----------------------------------------------------------------
 
@@ -73,7 +73,7 @@ export const SUCCESS_HOLD_MS = 1000;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "PLAYING" | "BURST" | "SUCCESS";
+export type Phase = 'READY' | 'PLAYING' | 'BURST' | 'SUCCESS';
 
 /** 0 is the left tank/valve, 1 is the right. */
 export type Side = 0 | 1;
@@ -136,17 +136,17 @@ export interface GameState {
 
 export function labelsFor(state: GameState): ControlLabels {
   switch (state.phase) {
-    case "READY":
-      return { left: "Start", right: "Start" };
-    case "PLAYING":
+    case 'READY':
+      return { left: 'Start', right: 'Start' };
+    case 'PLAYING':
       return {
-        left: state.gauges[0].stuckMs > 0 ? "Stuck" : "Vent L",
-        right: state.gauges[1].stuckMs > 0 ? "Stuck" : "Vent R",
+        left: state.gauges[0].stuckMs > 0 ? 'Stuck' : 'Vent L',
+        right: state.gauges[1].stuckMs > 0 ? 'Stuck' : 'Vent R',
       };
-    case "BURST":
-      return { left: "Retry", right: "Retry" };
-    case "SUCCESS":
-      return { left: "—", right: "—" };
+    case 'BURST':
+      return { left: 'Retry', right: 'Retry' };
+    case 'SUCCESS':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -206,7 +206,7 @@ function createGauge(): Gauge {
 
 export function createState(seed: number): GameState {
   return {
-    phase: "READY",
+    phase: 'READY',
     seed,
     rngState: seed >>> 0,
     gauges: [createGauge(), createGauge()],
@@ -242,7 +242,8 @@ function pickTargetRate(state: GameState, g: Gauge): void {
   const lo = lerp(RATE_LO_START, RATE_LO_END, p);
   const hi = lerp(RATE_HI_START, RATE_HI_END, p);
   g.targetRate = lo + nextRandom(state) * (hi - lo);
-  g.retargetMs = RATE_RETARGET_MIN_MS + nextRandom(state) * (RATE_RETARGET_MAX_MS - RATE_RETARGET_MIN_MS);
+  g.retargetMs =
+    RATE_RETARGET_MIN_MS + nextRandom(state) * (RATE_RETARGET_MAX_MS - RATE_RETARGET_MIN_MS);
 }
 
 /** Queue a surge on a seeded tank; size and spacing scale with round progress. */
@@ -287,7 +288,7 @@ function tickGauge(state: GameState, g: Gauge, side: Side): void {
     if (g.redMs >= BURST_MS) {
       state.burstSide = side;
       state.bursts += 1;
-      setPhase(state, "BURST");
+      setPhase(state, 'BURST');
     }
   } else {
     g.redMs = Math.max(0, g.redMs - TICK_MS * RED_RECOVERY_RATE);
@@ -301,11 +302,11 @@ function tickPlaying(state: GameState): void {
   if (state.nextSurgeMs <= 0) scheduleSurge(state);
 
   tickGauge(state, state.gauges[0], 0);
-  if (state.phase !== "PLAYING") return;
+  if (state.phase !== 'PLAYING') return;
   tickGauge(state, state.gauges[1], 1);
-  if (state.phase !== "PLAYING") return;
+  if (state.phase !== 'PLAYING') return;
 
-  if (state.elapsedMs >= ROUND_MS) setPhase(state, "SUCCESS");
+  if (state.elapsedMs >= ROUND_MS) setPhase(state, 'SUCCESS');
 }
 
 /** Advance exactly one fixed step. */
@@ -313,16 +314,16 @@ export function tick(state: GameState): void {
   state.timeMs += TICK_MS;
   state.phaseMs += TICK_MS;
   switch (state.phase) {
-    case "PLAYING":
+    case 'PLAYING':
       tickPlaying(state);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       if (state.phaseMs >= SUCCESS_HOLD_MS && !state.completionFired) {
         state.completionFired = true;
       }
       break;
-    case "READY":
-    case "BURST":
+    case 'READY':
+    case 'BURST':
       break;
   }
 }
@@ -366,16 +367,16 @@ function vent(state: GameState, side: Side): void {
 export function press(state: GameState, button: Button): void {
   if (state.completionFired) return;
   switch (state.phase) {
-    case "READY":
-      setPhase(state, "PLAYING");
+    case 'READY':
+      setPhase(state, 'PLAYING');
       break;
-    case "PLAYING":
-      vent(state, button === "LEFT" ? 0 : 1);
+    case 'PLAYING':
+      vent(state, button === 'LEFT' ? 0 : 1);
       break;
-    case "BURST":
+    case 'BURST':
       if (state.phaseMs >= BURST_LOCKOUT_MS) resetRound(state);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       break;
   }
 }

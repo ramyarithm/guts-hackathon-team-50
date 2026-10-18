@@ -39,9 +39,15 @@ export function createBossAudio(): BossAudio {
   const ensure = (): AudioContext | null => {
     if (ctx || failed || disposed) return ctx;
     try {
-      const Ctor = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
-        ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) throw new Error("no Web Audio");
+      const Ctor =
+        (
+          window as unknown as {
+            AudioContext?: typeof AudioContext;
+            webkitAudioContext?: typeof AudioContext;
+          }
+        ).AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctor) throw new Error('no Web Audio');
       ctx = new Ctor();
       master = ctx.createGain();
       master.gain.value = 0.9;
@@ -60,12 +66,16 @@ export function createBossAudio(): BossAudio {
       creatureSrc.buffer = buffer;
       creatureSrc.loop = true;
       creatureFilter = ctx.createBiquadFilter();
-      creatureFilter.type = "lowpass";
+      creatureFilter.type = 'lowpass';
       creatureFilter.frequency.value = 200;
       creaturePan = ctx.createStereoPanner();
       creatureGain = ctx.createGain();
       creatureGain.gain.value = 0;
-      creatureSrc.connect(creatureFilter).connect(creaturePan).connect(creatureGain).connect(master);
+      creatureSrc
+        .connect(creatureFilter)
+        .connect(creaturePan)
+        .connect(creatureGain)
+        .connect(master);
       creatureSrc.start();
     } catch {
       failed = true;
@@ -84,14 +94,24 @@ export function createBossAudio(): BossAudio {
     }
   };
 
-  const noiseBurst = (c: AudioContext, out: AudioNode, ms: number, gain: number, cutoff: number): void => {
-    const buffer = c.createBuffer(1, Math.max(1, Math.round((c.sampleRate * ms) / 1000)), c.sampleRate);
+  const noiseBurst = (
+    c: AudioContext,
+    out: AudioNode,
+    ms: number,
+    gain: number,
+    cutoff: number,
+  ): void => {
+    const buffer = c.createBuffer(
+      1,
+      Math.max(1, Math.round((c.sampleRate * ms) / 1000)),
+      c.sampleRate,
+    );
     const d = buffer.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
     const src = c.createBufferSource();
     src.buffer = buffer;
     const f = c.createBiquadFilter();
-    f.type = "lowpass";
+    f.type = 'lowpass';
     f.frequency.value = cutoff;
     const g = c.createGain();
     g.gain.value = gain;
@@ -99,7 +119,15 @@ export function createBossAudio(): BossAudio {
     src.start();
   };
 
-  const tone = (c: AudioContext, out: AudioNode, freq: number, ms: number, gain: number, type: OscillatorType = "sine", pan = 0): void => {
+  const tone = (
+    c: AudioContext,
+    out: AudioNode,
+    freq: number,
+    ms: number,
+    gain: number,
+    type: OscillatorType = 'sine',
+    pan = 0,
+  ): void => {
     const o = c.createOscillator();
     o.type = type;
     o.frequency.value = freq;
@@ -116,7 +144,7 @@ export function createBossAudio(): BossAudio {
   return {
     unlock() {
       safe((c) => {
-        if (c.state === "suspended") void c.resume();
+        if (c.state === 'suspended') void c.resume();
       });
     },
     setPresence(level, side) {
@@ -135,17 +163,22 @@ export function createBossAudio(): BossAudio {
       safe((c, m) => noiseBurst(c, m, 90, 0.35, 500));
     },
     click() {
-      safe((c, m) => tone(c, m, 1800, 40, 0.12, "square"));
+      safe((c, m) => tone(c, m, 1800, 40, 0.12, 'square'));
     },
     ring(side) {
       safe((c, m) => {
         for (let i = 0; i < 4; i++) {
-          setTimeout(() => safe((c2, m2) => {
-            tone(c2, m2, 880, 180, 0.12, "triangle", side * 0.8);
-            tone(c2, m2, 1100, 180, 0.1, "triangle", side * 0.8);
-          }), i * 320);
+          setTimeout(
+            () =>
+              safe((c2, m2) => {
+                tone(c2, m2, 880, 180, 0.12, 'triangle', side * 0.8);
+                tone(c2, m2, 1100, 180, 0.1, 'triangle', side * 0.8);
+              }),
+            i * 320,
+          );
         }
-        void c; void m;
+        void c;
+        void m;
       });
     },
     heartbeat() {
@@ -157,7 +190,7 @@ export function createBossAudio(): BossAudio {
     sightingSting() {
       safe((c, m) => {
         const o = c.createOscillator();
-        o.type = "sawtooth";
+        o.type = 'sawtooth';
         o.frequency.setValueAtTime(90, c.currentTime);
         o.frequency.exponentialRampToValueAtTime(700, c.currentTime + 0.9);
         const g = c.createGain();
@@ -165,7 +198,7 @@ export function createBossAudio(): BossAudio {
         g.gain.exponentialRampToValueAtTime(0.25, c.currentTime + 0.5);
         g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 1.2);
         const f = c.createBiquadFilter();
-        f.type = "lowpass";
+        f.type = 'lowpass';
         f.frequency.value = 1200;
         o.connect(f).connect(g).connect(m);
         o.start();
@@ -174,13 +207,13 @@ export function createBossAudio(): BossAudio {
     },
     caughtSting() {
       safe((c, m) => {
-        tone(c, m, 38, 1400, 0.9, "sine");
+        tone(c, m, 38, 1400, 0.9, 'sine');
         noiseBurst(c, m, 700, 0.8, 900);
       });
     },
     blocked() {
       safe((c, m) => {
-        tone(c, m, 110, 90, 0.18, "triangle");
+        tone(c, m, 110, 90, 0.18, 'triangle');
         noiseBurst(c, m, 60, 0.12, 300);
       });
     },
@@ -189,18 +222,32 @@ export function createBossAudio(): BossAudio {
         const clicks = Math.max(4, Math.round(ms / 70));
         for (let i = 0; i < clicks; i++) {
           // Ratchet clicks that slow down as the wheel reaches the end of its travel.
-          const at = (ms * (1 - Math.pow(1 - i / clicks, 1.6)));
-          setTimeout(() => safe((c2, m2) => { tone(c2, m2, 900 + (i % 3) * 120, 30, 0.1, "square"); noiseBurst(c2, m2, 40, 0.1, 2500); }), at);
+          const at = ms * (1 - Math.pow(1 - i / clicks, 1.6));
+          setTimeout(
+            () =>
+              safe((c2, m2) => {
+                tone(c2, m2, 900 + (i % 3) * 120, 30, 0.1, 'square');
+                noiseBurst(c2, m2, 40, 0.1, 2500);
+              }),
+            at,
+          );
         }
       });
     },
     doorClank() {
       safe((c, m) => {
         noiseBurst(c, m, 400, 0.9, 700);
-        tone(c, m, 70, 900, 0.7, "sine");
-        tone(c, m, 210, 1500, 0.22, "triangle");
-        tone(c, m, 1270, 1800, 0.08, "sine");
-        setTimeout(() => safe((c2, m2) => { noiseBurst(c2, m2, 1400, 0.35, 350); tone(c2, m2, 48, 1600, 0.4, "sine"); }), 260); // the hinges groan
+        tone(c, m, 70, 900, 0.7, 'sine');
+        tone(c, m, 210, 1500, 0.22, 'triangle');
+        tone(c, m, 1270, 1800, 0.08, 'sine');
+        setTimeout(
+          () =>
+            safe((c2, m2) => {
+              noiseBurst(c2, m2, 1400, 0.35, 350);
+              tone(c2, m2, 48, 1600, 0.4, 'sine');
+            }),
+          260,
+        ); // the hinges groan
       });
     },
     fadeOut(ms) {

@@ -4,9 +4,9 @@
 // Each digit requires 5 symbols. A reference guide shows all codes on screen.
 // One attempt only - incorrect PIN = failure.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export type { Button, ControlLabels } from "../types";
+export type { Button, ControlLabels } from '../types';
 
 // ---- Morse Code Reference ----
 
@@ -115,7 +115,7 @@ export function createGame(targetPin: string[], callbacks: GameCallbacks = {}): 
     if (state.currentSymbols.length < SYMBOLS_PER_DIGIT) return;
 
     const digitIndex = MORSE_CODES.indexOf(state.currentSymbols);
-    
+
     if (digitIndex === -1) {
       // Invalid morse sequence
       setPhase('FAILED');
@@ -133,7 +133,7 @@ export function createGame(targetPin: string[], callbacks: GameCallbacks = {}): 
     if (state.enteredDigits.length === PIN_LENGTH) {
       const entered = state.enteredDigits.join('');
       const target = state.targetPin.join('');
-      
+
       if (entered === target) {
         setPhase('SUCCESS');
         state.message = 'ACCESS GRANTED — THE TUNNEL IS OPEN';
@@ -160,8 +160,12 @@ export function createGame(targetPin: string[], callbacks: GameCallbacks = {}): 
   }
 
   const game: Game = {
-    get state() { return state; },
-    get disposed() { return disposed; },
+    get state() {
+      return state;
+    },
+    get disposed() {
+      return disposed;
+    },
 
     step(deltaMs: number): void {
       if (disposed) return;

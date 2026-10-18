@@ -2,31 +2,25 @@
 // sparse: a dial, a needle, the green target zone and a row of signal bars, plus the
 // normal UI labels in the shared text style. Same bunker palette as G1 and G3.
 
-import {
-  SHAKE_MS,
-  TARGET_BARS,
-  WORLD_HEIGHT,
-  WORLD_WIDTH,
-  type GameState,
-} from "./logic";
+import { SHAKE_MS, TARGET_BARS, WORLD_HEIGHT, WORLD_WIDTH, type GameState } from './logic';
 
 const FONT = '"ui-monospace", Menlo, Consolas, "Courier New", monospace';
 
 const C = {
-  letterbox: "#04070a",
-  bg0: "#0a1411",
-  bg1: "#060b0a",
-  dial: "#2f453b",
-  dialDim: "#182420",
-  tick: "rgba(184, 245, 207, 0.35)",
-  needle: "#b8f5cf",
-  green: "#5cff9d",
-  greenDim: "rgba(92, 255, 157, 0.18)",
-  barOff: "rgba(92, 255, 157, 0.12)",
-  text: "#b8f5cf",
-  textDim: "rgba(184, 245, 207, 0.6)",
-  danger: "#ff6b57",
-  scanline: "rgba(0, 0, 0, 0.18)",
+  letterbox: '#04070a',
+  bg0: '#0a1411',
+  bg1: '#060b0a',
+  dial: '#2f453b',
+  dialDim: '#182420',
+  tick: 'rgba(184, 245, 207, 0.35)',
+  needle: '#b8f5cf',
+  green: '#5cff9d',
+  greenDim: 'rgba(92, 255, 157, 0.18)',
+  barOff: 'rgba(92, 255, 157, 0.12)',
+  text: '#b8f5cf',
+  textDim: 'rgba(184, 245, 207, 0.6)',
+  danger: '#ff6b57',
+  scanline: 'rgba(0, 0, 0, 0.18)',
 } as const;
 
 // ---- Layout (world units) -------------------------------------------------------
@@ -125,7 +119,13 @@ function drawDial(ctx: CanvasRenderingContext2D, state: GameState): void {
     ctx.strokeStyle = C.tick;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(DIAL_CX, DIAL_CY, DIAL_R + 7 + (Math.floor(state.timeMs / 16) % 2), Math.PI, Math.PI * 2);
+    ctx.arc(
+      DIAL_CX,
+      DIAL_CY,
+      DIAL_R + 7 + (Math.floor(state.timeMs / 16) % 2),
+      Math.PI,
+      Math.PI * 2,
+    );
     ctx.stroke();
   }
 }
@@ -133,7 +133,7 @@ function drawDial(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawZone(ctx: CanvasRenderingContext2D, state: GameState): void {
   const a0 = angleFor(state.zone.start);
   const a1 = angleFor(state.zone.start + state.zone.width);
-  const hit = state.phase === "HOLD" && state.lastResult === "HIT";
+  const hit = state.phase === 'HOLD' && state.lastResult === 'HIT';
   const flash = hit && Math.floor(state.phaseMs / 70) % 2 === 0;
   // Band.
   ctx.strokeStyle = flash ? C.green : C.greenDim;
@@ -160,18 +160,18 @@ function drawZone(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawNeedle(ctx: CanvasRenderingContext2D, state: GameState): void {
   const a = angleFor(state.needle);
   let color: string = C.needle;
-  if (state.phase === "HOLD") color = state.lastResult === "HIT" ? C.green : C.danger;
-  if (state.phase === "SUCCESS") color = C.green;
-  if (state.phase === "FAILED") color = C.danger;
+  if (state.phase === 'HOLD') color = state.lastResult === 'HIT' ? C.green : C.danger;
+  if (state.phase === 'SUCCESS') color = C.green;
+  if (state.phase === 'FAILED') color = C.danger;
   const len = DIAL_R - 4;
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
-  ctx.lineCap = "round";
+  ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(DIAL_CX, DIAL_CY);
   ctx.lineTo(DIAL_CX + Math.cos(a) * len, DIAL_CY + Math.sin(a) * len);
   ctx.stroke();
-  ctx.lineCap = "butt";
+  ctx.lineCap = 'butt';
   // Hub.
   ctx.fillStyle = C.dial;
   ctx.beginPath();
@@ -186,7 +186,7 @@ function drawNeedle(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawBars(ctx: CanvasRenderingContext2D, state: GameState): void {
   const total = TARGET_BARS * BAR_W + (TARGET_BARS - 1) * BAR_GAP;
   const x0 = WORLD_WIDTH / 2 - total / 2;
-  const justLocked = state.phase === "HOLD" && state.lastResult === "HIT" ? state.bars - 1 : -1;
+  const justLocked = state.phase === 'HOLD' && state.lastResult === 'HIT' ? state.bars - 1 : -1;
   for (let i = 0; i < TARGET_BARS; i++) {
     const h = 14 + i * 7;
     const x = x0 + i * (BAR_W + BAR_GAP);
@@ -204,54 +204,53 @@ function drawBars(ctx: CanvasRenderingContext2D, state: GameState): void {
 function drawText(ctx: CanvasRenderingContext2D, state: GameState): void {
   const cx = WORLD_WIDTH / 2;
   const blink = Math.sin(state.timeMs / 300) > 0;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
   switch (state.phase) {
-    case "READY":
+    case 'READY':
       ctx.fillStyle = C.text;
       ctx.font = `bold 15px ${FONT}`;
-      ctx.fillText("SIGNAL LOCK", cx, 388);
+      ctx.fillText('SIGNAL LOCK', cx, 388);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Stop the needle in the green.", cx, 410);
+      ctx.fillText('Stop the needle in the green.', cx, 410);
       ctx.fillText(`Lock ${TARGET_BARS} bars.`, cx, 425);
       if (blink) {
         ctx.fillStyle = C.green;
         ctx.font = `bold 12px ${FONT}`;
-        ctx.fillText("PRESS LOCK", cx, 446);
+        ctx.fillText('PRESS LOCK', cx, 446);
       }
       break;
-    case "SWEEPING":
-    case "HOLD":
+    case 'SWEEPING':
+    case 'HOLD':
       if (state.bars === 0 && state.attempts === 0) {
         ctx.fillStyle = C.textDim;
         ctx.font = `11px ${FONT}`;
-        ctx.fillText("LOCK stops the needle.", cx, 400);
+        ctx.fillText('LOCK stops the needle.', cx, 400);
       }
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
       ctx.fillText(`${state.bars}/${TARGET_BARS}`, cx, 352);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       ctx.fillStyle = C.green;
       ctx.font = `bold 18px ${FONT}`;
-      ctx.fillText("SIGNAL LOCKED", cx, 396);
+      ctx.fillText('SIGNAL LOCKED', cx, 396);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Carrier steady.", cx, 420);
+      ctx.fillText('Carrier steady.', cx, 420);
       break;
-    case "FAILED":
+    case 'FAILED':
       ctx.fillStyle = C.danger;
       ctx.font = `bold 18px ${FONT}`;
-      ctx.fillText("SIGNAL LOST", cx, 396);
+      ctx.fillText('SIGNAL LOST', cx, 396);
       ctx.fillStyle = C.textDim;
       ctx.font = `11px ${FONT}`;
-      ctx.fillText("Needle missed the zone.", cx, 420);
+      ctx.fillText('Needle missed the zone.', cx, 420);
       break;
   }
 }
-
 
 function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
   // Scanlines: one dark line every ~3 device pixels, expressed in world units.
@@ -269,8 +268,8 @@ function drawCrt(ctx: CanvasRenderingContext2D, scale: number): void {
     WORLD_HEIGHT / 2,
     WORLD_HEIGHT * 0.75,
   );
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 }

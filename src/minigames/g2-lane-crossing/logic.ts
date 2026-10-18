@@ -6,11 +6,11 @@
 // layout is verified before use (see verifyLayout) so a crossing is always possible and
 // the player can never be trapped.
 
-import type { Button, ControlLabels } from "../types";
+import type { Button, ControlLabels } from '../types';
 
-export { hashSeed } from "../../util/random";
+export { hashSeed } from '../../util/random';
 
-export type { Button, ControlLabels } from "../types";
+export type { Button, ControlLabels } from '../types';
 
 // ---- Tuning -----------------------------------------------------------------
 
@@ -86,7 +86,7 @@ export const MAX_GENERATION_ATTEMPTS = 50;
 
 // ---- Types ------------------------------------------------------------------
 
-export type Phase = "READY" | "PLAYING" | "HIT" | "SUCCESS";
+export type Phase = 'READY' | 'PLAYING' | 'HIT' | 'SUCCESS';
 
 /** One lane's fixed, repeating obstacle pattern. */
 export interface LaneLayout {
@@ -163,14 +163,14 @@ export interface CreateStateOptions {
 
 export function labelsFor(phase: Phase): ControlLabels {
   switch (phase) {
-    case "READY":
-      return { left: "Start", right: "Start" };
-    case "PLAYING":
-      return { left: "Back", right: "Forward" };
-    case "HIT":
-      return { left: "—", right: "—" };
-    case "SUCCESS":
-      return { left: "—", right: "—" };
+    case 'READY':
+      return { left: 'Start', right: 'Start' };
+    case 'PLAYING':
+      return { left: 'Back', right: 'Forward' };
+    case 'HIT':
+      return { left: '—', right: '—' };
+    case 'SUCCESS':
+      return { left: '—', right: '—' };
   }
 }
 
@@ -244,7 +244,12 @@ export function glideRowAt(fromRow: number, toRow: number, k: number): number {
 }
 
 /** Whether a glide from `fromRow` to `toRow` pressed at `startTick` survives every tick. */
-export function glideSafe(layout: Layout, fromRow: number, toRow: number, startTick: number): boolean {
+export function glideSafe(
+  layout: Layout,
+  fromRow: number,
+  toRow: number,
+  startTick: number,
+): boolean {
   for (let k = 1; k <= STEP_TICKS; k++) {
     if (isBlocked(layout, glideRowAt(fromRow, toRow, k), startTick + k)) return false;
   }
@@ -299,7 +304,11 @@ function pick<T>(options: readonly T[], rng: () => number): T {
  * landing? This mirrors the verifier's rules for one lane pair; the full verifier is
  * still the final gate.
  */
-export function coversClosings(prev: LaneLayout, next: LaneLayout, reactionTicks = REACTION_TICKS): boolean {
+export function coversClosings(
+  prev: LaneLayout,
+  next: LaneLayout,
+  reactionTicks = REACTION_TICKS,
+): boolean {
   if (prev.blockedTicks <= 0) return true;
   const landingMargin = landingMarginTicks(reactionTicks);
   const L = lcm(prev.periodTicks, next.periodTicks);
@@ -343,7 +352,8 @@ export function generateLayout(seed: number): Layout {
     let periodTicks = pick(PERIOD_OPTIONS_TICKS, rng);
     const obstacleWidth = pick(OBSTACLE_WIDTH_OPTIONS, rng);
     // Keep the gap between obstacles at least MIN_GAP: spacing = speed * period.
-    const minSpeedFor = (p: number) => Math.max(LANE_MIN_SPEED, ((obstacleWidth + MIN_GAP) * 60) / p);
+    const minSpeedFor = (p: number) =>
+      Math.max(LANE_MIN_SPEED, ((obstacleWidth + MIN_GAP) * 60) / p);
     if (minSpeedFor(periodTicks) > LANE_MAX_SPEED) {
       periodTicks = PERIOD_OPTIONS_TICKS[PERIOD_OPTIONS_TICKS.length - 1]!;
     }
@@ -517,7 +527,12 @@ function buildGraph(layout: Layout, reactionTicks: number, startTick: number): G
     const s = idx(row, t);
     if (glideRun[dir]![s]! < reactionTicks) return false;
     // While reacting (up to R-1 ticks) the player stands in the current row.
-    if (reactionTicks > 1 && row !== 0 && row !== TOP_ROW && safeRun[idx(row, t + 1)]! < reactionTicks - 1) {
+    if (
+      reactionTicks > 1 &&
+      row !== 0 &&
+      row !== TOP_ROW &&
+      safeRun[idx(row, t + 1)]! < reactionTicks - 1
+    ) {
       return false;
     }
     // The target lane must stay safe for the landing margin after the latest landing.
@@ -685,7 +700,11 @@ export function verifyLayout(layout: Layout, options: VerifyOptions = {}): Verif
  * ("LEFT", "RIGHT" or null for wait), assuming the fastest reaction. Null if the start
  * state is not winning.
  */
-export function findWinningPlan(layout: Layout, startTick = 0, options: VerifyOptions = {}): Move[] | null {
+export function findWinningPlan(
+  layout: Layout,
+  startTick = 0,
+  options: VerifyOptions = {},
+): Move[] | null {
   const reactionTicks = Math.max(1, options.reactionTicks ?? REACTION_TICKS);
   const g = buildGraph(layout, reactionTicks, startTick);
   if (!g.winning[g.start]) return null;
@@ -701,13 +720,13 @@ export function findWinningPlan(layout: Layout, startTick = 0, options: VerifyOp
         t += 1;
         break;
       case ACTION_FORWARD:
-        plan.push("RIGHT");
+        plan.push('RIGHT');
         for (let k = 1; k < STEP_TICKS; k++) plan.push(null);
         row += 1;
         t += STEP_TICKS;
         break;
       case ACTION_BACK:
-        plan.push("LEFT");
+        plan.push('LEFT');
         for (let k = 1; k < STEP_TICKS; k++) plan.push(null);
         row -= 1;
         t += STEP_TICKS;
@@ -730,7 +749,10 @@ export interface GenerationOptions {
 }
 
 /** Generate -> verify -> accept, advancing the seed on failure; falls back if all fail. */
-export function generateVerifiedLayout(seed: number, options: GenerationOptions = {}): GenerationResult {
+export function generateVerifiedLayout(
+  seed: number,
+  options: GenerationOptions = {},
+): GenerationResult {
   const maxAttempts = options.maxAttempts ?? MAX_GENERATION_ATTEMPTS;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidateSeed = (seed + Math.imul(attempt, 0x9e3779b9)) >>> 0;
@@ -754,7 +776,7 @@ export function createState(seed: number, options: CreateStateOptions = {}): Gam
     layoutInfo = { attempts: result.attempts, usedFallback: result.usedFallback };
   }
   return {
-    phase: "READY",
+    phase: 'READY',
     seed,
     layout,
     layoutInfo,
@@ -822,14 +844,14 @@ function checkCollision(state: GameState): void {
     state.playerRow = row;
     state.glide = null;
     state.bufferedPress = null;
-    setPhase(state, "HIT");
+    setPhase(state, 'HIT');
   }
 }
 
 /** Start a glide one row in the pressed direction; a LEFT at the start row does nothing. */
 function beginStep(state: GameState, button: Button): void {
   const target =
-    button === "RIGHT" ? Math.min(TOP_ROW, state.playerRow + 1) : Math.max(0, state.playerRow - 1);
+    button === 'RIGHT' ? Math.min(TOP_ROW, state.playerRow + 1) : Math.max(0, state.playerRow - 1);
   if (target === state.playerRow) return;
   state.glide = { fromRow: state.playerRow, toRow: target, elapsedTicks: 0 };
   state.playerRow = target;
@@ -844,7 +866,7 @@ function advanceGlide(state: GameState): void {
   state.glide = null;
   if (state.playerRow === TOP_ROW) {
     state.bufferedPress = null;
-    setPhase(state, "SUCCESS");
+    setPhase(state, 'SUCCESS');
     return;
   }
   const queued = state.bufferedPress;
@@ -861,17 +883,17 @@ export function tick(state: GameState): void {
   state.phaseMs += TICK_MS;
 
   switch (state.phase) {
-    case "PLAYING":
+    case 'PLAYING':
       advanceGlide(state);
-      if (state.phase === "PLAYING") checkCollision(state);
+      if (state.phase === 'PLAYING') checkCollision(state);
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       if (state.phaseMs >= SUCCESS_HOLD_MS && !state.completionFired) {
         state.completionFired = true;
       }
       break;
-    case "READY":
-    case "HIT":
+    case 'READY':
+    case 'HIT':
       break;
   }
 }
@@ -894,20 +916,20 @@ export function step(state: GameState, dtMs: number): void {
 export function press(state: GameState, button: Button): void {
   if (state.completionFired) return;
   switch (state.phase) {
-    case "READY":
-      setPhase(state, "PLAYING");
+    case 'READY':
+      setPhase(state, 'PLAYING');
       break;
-    case "PLAYING":
+    case 'PLAYING':
       if (state.glide) {
         if (state.bufferedPress === null) state.bufferedPress = button;
       } else {
         beginStep(state, button);
       }
       break;
-    case "HIT":
+    case 'HIT':
       // No internal retry - controller will restart via onFail
       break;
-    case "SUCCESS":
+    case 'SUCCESS':
       break;
   }
 }

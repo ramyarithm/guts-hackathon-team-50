@@ -1,11 +1,11 @@
 // Adapter for E2 (morse pad) - PIN entry via Morse code.
 
-import { FAILURE_HOLD_MS, createGame, type Game } from "./logic";
-import { drawFrame } from "./render";
-import { register } from "../registry";
-import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from "../types";
+import { FAILURE_HOLD_MS, createGame, type Game } from './logic';
+import { drawFrame } from './render';
+import { register } from '../registry';
+import type { Button, MinigameAdapter, MinigameRegistryEntry, MinigameStartArgs } from '../types';
 
-export const E2_ID = "E2";
+export const E2_ID = 'E2';
 
 export function createE2Adapter(): MinigameAdapter {
   let args: MinigameStartArgs | null = null;
@@ -28,9 +28,9 @@ export function createE2Adapter(): MinigameAdapter {
     game.step(delta);
     if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
-    
+
     // Call onFail after failure hold period
-    if (game.state.phase === "FAILED" && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
+    if (game.state.phase === 'FAILED' && game.state.phaseMs >= FAILURE_HOLD_MS && !failFired) {
       failFired = true;
       args?.onFail();
     }
@@ -55,25 +55,25 @@ export function createE2Adapter(): MinigameAdapter {
       host = startArgs.container ?? null;
 
       if (!host) {
-        console.error("[E2] No container provided");
+        console.error('[E2] No container provided');
         return;
       }
 
       // Create canvas
-      canvas = document.createElement("canvas");
-      canvas.style.display = "block";
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
+      canvas = document.createElement('canvas');
+      canvas.style.display = 'block';
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
       host.appendChild(canvas);
 
-      ctx = canvas.getContext("2d");
+      ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error("[E2] Could not get canvas context");
+        console.error('[E2] Could not get canvas context');
         return;
       }
 
       resize();
-      window.addEventListener("resize", resize);
+      window.addEventListener('resize', resize);
 
       // Get PIN from args - E2 expects the PIN to be passed
       // For now, use a default if not provided (will be connected to main.ts later)
@@ -91,7 +91,7 @@ export function createE2Adapter(): MinigameAdapter {
           args?.setControlLabels?.(labels);
         },
       });
-      
+
       // Set initial labels
       args?.setControlLabels?.({ left: '━ DASH', right: '▪ DOT' });
 
@@ -113,7 +113,7 @@ export function createE2Adapter(): MinigameAdapter {
         rafId = null;
       }
 
-      window.removeEventListener("resize", resize);
+      window.removeEventListener('resize', resize);
 
       if (game) {
         game.dispose();
@@ -136,7 +136,7 @@ export function createE2Adapter(): MinigameAdapter {
 
 export const e2Entry: MinigameRegistryEntry = {
   id: E2_ID,
-  name: "Morse Override",
+  name: 'Morse Override',
   ready: true,
   inputCount: 2,
   pool: false, // Ending game, not in random selection pool
@@ -146,4 +146,4 @@ export const e2Entry: MinigameRegistryEntry = {
 // Auto-register
 register(e2Entry);
 
-export { MORSE_CODES, SYMBOLS_PER_DIGIT, PIN_LENGTH } from "./logic";
+export { MORSE_CODES, SYMBOLS_PER_DIGIT, PIN_LENGTH } from './logic';

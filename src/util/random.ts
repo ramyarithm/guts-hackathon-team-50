@@ -1,6 +1,6 @@
 /**
  * Shared seeded PRNG utilities.
- * 
+ *
  * All run randomness should use these functions for reproducibility.
  * Never use Math.random() for anything that affects gameplay.
  */
@@ -21,7 +21,7 @@ export function hashSeed(text: string): number {
 /**
  * Create a seeded PRNG using mulberry32 algorithm.
  * Returns a function that produces values in [0, 1).
- * 
+ *
  * @example
  * const rng = createSeededRng(hashSeed(runId));
  * const value = rng(); // 0 <= value < 1

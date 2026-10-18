@@ -3,7 +3,7 @@
 // once, then nothing), the credits never start or stop music, and returning to the menu
 // asks for the menu track, which is a no-op when it is already playing.
 
-export type CreditsEntry = "win" | "menu";
+export type CreditsEntry = 'win' | 'menu';
 
 /** The subset of the audio engine the flow needs. */
 export interface FlowAudio {
@@ -15,7 +15,7 @@ export interface FlowAudio {
 /** The ending: fade out and stop every track, then play the victory sound once. */
 export function enterEndingAudio(audio: FlowAudio): void {
   audio.stopMusic();
-  audio.playSfx("victory");
+  audio.playSfx('victory');
 }
 
 /**
@@ -28,5 +28,5 @@ export function enterCreditsAudio(_audio: FlowAudio, _entry: CreditsEntry): void
 
 /** Main menu from the credits: the menu track (ignored by the engine if already playing). */
 export function leaveCreditsToMenuAudio(audio: FlowAudio): void {
-  audio.playMusic("menu");
+  audio.playMusic('menu');
 }
