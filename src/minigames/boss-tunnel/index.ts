@@ -1,191 +1,211 @@
 /**
- * Boss Tunnel Escape - Adapter
- * 
- * Wires the pure game logic to a canvas and the shared minigame contract.
- * This is NOT registered in the normal minigame pool - it's called directly
- * by main.ts after PIN entry.
+ * Dead Line - adapter for the first-person tunnel escape (the boss fight).
+ *
+ * Fills the whole browser window (the one exception to the shared layout): a fixed
+ * full-screen canvas sized to the viewport x devicePixelRatio, re-fitted on resize and
+ * orientation change, with the HUD and the two control labels drawn on top. Removing the
+ * canvas on dispose restores the shared layout untouched. Not in the minigame pool: the
+ * controller starts it after the vault opens.
  */
 
-import { CAUGHT_HOLD_MS, MAX_LIGHT_TIME_MS, createGame, type TunnelGame } from "./logic";
-import { drawFrame } from "./render";
+import { createBossAudio, type BossAudio } from "./audio";
+import {
+  ATTENTION_CAUGHT,
+  DETECT_THRESHOLD,
+  DOOR_WHEEL_MS,
+  PANIC_THRESHOLD,
+  createState,
+  labelsFor,
+  press,
+  step,
+  takeEvents,
+  type TunnelEvent,
+  type TunnelState,
+} from "./logic";
+import { createRenderer, type Renderer } from "./render";
 import type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
 
 export type { Button, MinigameAdapter, MinigameStartArgs } from "../types";
+export type { TunnelEvent } from "./logic";
 
 export const BOSS_ID = "BOSS";
-
-/** Gameplay moments the tunnel reports, for the dialogue subtitles. Emitted once each. */
-export type TunnelEvent = "tunnel_enter" | "monster_first_detected" | "monster_reacts_to_flashlight" | "light_mechanic_revealed";
+/** Backing resolution cap. */
+const MAX_DPR = 2;
+/** Heartbeat interval at the panic threshold; it speeds up toward CAUGHT. */
+const HEARTBEAT_MS = 900;
+const CAUGHT_HOLD_MS_FADE = 300;
 
 export interface BossStartArgs extends MinigameStartArgs {
-  /** Optional: called at the matching gameplay moment. Never affects the game. */
+  /** Optional: called at the matching gameplay moment, each once per tunnel run. */
   onEvent?: (name: TunnelEvent) => void;
+}
+
+/** Seed from the run id so the layout is reproducible per run. */
+export function hashSeed(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** True when a rect covers the whole viewport (used by the fullscreen check). */
+export function fillsViewport(rect: { left: number; top: number; width: number; height: number }, vw: number, vh: number): boolean {
+  return rect.left <= 0 && rect.top <= 0 && rect.width >= vw && rect.height >= vh;
 }
 
 export function createBossAdapter(): MinigameAdapter {
   let args: BossStartArgs | null = null;
-  let game: TunnelGame | null = null;
-  const emitted = new Set<TunnelEvent>();
-  let lightSeen = false;
-
-  const emit = (name: TunnelEvent): void => {
-    if (disposed || emitted.has(name)) return;
-    emitted.add(name);
-    try {
-      args?.onEvent?.(name);
-    } catch (error) {
-      console.warn("[BOSS] onEvent failed", error);
-    }
-  };
-  let host: HTMLElement | null = null;
+  let state: TunnelState | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
   let rafId: number | null = null;
-  let lastFrameTs: number | null = null;
-  let resizeObserver: ResizeObserver | null = null;
-  let windowResizeHandler: (() => void) | null = null;
+  let lastTs: number | null = null;
+  let onResize: (() => void) | null = null;
+  let audio: BossAudio | null = null;
+  let renderer: Renderer | null = null;
   let completed = false;
-  let failFired = false;
+  let failed = false;
   let disposed = false;
+  let lastLabels = "";
+  let seen = { step: -Infinity, click: -Infinity, denied: -Infinity, caught: false, sighting: false, heartbeat: 0, wheel: false, clank: false };
+
+  const publishLabels = (): void => {
+    if (!state || disposed) return;
+    const l = labelsFor(state);
+    const key = `${l.left}/${l.right}`;
+    if (key === lastLabels) return;
+    lastLabels = key;
+    args?.setControlLabels(l);
+  };
 
   const resize = (): void => {
-    if (disposed || !canvas) return;
-    // Fullscreen: use window dimensions
-    const cssW = window.innerWidth;
-    const cssH = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.style.width = `${cssW}px`;
-    canvas.style.height = `${cssH}px`;
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
+    if (!canvas) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
   };
 
   const frame = (ts: number): void => {
-    if (disposed || !game || !ctx || !canvas) return;
+    if (disposed || !state || !ctx || !canvas) return;
     rafId = requestAnimationFrame(frame);
-    const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
-    lastFrameTs = ts;
-    game.tick(elapsed);
-    // onComplete runs inside tick() and the controller disposes this scene synchronously.
-    if (disposed || !game || !ctx || !canvas) return;
-    drawFrame(ctx, game.state, canvas.width, canvas.height);
-
-    // Dialogue events (observed from state; they change nothing).
-    const s = game.state;
-    if (s.phase === 'PLAYING') {
-      if (s.lightOn) {
-        lightSeen = true;
-        emit('monster_first_detected'); // the first time the light shows what is in the tunnel
-        if (s.lightOnTime >= MAX_LIGHT_TIME_MS * 0.5) emit('monster_reacts_to_flashlight'); // it turns to the light
-      } else if (lightSeen) {
-        emit('light_mechanic_revealed'); // light off again: the player has the mechanic
+    const dt = lastTs === null ? 0 : ts - lastTs;
+    lastTs = ts;
+    step(state, dt);
+    for (const name of takeEvents(state)) {
+      try {
+        args?.onEvent?.(name);
+      } catch (error) {
+        console.warn("[BOSS] onEvent failed", error);
       }
-      if (s.distanceTraveled > 0) emit('light_mechanic_revealed');
     }
-
-    // Call onFail after caught hold period
-    if (game.state.phase === 'CAUGHT' && game.state.phaseMs >= CAUGHT_HOLD_MS && !failFired) {
-      failFired = true;
+    // Sound cues from state changes.
+    if (audio) {
+      const s = state;
+      if (s.lastStepMs !== seen.step) { seen.step = s.lastStepMs; if (Number.isFinite(s.lastStepMs)) audio.footstep(); }
+      if (s.lastClickMs !== seen.click) { seen.click = s.lastClickMs; if (Number.isFinite(s.lastClickMs)) audio.click(); }
+      if (s.lastDeniedMs !== seen.denied) { seen.denied = s.lastDeniedMs; if (Number.isFinite(s.lastDeniedMs)) audio.blocked(); }
+      if (s.attention >= DETECT_THRESHOLD && !seen.sighting) { seen.sighting = true; audio.sightingSting(); }
+      if (s.phase === "CAUGHT" && !seen.caught) { seen.caught = true; audio.caughtSting(); audio.setPresence(0, 0); }
+      if (s.phase === "TUNNEL") {
+        seen.caught = false;
+        const level = s.attention / ATTENTION_CAUGHT;
+        audio.setPresence(level, s.creatureSide);
+        const panic = (s.attention - PANIC_THRESHOLD) / (ATTENTION_CAUGHT - PANIC_THRESHOLD);
+        if (panic >= 0 && ts - seen.heartbeat >= HEARTBEAT_MS * (1 - 0.55 * panic)) { seen.heartbeat = ts; audio.heartbeat(); }
+      }
+      if (s.phase === "SURFACE") {
+        // The door: the wheel ratchets round, the leaf unseats with a clank, then everything fades under the daylight.
+        if (!seen.wheel) { seen.wheel = true; audio.setPresence(0, 0); audio.wheelSpin(DOOR_WHEEL_MS); }
+        if (!seen.clank && s.phaseMs >= DOOR_WHEEL_MS) { seen.clank = true; audio.doorClank(); audio.fadeOut(2200); }
+      }
+    }
+    renderer?.draw(ctx, state, canvas.width, canvas.height, ts);
+    publishLabels();
+    if (state.completionFired && !completed && !failed) {
+      completed = true;
+      args?.onComplete();
+    } else if (state.failureFired && !failed && !completed) {
+      failed = true; // caught: the run is over (the controller's Game Over flow)
+      audio?.fadeOut(CAUGHT_HOLD_MS_FADE);
       args?.onFail();
     }
   };
 
-  const teardownScene = (): void => {
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
+  const teardown = (): void => {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+    lastTs = null;
+    if (onResize) {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+      onResize = null;
     }
-    lastFrameTs = null;
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-    if (windowResizeHandler) {
-      window.removeEventListener("resize", windowResizeHandler);
-      windowResizeHandler = null;
-    }
-    game?.dispose();
-    game = null;
+    audio?.dispose();
+    audio = null;
+    renderer?.dispose();
+    renderer = null;
     canvas?.remove();
     canvas = null;
     ctx = null;
-    host = null;
+    state = null;
   };
 
   const adapter: MinigameAdapter = {
     startMinigame(startArgs: MinigameStartArgs): void {
       if (disposed) return;
-      teardownScene();
+      teardown();
       args = startArgs as BossStartArgs;
       completed = false;
-      failFired = false;
-      emitted.clear();
-      lightSeen = false;
-
-      host = startArgs.container ?? document.getElementById("minigame-root");
-      if (!host) {
-        console.warn("[BOSS] no container and no #minigame-root found; mounting on document.body");
-        host = document.body;
-      }
+      failed = false;
+      lastLabels = "";
+      seen = { step: -Infinity, click: -Infinity, denied: -Infinity, caught: false, sighting: false, heartbeat: 0, wheel: false, clank: false };
 
       canvas = document.createElement("canvas");
       canvas.dataset["minigame"] = BOSS_ID;
-      // Fullscreen immersive display
-      canvas.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 100;
-        display: block;
-      `;
+      canvas.style.cssText = "position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:100;display:block;background:#000;";
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", "Tunnel escape boss minigame");
+      canvas.setAttribute("aria-label", "Dead Line: first-person tunnel escape");
       document.body.appendChild(canvas);
-
       const context = canvas.getContext("2d");
       if (!context) {
         console.error("[BOSS] 2D canvas context unavailable");
-        teardownScene();
+        teardown();
         return;
       }
       ctx = context;
-
-      game = createGame({
-        onLabels: (labels) => {
-          if (!disposed) args?.setControlLabels(labels);
-        },
-        onComplete: () => {
-          if (disposed || completed) return;
-          completed = true;
-          args?.onComplete();
-        },
-      });
-
+      state = createState(hashSeed(startArgs.runId));
+      renderer = createRenderer();
+      audio = createBossAudio();
+      audio.unlock();
       resize();
-      // For fullscreen, always use window resize
-      windowResizeHandler = () => resize();
-      window.addEventListener("resize", windowResizeHandler);
-
+      onResize = () => resize();
+      window.addEventListener("resize", onResize);
+      window.addEventListener("orientationchange", onResize);
+      publishLabels();
       rafId = requestAnimationFrame(frame);
-      emit('tunnel_enter');
     },
 
     handleInput(button: Button): void {
-      if (disposed || completed || failFired || !game) return;
+      if (disposed || completed || failed || !state) return;
       if (button !== "LEFT" && button !== "RIGHT") return;
-      game.input(button);
+      audio?.unlock();
+      press(state, button);
+      publishLabels();
     },
 
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      teardownScene();
+      teardown();
       args = null;
     },
   };
 
   return adapter;
 }
-
-// Export for direct use in main.ts (not registered in pool)
-export { createBossAdapter as createAdapter };

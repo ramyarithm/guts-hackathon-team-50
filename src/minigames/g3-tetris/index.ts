@@ -43,10 +43,10 @@ export function createG3Adapter(): MinigameAdapter {
 
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
-    rafId = requestAnimationFrame(frame);
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.step(elapsed);
+    if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
     
     // Call onFail after overflow lockout period
@@ -54,6 +54,7 @@ export function createG3Adapter(): MinigameAdapter {
       failFired = true;
       args?.onFail();
     }
+    rafId = requestAnimationFrame(frame);
   };
 
   const teardownScene = (): void => {
