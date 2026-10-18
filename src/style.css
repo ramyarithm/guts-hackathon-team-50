@@ -224,7 +224,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: calc(6px * var(--stage-scale));
-  padding-bottom: 15vh;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 40px);
 }
 
 /* Stage progress - compact bar above game */
@@ -301,7 +301,7 @@ html, body {
    letterboxed and centred by its own canvas size. */
 #minigame-root {
   width: calc(320px * var(--stage-scale));
-  height: calc(480px * var(--stage-scale));
+  height: calc(420px * var(--stage-scale));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -465,38 +465,24 @@ html, body {
 #lives-display {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: calc(8px * var(--stage-scale));
-  height: calc(20px * var(--stage-scale));
+  justify-content: flex-start;
+  gap: calc(4px * var(--stage-scale));
+  padding: calc(6px * var(--stage-scale)) calc(10px * var(--stage-scale));
   font-family: var(--font-mono);
 }
 
-.lives-label {
-  font-size: calc(10px * var(--stage-scale));
+.heart {
+  font-size: calc(18px * var(--stage-scale));
+  color: var(--danger);
+  text-shadow: 0 0 8px rgba(255, 107, 87, 0.6);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.heart.lost {
+  opacity: 0.2;
   color: var(--text-dim);
-  letter-spacing: 1px;
-}
-
-#lives-count {
-  font-size: calc(16px * var(--stage-scale));
-  font-weight: 700;
-  color: var(--danger);
-  text-shadow: 0 0 10px rgba(255, 107, 87, 0.5);
-}
-
-#lives-count.lives-full {
-  color: var(--accent);
-  text-shadow: 0 0 10px rgba(92, 255, 157, 0.5);
-}
-
-#lives-count.lives-low {
-  color: var(--danger);
-  animation: pulse-danger 1s ease-in-out infinite;
-}
-
-@keyframes pulse-danger {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  text-shadow: none;
+  transform: scale(0.8);
 }
 
 /* ============================================

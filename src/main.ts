@@ -233,7 +233,7 @@ const elements = {
   stages: document.querySelectorAll('.stage') as NodeListOf<HTMLDivElement>,
   minigameRoot: document.getElementById('minigame-root') as HTMLDivElement,
   sceneBg: document.getElementById('scene-bg') as HTMLDivElement,
-  livesCount: document.getElementById('lives-count') as HTMLSpanElement,
+  livesDisplay: document.getElementById('lives-display') as HTMLDivElement,
   gameOverOverlay: document.getElementById('game-over-overlay') as HTMLDivElement,
   btnRestart: document.getElementById('btn-restart') as HTMLButtonElement,
   btnMenu: document.getElementById('btn-menu') as HTMLButtonElement,
@@ -262,9 +262,10 @@ function updateControlLabels(labels: ControlLabels): void {
 }
 
 function updateLivesDisplay(): void {
-  elements.livesCount.textContent = state.lives.toString();
-  elements.livesCount.classList.toggle('lives-full', state.lives === INITIAL_LIVES);
-  elements.livesCount.classList.toggle('lives-low', state.lives === 1);
+  const hearts = elements.livesDisplay.querySelectorAll('.heart');
+  hearts.forEach((heart, i) => {
+    heart.classList.toggle('lost', i >= state.lives);
+  });
 }
 
 function showGameOver(): void {
