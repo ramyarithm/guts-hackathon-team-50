@@ -21,6 +21,7 @@ import {
   type ControlLabels,
   type MinigameAdapter,
 } from './minigames';
+import { createBossAdapter } from './minigames/boss-tunnel';
 import { audio, trackForMinigame, trackForScene, GAMES_WITH_OWN_AUDIO, MINIGAME_TRACKS } from './audio'; // [audio]
 import { createMainMenuScene } from './scenes/main-menu';
 
@@ -50,7 +51,7 @@ function shuffleArray<T>(arr: T[], rng: () => number): T[] {
 
 // ---- Game State ----
 
-type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'ENDING' | 'GAME_OVER';
+type GamePhase = 'STAGES' | 'PIN_ENTRY' | 'BOSS' | 'ENDING' | 'GAME_OVER';
 type StageId = 'C1' | 'C2' | 'C3' | 'C4';
 
 const INITIAL_LIVES = 3;
@@ -323,6 +324,25 @@ function buildDebugButtons(): void {
     });
     elements.debugGames.appendChild(btn);
   }
+  
+  // Add BOSS button (not in registry, called directly)
+  const bossBtn = document.createElement('button');
+  bossBtn.type = 'button';
+  bossBtn.className = 'debug-btn';
+  bossBtn.dataset.gameId = 'BOSS';
+  bossBtn.textContent = 'BOSS';
+  bossBtn.title = 'Tunnel Escape (2 buttons) - Boss fight';
+  bossBtn.addEventListener('click', () => {
+    if (inMainMenu) {
+      leaveMainMenu();
+      beginRun();
+    }
+    if (getCurrentGameId() !== 'BOSS') {
+      console.log('[Main] Switching to BOSS');
+      startBoss();
+    }
+  });
+  elements.debugGames.appendChild(bossBtn);
 }
 
 // ---- Main Menu ----
@@ -556,7 +576,7 @@ function startPinEntryPhase(): void {
 }
 
 function showDoorOpening(): void {
-  // Play door opening animation then show ending
+  // Play door opening animation then start boss
   // Use vault frames for E1, pin door frames for E2
   const frames = state.endingGame === 'E1' 
     ? [
@@ -579,12 +599,118 @@ function showDoorOpening(): void {
       elements.sceneBg.style.backgroundImage = `url('${frames[frameIndex]}')`;
     } else {
       clearInterval(interval);
-      // After door opens, transition to tunnel/ending
+      // After door opens, start the boss fight
       setTimeout(() => {
-        showEnding();
+        startBoss();
       }, 500);
     }
   }, 400);
+}
+
+function startBoss(): void {
+  console.log('[Main] Starting boss tunnel escape...');
+  state.phase = 'BOSS';
+  state.currentGameId = 'BOSS';
+  
+  // Clean up any existing adapter
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  
+  // Set dark background for tunnel
+  elements.sceneBg.style.backgroundImage = 'none';
+  elements.sceneBg.classList.remove('stage-c1', 'stage-c2', 'stage-c3', 'stage-c4', 'stage-pin', 'stage-e1', 'stage-e2');
+  elements.sceneBg.style.backgroundColor = '#050505';
+  
+  // [audio] Play boss music
+  audio.playMusic(trackForScene({ kind: 'boss' }));
+  
+  // Create and start boss adapter
+  const bossAdapter = createBossAdapter();
+  currentAdapter = bossAdapter;
+  currentInputCount = 2; // Boss uses both buttons
+  
+  bossAdapter.startMinigame({
+    gameId: 'BOSS',
+    stageId: 'C4', // Not really used, but required by interface
+    runId: state.runPlan.seed.toString(),
+    container: elements.minigameRoot,
+    setControlLabels: updateControlLabels,
+    onComplete: handleBossComplete,
+    onFail: handleBossFail,
+  });
+  
+  updateDebugButtons();
+}
+
+function handleBossComplete(): void {
+  console.log('[Main] Boss completed! Escaping...');
+  
+  // Clean up boss
+  if (currentAdapter) {
+    currentAdapter.dispose();
+    currentAdapter = null;
+  }
+  elements.minigameRoot.innerHTML = '';
+  
+  // Transition to ending with white flash
+  showEscapeTransition();
+}
+
+function handleBossFail(): void {
+  console.log('[Main] Boss failed - Game Over!');
+  // Boss is instant death
+  showGameOver();
+}
+
+function showEscapeTransition(): void {
+  // Create white flash overlay
+  const flash = document.createElement('div');
+  flash.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+    z-index: 1000;
+    pointer-events: none;
+  `;
+  document.body.appendChild(flash);
+  
+  // Fade to white
+  requestAnimationFrame(() => {
+    flash.style.opacity = '1';
+  });
+  
+  // After white flash, show sunrise and fade out
+  setTimeout(() => {
+    // Set sunrise background
+    elements.sceneBg.style.backgroundColor = '';
+    elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_1.png')`;
+    
+    // Fade from white
+    flash.style.transition = 'opacity 1s ease-out';
+    flash.style.opacity = '0';
+    
+    // Cycle through sunrise frames
+    setTimeout(() => {
+      elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_2.png')`;
+    }, 400);
+    setTimeout(() => {
+      elements.sceneBg.style.backgroundImage = `url('/assets/scenes/sunrise_frame_3.png')`;
+    }, 800);
+    
+    // Show ending after transition
+    setTimeout(() => {
+      flash.remove();
+      showEnding();
+    }, 1500);
+  }, 600);
 }
 
 function showEnding(): void {
