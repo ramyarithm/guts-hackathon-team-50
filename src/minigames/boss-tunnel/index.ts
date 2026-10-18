@@ -62,7 +62,6 @@ export function createBossAdapter(): MinigameAdapter {
 
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
-    rafId = requestAnimationFrame(frame);
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.tick(elapsed);
@@ -88,6 +87,8 @@ export function createBossAdapter(): MinigameAdapter {
       failFired = true;
       args?.onFail();
     }
+    // Schedule next frame AFTER processing to avoid race on disposal
+    rafId = requestAnimationFrame(frame);
   };
 
   const teardownScene = (): void => {

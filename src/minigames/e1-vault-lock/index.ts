@@ -104,7 +104,6 @@ export function createE1Adapter(): MinigameAdapter {
 
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
-    rafId = requestAnimationFrame(frame);
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     game.step(elapsed);
@@ -116,6 +115,8 @@ export function createE1Adapter(): MinigameAdapter {
       if (Number.isFinite(lastClickSeen)) clicker.click();
     }
     renderer.drawFrame(ctx, game.state, canvas.width, canvas.height);
+    // Schedule next frame AFTER processing to avoid race on disposal
+    rafId = requestAnimationFrame(frame);
   };
 
   const teardownScene = (): void => {

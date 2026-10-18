@@ -63,12 +63,12 @@ export function createG4Adapter(): MinigameAdapter {
 
   const frame = (ts: number): void => {
     if (disposed || !game || !ctx || !canvas) return;
-    rafId = requestAnimationFrame(frame);
     
     const elapsed = lastFrameTs === null ? 0 : ts - lastFrameTs;
     lastFrameTs = ts;
     
     game.tick(elapsed, musicBeat());
+    if (disposed || !game || !ctx || !canvas) return;
     
     // Update press flash
     const timeSincePress = ts - lastPressTime;
@@ -81,6 +81,7 @@ export function createG4Adapter(): MinigameAdapter {
       failFired = true;
       args?.onFail();
     }
+    rafId = requestAnimationFrame(frame);
   };
 
   const teardownScene = (): void => {

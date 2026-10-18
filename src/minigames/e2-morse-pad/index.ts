@@ -26,6 +26,7 @@ export function createE2Adapter(): MinigameAdapter {
     lastFrameTs = ts;
 
     game.step(delta);
+    if (disposed || !game || !ctx || !canvas) return;
     drawFrame(ctx, game.state, canvas.width, canvas.height);
     
     // Call onFail after failure hold period
