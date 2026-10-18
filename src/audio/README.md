@@ -25,9 +25,7 @@ beat clock.
 | `c4` | `c4.mp3` (10.73 s) | Stage C4, the PIN door / E-games (E1, E2) and the ending until the sting | yes |
 | `boss` | `creepy sounds.mp3` (26.11 s) | Boss fight ambience (not wired; see below) | yes |
 | `victory` | `victory sound.mp3` (3.81 s) | One-shot on the core ending ("ESCAPED!") | no |
-| `gameover_sting` | `Game Over.mp3` (1.54 s) | Registered only, not wired | no |
-| `gameover_laugh` | `game over laugh.mp3` (1.10 s) | Registered only, not wired | no |
-| `gameover_music` | `game over music.mp3` (69.14 s) | Registered only, not wired | yes |
+| `gameover_music` | `game over music.mp3` (69.14 s) | Plays when a minigame fails | yes |
 
 Music is tied to the **narrative stage**, not to the minigame drawn for it: whatever game
 runs in C2 plays `c2`, and stage C1 just loops `c1.mp3` with drums. A stage's track starts
@@ -134,12 +132,9 @@ but nothing reads it.
   as the looping music key `boss`; there is no separate stinger file. When the boss is
   wired after the PIN door: `audio.playMusic("boss")` on entering the tunnel (crossfades
   from `c4`), `audio.playMusic(trackForScene({ kind: "end" }))` or `stopMusic()` on
-  escape, and for a catch stinger either add a short file to the manifest as `kind: "sfx"`
-  or reuse `gameover_laugh` if the team wants.
-- **Game over** (not wired; decide where they go):
-  - `Game Over.mp3`, 1.54 s: a short sting for the moment a run is lost.
-  - `game over laugh.mp3`, 1.10 s: a stinger for the creature catching the engineer.
-  - `game over music.mp3`, 69.1 s: a looping bed for a game-over or retry screen.
+  escape.
+- **Game over**: `game over music.mp3` (69.1 s) plays when a minigame fails, looping until
+  the game restarts.
 
 ## Tests
 

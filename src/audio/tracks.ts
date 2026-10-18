@@ -9,8 +9,6 @@ import c3Url from "../../assets/c3.mp3";
 import c4Url from "../../assets/c4.mp3";
 import creepyUrl from "../../assets/creepy sounds.mp3";
 import victoryUrl from "../../assets/victory sound.mp3";
-import gameOverStingUrl from "../../assets/Game Over.mp3";
-import gameOverLaughUrl from "../../assets/game over laugh.mp3";
 import gameOverMusicUrl from "../../assets/game over music.mp3";
 import { C1_BARS, C1_BPM, C1_LOOP_END_OFFSET_MS, C1_LOOP_START_OFFSET_MS, type TrackManifest } from "./engine";
 
@@ -57,9 +55,7 @@ export const TRACKS: TrackManifest = {
 
   // One-shots.
   victory: { url: victoryUrl, kind: "sfx", loop: false },
-  // Game over files: registered, deliberately NOT wired anywhere yet (see README).
-  gameover_sting: { url: gameOverStingUrl, kind: "sfx", loop: false },
-  gameover_laugh: { url: gameOverLaughUrl, kind: "sfx", loop: false },
+  // Game over music plays when a minigame fails.
   gameover_music: { url: gameOverMusicUrl, kind: "music", loop: true },
 };
 

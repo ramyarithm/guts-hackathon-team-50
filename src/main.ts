@@ -365,6 +365,9 @@ function handleGameFail(): void {
   const gameId = getCurrentGameId();
   console.log(`[Main] Game ${gameId} failed for stage ${state.currentStage}, restarting...`);
   
+  // [audio] Play game over music
+  audio.playMusic('gameover_music');
+  
   // Simply restart the current game from scratch
   startGame(gameId);
 }
