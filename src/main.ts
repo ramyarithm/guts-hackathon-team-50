@@ -61,6 +61,7 @@ interface RunPlan {
   seed: number;
   games: string[]; // [C1 game, C2 game, C3 game, C4 game]
   pinDigits: string[]; // 4 random digits generated from seed
+  endingGame: 'E1' | 'E2'; // Random ending minigame for PIN entry
 }
 
 interface GameState {
@@ -137,10 +138,12 @@ function generateRunPlan(seed: number): RunPlan {
       Math.floor(rng() * 10).toString(),
       Math.floor(rng() * 10).toString(),
     ],
+    endingGame: rng() < 0.5 ? 'E1' : 'E2', // Random ending minigame
   };
 
   console.log('[Main] Generated run plan:', plan);
   console.log('[Main] PIN for this run:', plan.pinDigits.join(''));
+  console.log('[Main] Ending game:', plan.endingGame);
   
   // Verify no duplicates
   const uniqueGames = new Set(plan.games);
@@ -582,11 +585,11 @@ function advanceToNextStage(): void {
 
 function startPinEntryPhase(): void {
   state.phase = 'PIN_ENTRY';
-  state.endingGame = 'E2'; // Use morse pad for PIN entry
-  console.log('[Main] Starting PIN entry phase with E2...');
+  state.endingGame = state.runPlan.endingGame;
+  console.log(`[Main] Starting PIN entry phase with ${state.endingGame}...`);
   
   updateStageDisplay(); // Update background to PIN stage
-  startGame('E2');
+  startGame(state.endingGame);
 }
 
 function showDoorOpening(): void {
