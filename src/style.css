@@ -841,6 +841,68 @@ html, body {
   animation: vn-fade-in 1.4s ease-out;
 }
 
+/* Chat-style sides, so the two voices read before the colours do: the engineer (and the
+   archived recording) speak from the left, Control answers from the right. Each box has a
+   small tail in its plate colour and slides in from its own side. SYSTEM stays centred. */
+.vn__box[data-speaker="ENGINEER"],
+.vn__box[data-speaker="COLLEAGUE_RECORDING"] {
+  align-self: flex-start;
+  width: 92%;
+  border-top-left-radius: 0;
+}
+
+.vn__box[data-speaker="SUPERVISOR"] {
+  align-self: flex-end;
+  width: 92%;
+  text-align: right;
+  border-top-right-radius: 0;
+}
+
+.vn__box[data-speaker="ENGINEER"]::before,
+.vn__box[data-speaker="COLLEAGUE_RECORDING"]::before,
+.vn__box[data-speaker="SUPERVISOR"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  pointer-events: none;
+}
+
+.vn__box[data-speaker="ENGINEER"]::before {
+  left: 0;
+  border-width: calc(10px * var(--stage-scale)) calc(10px * var(--stage-scale)) 0 0;
+  border-color: #ffb347 transparent transparent transparent;
+}
+
+.vn__box[data-speaker="COLLEAGUE_RECORDING"]::before {
+  left: 0;
+  border-width: calc(10px * var(--stage-scale)) calc(10px * var(--stage-scale)) 0 0;
+  border-color: var(--border-light) transparent transparent transparent;
+}
+
+.vn__box[data-speaker="SUPERVISOR"]::before {
+  right: 0;
+  border-width: calc(10px * var(--stage-scale)) 0 0 calc(10px * var(--stage-scale));
+  border-color: var(--accent) transparent transparent transparent;
+}
+
+/* The Next arrow sits on the speaker's own side. */
+.vn__box[data-speaker="SUPERVISOR"] .vn__indicator {
+  right: auto;
+  left: calc(12px * var(--stage-scale));
+}
+
+.vn__box[data-speaker="ENGINEER"].vn__box--enter,
+.vn__box[data-speaker="COLLEAGUE_RECORDING"].vn__box--enter {
+  animation: vn-slide-from-left 0.2s ease-out;
+}
+
+.vn__box[data-speaker="SUPERVISOR"].vn__box--enter {
+  animation: vn-slide-from-right 0.2s ease-out;
+}
+
 .vn__indicator {
   position: absolute;
   right: calc(12px * var(--stage-scale));
@@ -957,10 +1019,21 @@ html, body {
   50% { opacity: 0.93; }
 }
 
+@keyframes vn-slide-from-left {
+  from { transform: translateX(-12px); opacity: 0.5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes vn-slide-from-right {
+  from { transform: translateX(12px); opacity: 0.5; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vn__indicator,
   .vn__box[data-speaker="SUPERVISOR"] .vn__text,
   .vn__box[data-speaker="SYSTEM"].vn__box--enter .vn__text,
+  .vn__box.vn__box--enter,
   .vn-subtitle {
     animation: none;
   }
