@@ -70,8 +70,11 @@ const ENDING_REPLAY_DELAY_MS = 4000;
 function generateRunPlan(seed: number): RunPlan {
   const rng = createSeededRng(seed);
 
-  const oneButtonGames = getOneButtonGames();
-  const twoButtonGames = getTwoButtonGames();
+  // G4 is a rhythm game that requires audio - exclude if music is off
+  const excludeGames = audio.isMusicEnabled() ? new Set<string>() : new Set(['G4']);
+
+  const oneButtonGames = getOneButtonGames().filter(g => !excludeGames.has(g.id));
+  const twoButtonGames = getTwoButtonGames().filter(g => !excludeGames.has(g.id));
 
   // Validate we have enough games
   if (oneButtonGames.length === 0) {
